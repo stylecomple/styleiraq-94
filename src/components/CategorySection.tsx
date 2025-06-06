@@ -2,16 +2,18 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 
+type CategoryType = 'all' | 'makeup' | 'perfumes' | 'flowers' | 'home' | 'personal_care';
+
 interface Category {
-  id: string;
+  id: CategoryType;
   name: string;
   icon: string;
 }
 
 interface CategorySectionProps {
   categories: Category[];
-  selectedCategory: string;
-  onCategorySelect: (categoryId: string) => void;
+  selectedCategory: CategoryType;
+  onCategorySelect: (categoryId: CategoryType) => void;
 }
 
 const CategorySection = ({ categories, selectedCategory, onCategorySelect }: CategorySectionProps) => {
