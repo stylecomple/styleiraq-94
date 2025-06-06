@@ -8,6 +8,7 @@ export interface AdminSettings {
   id?: string;
   notification_sound_url?: string;
   is_store_open: boolean;
+  email_receiver?: string;
   created_at?: string;
   updated_at?: string;
 }
@@ -17,7 +18,8 @@ export const useAdminSettings = () => {
   const { toast } = useToast();
   const [settings, setSettings] = useState<AdminSettings>({
     is_store_open: true,
-    notification_sound_url: undefined
+    notification_sound_url: undefined,
+    email_receiver: 'mujtabadrop@gmail.com'
   });
   const [loading, setLoading] = useState(false);
 

@@ -12,6 +12,7 @@ export type Database = {
       admin_settings: {
         Row: {
           created_at: string
+          email_receiver: string | null
           id: string
           is_store_open: boolean
           notification_sound_url: string | null
@@ -19,6 +20,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          email_receiver?: string | null
           id?: string
           is_store_open?: boolean
           notification_sound_url?: string | null
@@ -26,6 +28,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          email_receiver?: string | null
           id?: string
           is_store_open?: boolean
           notification_sound_url?: string | null

@@ -117,6 +117,22 @@ export const useOrderNotifications = () => {
           } catch (error) {
             console.error('❌ Error invoking telegram function:', error);
           }
+
+          // Send email notification
+          try {
+            console.log('📧 Sending email notification...');
+            const { error } = await supabase.functions.invoke('send-order-notification', {
+              body: { orderId }
+            });
+            
+            if (error) {
+              console.error('❌ Error sending email notification:', error);
+            } else {
+              console.log('✅ Email notification sent successfully');
+            }
+          } catch (error) {
+            console.error('❌ Error invoking email notification function:', error);
+          }
         }
       )
       .subscribe((status) => {

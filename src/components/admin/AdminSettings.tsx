@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Upload, Volume2, Store } from 'lucide-react';
+import { Upload, Volume2, Store, Mail } from 'lucide-react';
 import { useAdminSettings } from '@/hooks/useAdminSettings';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -14,6 +14,14 @@ const AdminSettings = () => {
   const { settings, loading, saveSettings } = useAdminSettings();
   const { toast } = useToast();
   const [uploading, setUploading] = useState(false);
+  const [emailReceiver, setEmailReceiver] = useState('');
+
+  // Update local email state when settings change
+  useEffect(() => {
+    if (settings.email_receiver) {
+      setEmailReceiver(settings.email_receiver);
+    }
+  }, [settings.email_receiver]);
 
   // Create storage bucket if it doesn't exist
   useEffect(() => {
@@ -125,6 +133,32 @@ const AdminSettings = () => {
     });
   };
 
+  const handleEmailReceiverSave = async () => {
+    if (!emailReceiver.trim()) {
+      toast({
+        title: "خطأ",
+        description: "يرجى إدخال عنوان بريد إلكتروني صالح",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(emailReceiver)) {
+      toast({
+        title: "خطأ",
+        description: "يرجى إدخال عنوان بريد إلكتروني صالح",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    await saveSettings({
+      email_receiver: emailReceiver
+    });
+  };
+
   return (
     <div className="space-y-6">
       <Card>
@@ -156,6 +190,49 @@ const AdminSettings = () => {
               onCheckedChange={handleStoreStatusChange}
               disabled={loading}
             />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Mail className="w-5 h-5" />
+            إعدادات البريد الإلكتروني
+          </CardTitle>
+          <CardDescription>
+            تحديد البريد الإلكتروني الذي سيتم إرسال إشعارات الطلبات إليه
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <Label htmlFor="email-receiver" className="text-sm font-medium">
+              البريد الإلكتروني المستقبل
+            </Label>
+            <div className="mt-2 flex items-center gap-4">
+              <Input
+                id="email-receiver"
+                type="email"
+                value={emailReceiver}
+                onChange={(e) => setEmailReceiver(e.target.value)}
+                placeholder="example@gmail.com"
+                disabled={loading}
+                className="flex-1"
+              />
+              <Button
+                onClick={handleEmailReceiverSave}
+                disabled={loading}
+                className="flex items-center gap-2"
+              >
+                <Mail className="w-4 h-4" />
+                حفظ
+              </Button>
+            </div>
+            {settings.email_receiver && (
+              <p className="text-sm text-green-600 mt-2">
+                ✓ البريد الحالي: {settings.email_receiver}
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>
