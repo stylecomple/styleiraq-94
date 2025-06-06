@@ -23,12 +23,11 @@ const Cart = () => {
     address: '',
     governorate: '',
     area: '',
-    phone: '',
-    paymentMethod: 'cash'
+    phone: ''
   });
 
   const formatPrice = (price: number) => {
-    return `${price.toLocaleString()} دينار`;
+    return `${price.toLocaleString('ar-IQ')} دينار عراقي`;
   };
 
   const handleQuantityChange = (productId: string, newQuantity: number) => {
@@ -86,7 +85,7 @@ const Cart = () => {
     setIsSubmitting(true);
 
     try {
-      // Create order
+      // Create order without payment_method field
       const { data: order, error: orderError } = await supabase
         .from('orders')
         .insert({
@@ -94,13 +93,15 @@ const Cart = () => {
           total_amount: getTotalPrice(),
           status: 'pending',
           shipping_address: `${orderDetails.address}, ${orderDetails.area}, ${orderDetails.governorate}`,
-          phone: orderDetails.phone,
-          payment_method: orderDetails.paymentMethod
+          phone: orderDetails.phone
         })
         .select()
         .single();
 
-      if (orderError) throw orderError;
+      if (orderError) {
+        console.error('Order creation error:', orderError);
+        throw orderError;
+      }
 
       // Create order items
       const orderItems = items.map(item => ({
@@ -114,7 +115,10 @@ const Cart = () => {
         .from('order_items')
         .insert(orderItems);
 
-      if (itemsError) throw itemsError;
+      if (itemsError) {
+        console.error('Order items creation error:', itemsError);
+        throw itemsError;
+      }
 
       toast({
         title: "تم إرسال الطلب",
@@ -207,28 +211,6 @@ const Cart = () => {
                       className="mt-1"
                       required
                     />
-                  </div>
-
-                  <div>
-                    <Label className="text-sm md:text-base">طريقة الدفع</Label>
-                    <RadioGroup 
-                      value={orderDetails.paymentMethod} 
-                      onValueChange={(value) => setOrderDetails({...orderDetails, paymentMethod: value})}
-                      className="mt-2 space-y-2"
-                    >
-                      <div className="flex items-center space-x-2 rtl:space-x-reverse">
-                        <RadioGroupItem value="cash" id="cash" />
-                        <Label htmlFor="cash" className="text-sm md:text-base">الدفع عند الاستلام</Label>
-                      </div>
-                      <div className="flex items-center space-x-2 rtl:space-x-reverse">
-                        <RadioGroupItem value="zaincash" id="zaincash" />
-                        <Label htmlFor="zaincash" className="text-sm md:text-base">زين كاش</Label>
-                      </div>
-                      <div className="flex items-center space-x-2 rtl:space-x-reverse">
-                        <RadioGroupItem value="visa" id="visa" />
-                        <Label htmlFor="visa" className="text-sm md:text-base">فيزا كارد</Label>
-                      </div>
-                    </RadioGroup>
                   </div>
                 </div>
 
