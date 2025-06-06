@@ -27,6 +27,8 @@ interface TelegramUpdate {
 
 const handler = async (req: Request): Promise<Response> => {
   console.log('🤖 Telegram bot function called');
+  console.log('📝 Request method:', req.method);
+  console.log('📝 Request headers:', Object.fromEntries(req.headers.entries()));
   
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -38,18 +40,37 @@ const handler = async (req: Request): Promise<Response> => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     
     if (!telegramToken) {
+      console.error('❌ TELEGRAM_BOT_TOKEN not found');
       throw new Error('TELEGRAM_BOT_TOKEN not found');
     }
 
     if (!supabaseUrl || !supabaseKey) {
+      console.error('❌ Supabase environment variables not found');
       throw new Error('Supabase environment variables not found');
     }
+
+    console.log('✅ Environment variables loaded');
 
     // Initialize Supabase client
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const update: TelegramUpdate = await req.json();
-    console.log('📨 Received update:', JSON.stringify(update, null, 2));
+    // Parse request body
+    let update: TelegramUpdate;
+    try {
+      const requestText = await req.text();
+      console.log('📝 Raw request body:', requestText);
+      
+      if (!requestText) {
+        console.log('⚠️ Empty request body');
+        return new Response('Empty request body', { status: 400 });
+      }
+      
+      update = JSON.parse(requestText);
+      console.log('📨 Parsed update:', JSON.stringify(update, null, 2));
+    } catch (parseError) {
+      console.error('❌ Error parsing request body:', parseError);
+      return new Response('Invalid JSON', { status: 400 });
+    }
     
     if (!update.message || !update.message.text) {
       console.log('⚠️ No message or text in update');
@@ -66,6 +87,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Store or update user in database
     try {
+      console.log('💾 Storing user in database...');
       const { data, error: upsertError } = await supabase
         .from('telegram_users')
         .upsert({
@@ -76,7 +98,8 @@ const handler = async (req: Request): Promise<Response> => {
           updated_at: new Date().toISOString()
         }, {
           onConflict: 'chat_id'
-        });
+        })
+        .select();
 
       if (upsertError) {
         console.error('❌ Error storing user:', upsertError);
@@ -105,6 +128,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Send response back to Telegram
     const telegramApiUrl = `https://api.telegram.org/bot${telegramToken}/sendMessage`;
     
+    console.log('📤 Sending response to Telegram...');
     const response = await fetch(telegramApiUrl, {
       method: 'POST',
       headers: {
@@ -124,7 +148,7 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error(`Telegram API Error: ${result.description}`);
     }
 
-    console.log('✅ Response sent successfully');
+    console.log('✅ Response sent successfully to Telegram');
 
     return new Response(JSON.stringify({ success: true }), {
       status: 200,
