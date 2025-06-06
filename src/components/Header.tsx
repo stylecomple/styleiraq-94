@@ -29,7 +29,7 @@ const Header = () => {
   };
 
   const handleCartClick = () => {
-    console.log('Cart clicked - will implement cart page later');
+    navigate('/cart');
   };
 
   return (
