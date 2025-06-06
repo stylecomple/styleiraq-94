@@ -24,12 +24,12 @@ const AdminSettings = () => {
   // Helper functions to safely cast payment configs
   const getVisaConfig = (): PaymentConfig => {
     if (!settings?.visa_card_config) return { enabled: false };
-    return settings.visa_card_config as PaymentConfig;
+    return settings.visa_card_config as unknown as PaymentConfig;
   };
 
   const getZainConfig = (): PaymentConfig => {
     if (!settings?.zain_cash_config) return { enabled: false };
-    return settings.zain_cash_config as PaymentConfig;
+    return settings.zain_cash_config as unknown as PaymentConfig;
   };
 
   // Local state for form data
