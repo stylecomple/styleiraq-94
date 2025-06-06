@@ -29,7 +29,7 @@ const Index = () => {
         .order('created_at', { ascending: false });
 
       if (selectedCategory !== 'all') {
-        query = query.eq('category', selectedCategory);
+        query = query.eq('category', selectedCategory as 'makeup' | 'perfumes' | 'flowers' | 'home' | 'personal_care');
       }
 
       const { data, error } = await query;
