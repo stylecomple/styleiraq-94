@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -19,6 +18,11 @@ interface CartContextType {
   clearCart: () => void;
   getTotalItems: () => number;
   getTotalPrice: () => number;
+  isPaymentDialogOpen: boolean;
+  selectedPaymentMethod: 'visa_card' | 'zain_cash' | null;
+  pendingOrder: any;
+  openPaymentDialog: (paymentMethod: 'visa_card' | 'zain_cash', orderData: any) => void;
+  closePaymentDialog: () => void;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -37,6 +41,9 @@ interface CartProviderProps {
 
 export const CartProvider = ({ children }: CartProviderProps) => {
   const [items, setItems] = useState<CartItem[]>([]);
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'visa_card' | 'zain_cash' | null>(null);
+  const [pendingOrder, setPendingOrder] = useState<any>(null);
   const { toast } = useToast();
 
   const addToCart = (product: any, selectedColor?: string) => {
@@ -110,6 +117,18 @@ export const CartProvider = ({ children }: CartProviderProps) => {
     return Math.round(items.reduce((total, item) => total + (item.price * item.quantity), 0));
   };
 
+  const openPaymentDialog = (paymentMethod: 'visa_card' | 'zain_cash', orderData: any) => {
+    setSelectedPaymentMethod(paymentMethod);
+    setPendingOrder(orderData);
+    setIsPaymentDialogOpen(true);
+  };
+
+  const closePaymentDialog = () => {
+    setIsPaymentDialogOpen(false);
+    setSelectedPaymentMethod(null);
+    setPendingOrder(null);
+  };
+
   return (
     <CartContext.Provider value={{
       items,
@@ -118,7 +137,12 @@ export const CartProvider = ({ children }: CartProviderProps) => {
       updateQuantity,
       clearCart,
       getTotalItems,
-      getTotalPrice
+      getTotalPrice,
+      isPaymentDialogOpen,
+      selectedPaymentMethod,
+      pendingOrder,
+      openPaymentDialog,
+      closePaymentDialog
     }}>
       {children}
     </CartContext.Provider>

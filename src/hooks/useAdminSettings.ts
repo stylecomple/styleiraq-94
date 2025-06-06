@@ -9,6 +9,18 @@ export interface AdminSettings {
   notification_sound_url?: string;
   is_store_open: boolean;
   email_receiver?: string;
+  visa_card_config?: {
+    enabled: boolean;
+    merchant_id: string;
+    api_key: string;
+    terminal_id: string;
+  };
+  zain_cash_config?: {
+    enabled: boolean;
+    merchant_code: string;
+    api_key: string;
+    service_type: string;
+  };
   created_at?: string;
   updated_at?: string;
 }
@@ -19,7 +31,19 @@ export const useAdminSettings = () => {
   const [settings, setSettings] = useState<AdminSettings>({
     is_store_open: true,
     notification_sound_url: undefined,
-    email_receiver: 'mujtabadrop@gmail.com'
+    email_receiver: 'mujtabadrop@gmail.com',
+    visa_card_config: {
+      enabled: false,
+      merchant_id: '',
+      api_key: '',
+      terminal_id: ''
+    },
+    zain_cash_config: {
+      enabled: false,
+      merchant_code: '',
+      api_key: '',
+      service_type: ''
+    }
   });
   const [loading, setLoading] = useState(false);
 

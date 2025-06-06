@@ -17,6 +17,8 @@ export type Database = {
           is_store_open: boolean
           notification_sound_url: string | null
           updated_at: string
+          visa_card_config: Json | null
+          zain_cash_config: Json | null
         }
         Insert: {
           created_at?: string
@@ -25,6 +27,8 @@ export type Database = {
           is_store_open?: boolean
           notification_sound_url?: string | null
           updated_at?: string
+          visa_card_config?: Json | null
+          zain_cash_config?: Json | null
         }
         Update: {
           created_at?: string
@@ -33,6 +37,8 @@ export type Database = {
           is_store_open?: boolean
           notification_sound_url?: string | null
           updated_at?: string
+          visa_card_config?: Json | null
+          zain_cash_config?: Json | null
         }
         Relationships: []
       }

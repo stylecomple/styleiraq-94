@@ -1,11 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Upload, Volume2, Store, Mail } from 'lucide-react';
+import { Upload, Volume2, Store, Mail, CreditCard, Smartphone } from 'lucide-react';
 import { useAdminSettings } from '@/hooks/useAdminSettings';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -15,13 +14,31 @@ const AdminSettings = () => {
   const { toast } = useToast();
   const [uploading, setUploading] = useState(false);
   const [emailReceiver, setEmailReceiver] = useState('');
+  const [visaCardConfig, setVisaCardConfig] = useState({
+    enabled: false,
+    merchant_id: '',
+    api_key: '',
+    terminal_id: ''
+  });
+  const [zainCashConfig, setZainCashConfig] = useState({
+    enabled: false,
+    merchant_code: '',
+    api_key: '',
+    service_type: ''
+  });
 
-  // Update local email state when settings change
+  // Update local states when settings change
   useEffect(() => {
     if (settings.email_receiver) {
       setEmailReceiver(settings.email_receiver);
     }
-  }, [settings.email_receiver]);
+    if (settings.visa_card_config) {
+      setVisaCardConfig(settings.visa_card_config);
+    }
+    if (settings.zain_cash_config) {
+      setZainCashConfig(settings.zain_cash_config);
+    }
+  }, [settings]);
 
   // Create storage bucket if it doesn't exist
   useEffect(() => {
@@ -159,6 +176,36 @@ const AdminSettings = () => {
     });
   };
 
+  const handleVisaCardConfigSave = async () => {
+    if (visaCardConfig.enabled && (!visaCardConfig.merchant_id || !visaCardConfig.api_key || !visaCardConfig.terminal_id)) {
+      toast({
+        title: "خطأ",
+        description: "يرجى ملء جميع حقول إعدادات فيزا كارد",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    await saveSettings({
+      visa_card_config: visaCardConfig
+    });
+  };
+
+  const handleZainCashConfigSave = async () => {
+    if (zainCashConfig.enabled && (!zainCashConfig.merchant_code || !zainCashConfig.api_key || !zainCashConfig.service_type)) {
+      toast({
+        title: "خطأ",
+        description: "يرجى ملء جميع حقول إعدادات زين كاش",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    await saveSettings({
+      zain_cash_config: zainCashConfig
+    });
+  };
+
   return (
     <div className="space-y-6">
       <Card>
@@ -234,6 +281,180 @@ const AdminSettings = () => {
               </p>
             )}
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <CreditCard className="w-5 h-5" />
+            إعدادات فيزا كارد
+          </CardTitle>
+          <CardDescription>
+            تكوين بوابة الدفع لفيزا كارد
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <Label htmlFor="visa-enabled" className="text-base font-medium">
+                تفعيل فيزا كارد
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                السماح للعملاء بالدفع باستخدام فيزا كارد
+              </p>
+            </div>
+            <Switch
+              id="visa-enabled"
+              checked={visaCardConfig.enabled}
+              onCheckedChange={(checked) => setVisaCardConfig(prev => ({ ...prev, enabled: checked }))}
+              disabled={loading}
+            />
+          </div>
+
+          {visaCardConfig.enabled && (
+            <div className="space-y-4 border-t pt-4">
+              <div>
+                <Label htmlFor="visa-merchant-id" className="text-sm font-medium">
+                  رقم التاجر (Merchant ID)
+                </Label>
+                <Input
+                  id="visa-merchant-id"
+                  type="text"
+                  value={visaCardConfig.merchant_id}
+                  onChange={(e) => setVisaCardConfig(prev => ({ ...prev, merchant_id: e.target.value }))}
+                  placeholder="أدخل رقم التاجر"
+                  disabled={loading}
+                  className="mt-2"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="visa-api-key" className="text-sm font-medium">
+                  مفتاح API
+                </Label>
+                <Input
+                  id="visa-api-key"
+                  type="password"
+                  value={visaCardConfig.api_key}
+                  onChange={(e) => setVisaCardConfig(prev => ({ ...prev, api_key: e.target.value }))}
+                  placeholder="أدخل مفتاح API"
+                  disabled={loading}
+                  className="mt-2"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="visa-terminal-id" className="text-sm font-medium">
+                  رقم المحطة (Terminal ID)
+                </Label>
+                <Input
+                  id="visa-terminal-id"
+                  type="text"
+                  value={visaCardConfig.terminal_id}
+                  onChange={(e) => setVisaCardConfig(prev => ({ ...prev, terminal_id: e.target.value }))}
+                  placeholder="أدخل رقم المحطة"
+                  disabled={loading}
+                  className="mt-2"
+                />
+              </div>
+
+              <Button
+                onClick={handleVisaCardConfigSave}
+                disabled={loading}
+                className="w-full"
+              >
+                حفظ إعدادات فيزا كارد
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Smartphone className="w-5 h-5" />
+            إعدادات زين كاش
+          </CardTitle>
+          <CardDescription>
+            تكوين بوابة الدفع لزين كاش
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <Label htmlFor="zain-enabled" className="text-base font-medium">
+                تفعيل زين كاش
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                السماح للعملاء بالدفع باستخدام زين كاش
+              </p>
+            </div>
+            <Switch
+              id="zain-enabled"
+              checked={zainCashConfig.enabled}
+              onCheckedChange={(checked) => setZainCashConfig(prev => ({ ...prev, enabled: checked }))}
+              disabled={loading}
+            />
+          </div>
+
+          {zainCashConfig.enabled && (
+            <div className="space-y-4 border-t pt-4">
+              <div>
+                <Label htmlFor="zain-merchant-code" className="text-sm font-medium">
+                  كود التاجر (Merchant Code)
+                </Label>
+                <Input
+                  id="zain-merchant-code"
+                  type="text"
+                  value={zainCashConfig.merchant_code}
+                  onChange={(e) => setZainCashConfig(prev => ({ ...prev, merchant_code: e.target.value }))}
+                  placeholder="أدخل كود التاجر"
+                  disabled={loading}
+                  className="mt-2"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="zain-api-key" className="text-sm font-medium">
+                  مفتاح API
+                </Label>
+                <Input
+                  id="zain-api-key"
+                  type="password"
+                  value={zainCashConfig.api_key}
+                  onChange={(e) => setZainCashConfig(prev => ({ ...prev, api_key: e.target.value }))}
+                  placeholder="أدخل مفتاح API"
+                  disabled={loading}
+                  className="mt-2"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="zain-service-type" className="text-sm font-medium">
+                  نوع الخدمة
+                </Label>
+                <Input
+                  id="zain-service-type"
+                  type="text"
+                  value={zainCashConfig.service_type}
+                  onChange={(e) => setZainCashConfig(prev => ({ ...prev, service_type: e.target.value }))}
+                  placeholder="أدخل نوع الخدمة"
+                  disabled={loading}
+                  className="mt-2"
+                />
+              </div>
+
+              <Button
+                onClick={handleZainCashConfigSave}
+                disabled={loading}
+                className="w-full"
+              >
+                حفظ إعدادات زين كاش
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
 

@@ -1,431 +1,387 @@
-
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Minus, Plus, Trash2, ArrowLeft } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Minus, Plus, Trash2, ArrowLeft, CreditCard, Smartphone, Truck } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-
-const iraqGovernorates = [
-  'بغداد',
-  'البصرة', 
-  'نينوى',
-  'الأنبار',
-  'أربيل',
-  'كركوك',
-  'النجف',
-  'كربلاء',
-  'واسط',
-  'صلاح الدين',
-  'القادسية',
-  'ديالى',
-  'بابل',
-  'دهوك',
-  'السليمانية',
-  'المثنى',
-  'ذي قار',
-  'ميسان'
-];
+import { useQuery } from '@tanstack/react-query';
+import PaymentDialog from '@/components/PaymentDialog';
 
 const Cart = () => {
-  const { items, removeFromCart, updateQuantity, clearCart, getTotalPrice } = useCart();
+  const { 
+    items, 
+    removeFromCart, 
+    updateQuantity, 
+    clearCart, 
+    getTotalPrice,
+    isPaymentDialogOpen,
+    selectedPaymentMethod,
+    pendingOrder,
+    openPaymentDialog,
+    closePaymentDialog
+  } = useCart();
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [showCheckout, setShowCheckout] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [orderDetails, setOrderDetails] = useState({
-    address: '',
-    governorate: '',
-    area: '',
+  
+  const [loading, setLoading] = useState(false);
+  const [orderForm, setOrderForm] = useState({
     phone: '',
-    paymentMethod: ''
+    governorate: '',
+    address: '',
+    paymentMethod: 'cash_on_delivery'
   });
 
+  // Fetch admin settings to check which payment methods are enabled
+  const { data: adminSettings } = useQuery({
+    queryKey: ['admin-settings'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('admin_settings')
+        .select('visa_card_config, zain_cash_config')
+        .single();
+      
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  const governorates = [
+    "بغداد", "البصرة", "نينوى", "ذي قار", "الأنبار", "ديالى", "صلاح الدين", "كركوك", "بابل", "القادسية",
+    "ميسان", "واسط", "دهوك", "أربيل", "السليمانية", "النجف", "كربلاء", "المثنى"
+  ];
+
   const formatPrice = (price: number) => {
-    return `${price.toLocaleString('ar-IQ')} د.ع`;
+    return `${price.toLocaleString()} دينار`;
   };
 
-  const handleQuantityChange = (productId: string, newQuantity: number, selectedColor?: string) => {
-    if (newQuantity < 1) {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setOrderForm(prev => ({
+      ...prev,
+      [e.target.name]: e.target.value
+    }));
+  };
+
+  const handleQuantityChange = (productId: string, quantity: number, selectedColor?: string) => {
+    if (quantity < 1) {
       removeFromCart(productId, selectedColor);
     } else {
-      updateQuantity(productId, newQuantity, selectedColor);
+      updateQuantity(productId, quantity, selectedColor);
     }
   };
 
-  const validateIraqiPhoneNumber = (phone: string) => {
-    // Iraqi phone number patterns: 07XXXXXXXX or +9647XXXXXXXX
-    const iraqiPhonePattern = /^(07[3-9]\d{8}|(\+964)?7[3-9]\d{8})$/;
-    return iraqiPhonePattern.test(phone.replace(/\s/g, ''));
+  const handleRemoveItem = (productId: string, selectedColor?: string) => {
+    removeFromCart(productId, selectedColor);
   };
 
-  const handleCheckout = () => {
-    if (items.length === 0) {
-      toast({
-        title: "السلة فارغة",
-        description: "يرجى إضافة منتجات للسلة أولاً",
-        variant: "destructive"
-      });
-      return;
-    }
-
+  const handleOrderSubmit = async () => {
     if (!user) {
       toast({
-        title: "تسجيل الدخول مطلوب",
-        description: "يرجى تسجيل الدخول أولاً لإتمام الشراء",
-        variant: "destructive"
+        title: 'يجب تسجيل الدخول',
+        description: 'يرجى تسجيل الدخول لإتمام الطلب',
+        variant: 'destructive',
       });
       navigate('/auth');
       return;
     }
 
-    setShowCheckout(true);
-  };
-
-  const handleSubmitOrder = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!orderDetails.address || !orderDetails.governorate || !orderDetails.area || !orderDetails.phone || !orderDetails.paymentMethod) {
+    if (!orderForm.phone || !orderForm.governorate || !orderForm.address) {
       toast({
-        title: "معلومات ناقصة",
-        description: "يرجى ملء جميع الحقول المطلوبة",
-        variant: "destructive"
+        title: 'بيانات ناقصة',
+        description: 'يرجى ملء جميع الحقول المطلوبة',
+        variant: 'destructive',
       });
       return;
     }
 
-    if (!validateIraqiPhoneNumber(orderDetails.phone)) {
+    if (items.length === 0) {
       toast({
-        title: "رقم هاتف غير صحيح",
-        description: "يرجى إدخال رقم هاتف عراقي صحيح (مثال: 07XXXXXXXX)",
-        variant: "destructive"
+        title: 'السلة فارغة',
+        description: 'يرجى إضافة منتجات للسلة قبل إتمام الطلب',
+        variant: 'destructive',
       });
       return;
     }
 
-    if (!user) {
-      toast({
-        title: "خطأ في التحقق",
-        description: "يرجى تسجيل الدخول مرة أخرى",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setIsSubmitting(true);
+    setLoading(true);
 
     try {
-      // Create order with payment method and governorate
+      // Create order
+      const orderData = {
+        user_id: user.id,
+        total_amount: getTotalPrice(),
+        shipping_address: orderForm.address,
+        phone: orderForm.phone,
+        governorate: orderForm.governorate,
+        payment_method: orderForm.paymentMethod,
+        status: 'pending'
+      };
+
       const { data: order, error: orderError } = await supabase
         .from('orders')
-        .insert({
-          user_id: user.id,
-          total_amount: getTotalPrice(),
-          status: 'pending',
-          shipping_address: `${orderDetails.address}, ${orderDetails.area}, ${orderDetails.governorate}`,
-          phone: orderDetails.phone,
-          payment_method: orderDetails.paymentMethod,
-          governorate: orderDetails.governorate
-        })
+        .insert(orderData)
         .select()
         .single();
 
-      if (orderError) {
-        console.error('Order creation error:', orderError);
-        throw orderError;
-      }
+      if (orderError) throw orderError;
 
-      // Create order items with selected colors
+      // Create order items
       const orderItems = items.map(item => ({
         order_id: order.id,
         product_id: item.id,
         quantity: item.quantity,
         price: item.price,
-        selected_color: item.selectedColor || null
+        selected_color: item.selectedColor
       }));
 
       const { error: itemsError } = await supabase
         .from('order_items')
         .insert(orderItems);
 
-      if (itemsError) {
-        console.error('Order items creation error:', itemsError);
-        throw itemsError;
-      }
+      if (itemsError) throw itemsError;
 
-      // Send Telegram notification
-      try {
-        console.log('Sending Telegram notification for order:', order.id);
-        const { error } = await supabase.functions.invoke('send-telegram-notification', {
-          body: { orderId: order.id }
+      // Handle different payment methods
+      if (orderForm.paymentMethod === 'visa_card') {
+        if (!adminSettings?.visa_card_config?.enabled) {
+          toast({
+            title: 'خطأ',
+            description: 'الدفع بالفيزا كارد غير متاح حالياً',
+            variant: 'destructive',
+          });
+          return;
+        }
+        
+        openPaymentDialog('visa_card', {
+          orderId: order.id,
+          totalAmount: getTotalPrice(),
+          items
+        });
+      } else if (orderForm.paymentMethod === 'zain_cash') {
+        if (!adminSettings?.zain_cash_config?.enabled) {
+          toast({
+            title: 'خطأ',
+            description: 'الدفع بزين كاش غير متاح حالياً',
+            variant: 'destructive',
+          });
+          return;
+        }
+        
+        openPaymentDialog('zain_cash', {
+          orderId: order.id,
+          totalAmount: getTotalPrice(),
+          items
+        });
+      } else {
+        // Cash on delivery - complete immediately
+        toast({
+          title: 'تم تأكيد الطلب',
+          description: 'سيتم التواصل معك قريباً لتأكيد التسليم',
         });
         
-        if (error) {
-          console.error('Error sending telegram notification:', error);
-        } else {
-          console.log('Telegram notification sent successfully');
-        }
-      } catch (error) {
-        console.error('Error invoking telegram function:', error);
+        clearCart();
+        navigate('/orders');
       }
-
-      toast({
-        title: "تم إرسال الطلب",
-        description: "سيتم التواصل معك قريباً لتأكيد الطلب"
-      });
-
-      clearCart();
-      navigate('/');
     } catch (error) {
-      console.error('Error submitting order:', error);
+      console.error('Error creating order:', error);
       toast({
-        title: "خطأ في إرسال الطلب",
-        description: "حدث خطأ أثناء إرسال الطلب، يرجى المحاولة مرة أخرى",
-        variant: "destructive"
+        title: 'خطأ',
+        description: 'حدث خطأ في إنشاء الطلب',
+        variant: 'destructive',
       });
     } finally {
-      setIsSubmitting(false);
+      setLoading(false);
     }
   };
 
-  if (showCheckout) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-pink-50 to-purple-50 py-4 md:py-8">
-        <div className="container mx-auto px-4 max-w-2xl">
-          <div className="flex items-center gap-4 mb-6 md:mb-8">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowCheckout(false)}
-              className="flex items-center gap-2"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              العودة للسلة
-            </Button>
-            <h1 className="text-xl md:text-2xl font-bold">إتمام الشراء</h1>
-          </div>
+  const handlePaymentSuccess = () => {
+    clearCart();
+    navigate('/orders');
+  };
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg md:text-xl">معلومات الطلب</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmitOrder} className="space-y-4 md:space-y-6">
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="address" className="text-sm md:text-base">العنوان</Label>
-                    <Input
-                      id="address"
-                      value={orderDetails.address}
-                      onChange={(e) => setOrderDetails({...orderDetails, address: e.target.value})}
-                      placeholder="أدخل العنوان بالتفصيل"
-                      className="mt-1"
-                      required
-                    />
-                  </div>
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center">
+      <div className="text-lg">جاري التحميل...</div>
+    </div>;
+  }
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="governorate" className="text-sm md:text-base">المحافظة</Label>
-                      <Select value={orderDetails.governorate} onValueChange={(value) => setOrderDetails({...orderDetails, governorate: value})}>
-                        <SelectTrigger className="mt-1">
-                          <SelectValue placeholder="اختر المحافظة" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {iraqGovernorates.map((gov) => (
-                            <SelectItem key={gov} value={gov}>
-                              {gov}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label htmlFor="area" className="text-sm md:text-base">المنطقة السكنية</Label>
-                      <Input
-                        id="area"
-                        value={orderDetails.area}
-                        onChange={(e) => setOrderDetails({...orderDetails, area: e.target.value})}
-                        placeholder="المنطقة السكنية"
-                        className="mt-1"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="phone" className="text-sm md:text-base">رقم التلفون</Label>
-                    <Input
-                      id="phone"
-                      type="tel"
-                      value={orderDetails.phone}
-                      onChange={(e) => setOrderDetails({...orderDetails, phone: e.target.value})}
-                      placeholder="07XXXXXXXX"
-                      className="mt-1"
-                      required
-                    />
-                    <p className="text-xs text-gray-500 mt-1">يجب أن يكون رقم عراقي صحيح</p>
-                  </div>
-
-                  <div>
-                    <Label className="text-sm md:text-base">طريقة الدفع</Label>
-                    <RadioGroup 
-                      value={orderDetails.paymentMethod} 
-                      onValueChange={(value) => setOrderDetails({...orderDetails, paymentMethod: value})}
-                      className="mt-2"
-                    >
-                      <div className="flex items-center space-x-2 space-x-reverse">
-                        <RadioGroupItem value="cash_on_delivery" id="cash_on_delivery" />
-                        <Label htmlFor="cash_on_delivery">الدفع عند الاستلام</Label>
-                      </div>
-                      <div className="flex items-center space-x-2 space-x-reverse">
-                        <RadioGroupItem value="zain_cash" id="zain_cash" />
-                        <Label htmlFor="zain_cash">زين كاش</Label>
-                      </div>
-                      <div className="flex items-center space-x-2 space-x-reverse">
-                        <RadioGroupItem value="visa_card" id="visa_card" />
-                        <Label htmlFor="visa_card">فيزا كارد</Label>
-                      </div>
-                    </RadioGroup>
-                  </div>
-                </div>
-
-                <div className="border-t pt-4">
-                  <div className="flex justify-between items-center text-lg md:text-xl font-bold">
-                    <span>المجموع الكلي:</span>
-                    <span>{formatPrice(getTotalPrice())}</span>
-                  </div>
-                </div>
-
-                <Button 
-                  type="submit" 
-                  className="w-full bg-pink-600 hover:bg-pink-700 py-3"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? 'جاري الإرسال...' : 'تأكيد الطلب'}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    );
+  if (!adminSettings) {
+    return <div className="min-h-screen flex items-center justify-center">
+      <div className="text-lg">جاري تحميل إعدادات الدفع...</div>
+    </div>;
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-50 to-purple-50 py-4 md:py-8">
-      <div className="container mx-auto px-4 max-w-4xl">
-        <div className="flex items-center gap-4 mb-6 md:mb-8">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => navigate('/')}
-            className="flex items-center gap-2"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            العودة للمتجر
-          </Button>
-          <h1 className="text-2xl md:text-3xl font-bold">سلة التسوق</h1>
-        </div>
+    <div className="min-h-screen bg-background p-4">
+      <div className="max-w-4xl mx-auto">
+        <Button variant="outline" onClick={() => navigate('/')} className="mb-4 flex items-center gap-2">
+          <ArrowLeft className="w-4 h-4" />
+          العودة للرئيسية
+        </Button>
 
-        {items.length === 0 ? (
-          <Card>
-            <CardContent className="text-center py-8 md:py-12">
-              <p className="text-gray-500 text-lg mb-4">سلة التسوق فارغة</p>
-              <Button onClick={() => navigate('/')} className="bg-pink-600 hover:bg-pink-700">
-                ابدأ التسوق
-              </Button>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="space-y-4 md:space-y-6">
-            <Card>
-              <CardContent className="p-4 md:p-6">
-                <div className="space-y-4">
-                  {items.map((item) => (
-                    <div key={`${item.id}-${item.selectedColor || 'default'}`} className="flex flex-col sm:flex-row items-start sm:items-center gap-4 p-3 md:p-4 border rounded-lg">
+        <Card>
+          <CardHeader>
+            <CardTitle>سلة التسوق</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {items.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground">السلة فارغة</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {items.map((item) => (
+                  <div key={item.id} className="flex items-center justify-between border-b pb-4">
+                    <div className="flex items-center space-x-4">
                       <img
-                        src={item.image}
+                        src={item.image || '/placeholder.svg'}
                         alt={item.name}
-                        className="w-16 h-16 md:w-20 md:h-20 object-cover rounded-lg mx-auto sm:mx-0"
+                        className="w-20 h-20 object-cover rounded"
                       />
-                      <div className="flex-1 text-center sm:text-right">
-                        <h3 className="font-semibold text-base md:text-lg">{item.name}</h3>
+                      <div>
+                        <h3 className="text-lg font-semibold">{item.name}</h3>
+                        <p className="text-gray-600">{formatPrice(item.price)}</p>
                         {item.selectedColor && (
-                          <p className="text-sm text-gray-600">اللون: {item.selectedColor}</p>
+                          <p className="text-sm text-gray-500">اللون: {item.selectedColor}</p>
                         )}
-                        <p className="text-pink-600 font-bold text-sm md:text-base">{formatPrice(item.price)}</p>
                       </div>
-                      <div className="flex items-center gap-2 mx-auto sm:mx-0">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleQuantityChange(item.id, item.quantity - 1, item.selectedColor)}
-                        >
-                          <Minus className="w-4 h-4" />
-                        </Button>
-                        <span className="w-12 text-center font-semibold">{item.quantity}</span>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleQuantityChange(item.id, item.quantity + 1, item.selectedColor)}
-                        >
-                          <Plus className="w-4 h-4" />
-                        </Button>
-                      </div>
-                      <div className="text-base md:text-lg font-bold mx-auto sm:mx-0">
-                        {formatPrice(item.price * item.quantity)}
-                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
                       <Button
                         variant="outline"
-                        size="sm"
-                        onClick={() => removeFromCart(item.id, item.selectedColor)}
-                        className="text-red-600 hover:text-red-700 mx-auto sm:mx-0"
+                        size="icon"
+                        onClick={() => handleQuantityChange(item.id, item.quantity - 1, item.selectedColor)}
+                      >
+                        <Minus className="w-4 h-4" />
+                      </Button>
+                      <span>{item.quantity}</span>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => handleQuantityChange(item.id, item.quantity + 1, item.selectedColor)}
+                      >
+                        <Plus className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="icon"
+                        onClick={() => handleRemoveItem(item.id, item.selectedColor)}
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
-                  ))}
+                  </div>
+                ))}
+                <div className="text-2xl font-bold text-right">
+                  المجموع الكلي: {formatPrice(getTotalPrice())}
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
-            <Card>
-              <CardContent className="p-4 md:p-6">
-                <div className="flex justify-between items-center mb-4">
-                  <span className="text-lg md:text-xl font-bold">المجموع الكلي:</span>
-                  <span className="text-xl md:text-2xl font-bold text-pink-600">
-                    {formatPrice(getTotalPrice())}
-                  </span>
+        <Card>
+          <CardHeader>
+            <CardTitle>معلومات التسليم والدفع</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div>
+              <Label htmlFor="phone" className="text-base font-medium">رقم الهاتف</Label>
+              <Input
+                type="tel"
+                id="phone"
+                name="phone"
+                placeholder="07XXXXXXXXX"
+                value={orderForm.phone}
+                onChange={handleInputChange}
+                required
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="governorate" className="text-base font-medium">المحافظة</Label>
+              <Select onValueChange={(value) => setOrderForm(prev => ({ ...prev, governorate: value }))}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="اختر محافظة" defaultValue={orderForm.governorate} />
+                </SelectTrigger>
+                <SelectContent>
+                  {governorates.map((gov) => (
+                    <SelectItem key={gov} value={gov}>{gov}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="address" className="text-base font-medium">العنوان</Label>
+              <Input
+                type="text"
+                id="address"
+                name="address"
+                placeholder="أدخل عنوان التسليم بالتفصيل"
+                value={orderForm.address}
+                onChange={handleInputChange}
+                required
+              />
+            </div>
+
+            <div>
+              <Label className="text-base font-medium mb-4 block">طريقة الدفع</Label>
+              <RadioGroup
+                value={orderForm.paymentMethod}
+                onValueChange={(value) => setOrderForm(prev => ({ ...prev, paymentMethod: value }))}
+                className="space-y-3"
+              >
+                <div className="flex items-center space-x-2 space-x-reverse">
+                  <RadioGroupItem value="cash_on_delivery" id="cash" />
+                  <Label htmlFor="cash" className="flex items-center gap-2 cursor-pointer">
+                    <Truck className="w-4 h-4" />
+                    الدفع عند الاستلام
+                  </Label>
                 </div>
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <Button
-                    variant="outline"
-                    onClick={clearCart}
-                    className="flex-1 py-3"
-                  >
-                    إفراغ السلة
-                  </Button>
-                  <Button
-                    onClick={handleCheckout}
-                    className="flex-1 bg-pink-600 hover:bg-pink-700 py-3"
-                  >
-                    إتمام الشراء
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
+                
+                {adminSettings?.visa_card_config?.enabled && (
+                  <div className="flex items-center space-x-2 space-x-reverse">
+                    <RadioGroupItem value="visa_card" id="visa" />
+                    <Label htmlFor="visa" className="flex items-center gap-2 cursor-pointer">
+                      <CreditCard className="w-4 h-4" />
+                      فيزا كارد
+                    </Label>
+                  </div>
+                )}
+                
+                {adminSettings?.zain_cash_config?.enabled && (
+                  <div className="flex items-center space-x-2 space-x-reverse">
+                    <RadioGroupItem value="zain_cash" id="zain" />
+                    <Label htmlFor="zain" className="flex items-center gap-2 cursor-pointer">
+                      <Smartphone className="w-4 h-4" />
+                      زين كاش
+                    </Label>
+                  </div>
+                )}
+              </RadioGroup>
+            </div>
+
+            <Button onClick={handleOrderSubmit} className="w-full bg-pink-600 hover:bg-pink-700" disabled={loading}>
+              تأكيد الطلب
+            </Button>
+          </CardContent>
+        </Card>
       </div>
+
+      <PaymentDialog
+        isOpen={isPaymentDialogOpen}
+        onClose={closePaymentDialog}
+        paymentMethod={selectedPaymentMethod}
+        orderData={pendingOrder}
+        onPaymentSuccess={handlePaymentSuccess}
+      />
     </div>
   );
 };
