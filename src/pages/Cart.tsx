@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -27,7 +26,7 @@ const Cart = () => {
   });
 
   const formatPrice = (price: number) => {
-    return `${price.toLocaleString('ar-IQ')} دينار عراقي`;
+    return `${price.toLocaleString('ar-IQ')} د.ع`;
   };
 
   const handleQuantityChange = (productId: string, newQuantity: number) => {

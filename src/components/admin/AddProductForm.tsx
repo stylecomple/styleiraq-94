@@ -121,14 +121,14 @@ const AddProductForm = ({ onClose }: AddProductFormProps) => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="price">السعر (ر.س) *</Label>
+              <Label htmlFor="price">السعر (د.ع) *</Label>
               <Input
                 id="price"
                 type="number"
-                step="0.01"
+                step="1"
                 value={formData.price}
                 onChange={(e) => handleInputChange('price', e.target.value)}
-                placeholder="0.00"
+                placeholder="0"
                 required
               />
             </div>
