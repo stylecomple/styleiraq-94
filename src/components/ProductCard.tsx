@@ -20,6 +20,7 @@ interface Product {
   images: string[] | null;
   colors: string[] | null;
   stock_quantity: number | null;
+  discount_percentage: number | null;
 }
 
 interface ProductCardProps {
@@ -44,6 +45,11 @@ const ProductCard = ({ product }: ProductCardProps) => {
 
   const formatPrice = (price: number) => {
     return `${price.toLocaleString('ar-IQ')} د.ع`;
+  };
+
+  const calculateDiscountedPrice = (price: number, discountPercentage: number | null) => {
+    if (!discountPercentage || discountPercentage === 0) return price;
+    return price * (1 - discountPercentage / 100);
   };
 
   const allImages = product.images && product.images.length > 0 
@@ -74,6 +80,9 @@ const ProductCard = ({ product }: ProductCardProps) => {
 
   const isOutOfStock = !product.stock_quantity || product.stock_quantity === 0;
   const hasColors = product.colors && product.colors.length > 0;
+  const isExclusiveOffer = product.categories?.includes('exclusive_offers');
+  const hasDiscount = isExclusiveOffer && product.discount_percentage && product.discount_percentage > 0;
+  const finalPrice = hasDiscount ? calculateDiscountedPrice(product.price, product.discount_percentage) : product.price;
 
   // الحصول على الفئة الأولى لعرضها كشارة
   const primaryCategory = product.categories && product.categories.length > 0 
@@ -92,6 +101,13 @@ const ProductCard = ({ product }: ProductCardProps) => {
           
           {/* Gradient Overlay */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+          
+          {/* Discount Badge */}
+          {hasDiscount && (
+            <div className="absolute top-4 left-4 bg-red-500 text-white px-3 py-1 rounded-full text-sm font-bold shadow-lg animate-pulse">
+              خصم {product.discount_percentage}%
+            </div>
+          )}
           
           {/* Action Buttons */}
           <div className="absolute top-4 right-4 flex flex-col gap-2">
@@ -192,10 +208,24 @@ const ProductCard = ({ product }: ProductCardProps) => {
                   )}
                   
                   <div className="border-t pt-4">
-                    <div className="flex items-center justify-center mb-4">
-                      <span className="text-3xl font-bold text-pink-600">
-                        {formatPrice(product.price)}
-                      </span>
+                    <div className="flex items-center justify-center mb-4 space-x-2">
+                      {hasDiscount ? (
+                        <div className="text-center">
+                          <div className="text-lg text-gray-500 line-through">
+                            {formatPrice(product.price)}
+                          </div>
+                          <div className="text-3xl font-bold text-red-600">
+                            {formatPrice(finalPrice)}
+                          </div>
+                          <div className="text-sm text-red-500 font-medium">
+                            وفر {formatPrice(product.price - finalPrice)}
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-3xl font-bold text-pink-600">
+                          {formatPrice(finalPrice)}
+                        </span>
+                      )}
                     </div>
                     
                     <Button 
@@ -271,9 +301,20 @@ const ProductCard = ({ product }: ProductCardProps) => {
         
         <CardContent className="pt-0 px-6 pb-6">
           <div className="flex items-center justify-center mb-4">
-            <span className="text-2xl font-bold bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent">
-              {formatPrice(product.price)}
-            </span>
+            {hasDiscount ? (
+              <div className="text-center">
+                <div className="text-sm text-gray-500 line-through">
+                  {formatPrice(product.price)}
+                </div>
+                <div className="text-2xl font-bold bg-gradient-to-r from-red-600 to-red-700 bg-clip-text text-transparent">
+                  {formatPrice(finalPrice)}
+                </div>
+              </div>
+            ) : (
+              <span className="text-2xl font-bold bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent">
+                {formatPrice(finalPrice)}
+              </span>
+            )}
           </div>
           
           <Button 

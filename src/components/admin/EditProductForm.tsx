@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { X } from 'lucide-react';
 
@@ -23,12 +24,22 @@ const EditProductForm = ({ product, onClose }: EditProductFormProps) => {
     name: product.name || '',
     description: product.description || '',
     price: product.price?.toString() || '',
-    category: product.category || '',
+    categories: product.categories || [],
     cover_image: product.cover_image || '',
     images: product.images?.join('\n') || '',
     colors: product.colors?.join('\n') || '',
-    stock_quantity: product.stock_quantity?.toString() || ''
+    stock_quantity: product.stock_quantity?.toString() || '',
+    discount_percentage: product.discount_percentage?.toString() || '0'
   });
+
+  const availableCategories = [
+    { value: 'makeup', label: 'مكياج' },
+    { value: 'perfumes', label: 'عطور' },
+    { value: 'flowers', label: 'ورد' },
+    { value: 'home', label: 'مستلزمات منزلية' },
+    { value: 'personal_care', label: 'عناية شخصية' },
+    { value: 'exclusive_offers', label: 'العروض الحصرية' }
+  ];
 
   const updateProductMutation = useMutation({
     mutationFn: async (productData: any) => {
@@ -46,11 +57,12 @@ const EditProductForm = ({ product, onClose }: EditProductFormProps) => {
         name: productData.name,
         description: productData.description || null,
         price: parseInt(productData.price),
-        category: productData.category,
+        categories: productData.categories,
         cover_image: productData.cover_image || null,
         images: images,
         colors: colors,
-        stock_quantity: parseInt(productData.stock_quantity) || 0
+        stock_quantity: parseInt(productData.stock_quantity) || 0,
+        discount_percentage: parseInt(productData.discount_percentage) || 0
       };
 
       console.log('Product to update:', productToUpdate);
@@ -89,7 +101,7 @@ const EditProductForm = ({ product, onClose }: EditProductFormProps) => {
     e.preventDefault();
     console.log('Form submitted with data:', formData);
     
-    if (!formData.name || !formData.price || !formData.category) {
+    if (!formData.name || !formData.price || formData.categories.length === 0) {
       toast({
         title: 'خطأ',
         description: 'يرجى ملء جميع الحقول المطلوبة',
@@ -105,6 +117,17 @@ const EditProductForm = ({ product, onClose }: EditProductFormProps) => {
     console.log(`Updating ${field} to:`, value);
     setFormData(prev => ({ ...prev, [field]: value }));
   };
+
+  const handleCategoryChange = (categoryValue: string, checked: boolean) => {
+    setFormData(prev => ({
+      ...prev,
+      categories: checked 
+        ? [...prev.categories, categoryValue]
+        : prev.categories.filter(cat => cat !== categoryValue)
+    }));
+  };
+
+  const isExclusiveOffer = formData.categories.includes('exclusive_offers');
 
   return (
     <Card className="mb-6">
@@ -129,22 +152,6 @@ const EditProductForm = ({ product, onClose }: EditProductFormProps) => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="category">الفئة *</Label>
-              <Select value={formData.category} onValueChange={(value) => handleInputChange('category', value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="اختر الفئة" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="makeup">مكياج</SelectItem>
-                  <SelectItem value="perfumes">عطور</SelectItem>
-                  <SelectItem value="flowers">ورد</SelectItem>
-                  <SelectItem value="home">مستلزمات منزلية</SelectItem>
-                  <SelectItem value="personal_care">عناية شخصية</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
               <Label htmlFor="price">السعر (د.ع) *</Label>
               <Input
                 id="price"
@@ -166,6 +173,42 @@ const EditProductForm = ({ product, onClose }: EditProductFormProps) => {
                 onChange={(e) => handleInputChange('stock_quantity', e.target.value)}
                 placeholder="0"
               />
+            </div>
+
+            {isExclusiveOffer && (
+              <div className="space-y-2">
+                <Label htmlFor="discount">نسبة الخصم (%)</Label>
+                <Input
+                  id="discount"
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={formData.discount_percentage}
+                  onChange={(e) => handleInputChange('discount_percentage', e.target.value)}
+                  placeholder="0"
+                />
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label>الفئات *</Label>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              {availableCategories.map((category) => (
+                <div key={category.value} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={category.value}
+                    checked={formData.categories.includes(category.value)}
+                    onCheckedChange={(checked) => handleCategoryChange(category.value, checked as boolean)}
+                  />
+                  <Label 
+                    htmlFor={category.value} 
+                    className="text-sm font-normal cursor-pointer"
+                  >
+                    {category.label}
+                  </Label>
+                </div>
+              ))}
             </div>
           </div>
 

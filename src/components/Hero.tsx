@@ -115,7 +115,7 @@ const Hero = ({ onStartShopping, onBrowseCollections }: HeroProps) => {
               </div>
 
               <div className="absolute top-1/2 -right-8 bg-white rounded-xl p-3 shadow-lg">
-                <div className="text-2xl">🌸</div>
+                <div className="text-2xl">🧴</div>
               </div>
 
               <div className="absolute top-1/4 -left-8 bg-white rounded-xl p-3 shadow-lg">
@@ -129,7 +129,7 @@ const Hero = ({ onStartShopping, onBrowseCollections }: HeroProps) => {
         <div className="mt-20 grid grid-cols-2 md:grid-cols-4 gap-6">
           {[
             { icon: '💄', name: 'مكياج', color: 'pink' },
-            { icon: '🌸', name: 'عطور', color: 'purple' },
+            { icon: '🧴', name: 'عطور', color: 'purple' },
             { icon: '🌹', name: 'ورد', color: 'rose' },
             { icon: '🏠', name: 'منزلية', color: 'indigo' }
           ].map((category, index) => (

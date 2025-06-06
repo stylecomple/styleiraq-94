@@ -133,6 +133,7 @@ export type Database = {
           cover_image: string | null
           created_at: string | null
           description: string | null
+          discount_percentage: number | null
           id: string
           images: string[] | null
           is_active: boolean | null
@@ -147,6 +148,7 @@ export type Database = {
           cover_image?: string | null
           created_at?: string | null
           description?: string | null
+          discount_percentage?: number | null
           id?: string
           images?: string[] | null
           is_active?: boolean | null
@@ -161,6 +163,7 @@ export type Database = {
           cover_image?: string | null
           created_at?: string | null
           description?: string | null
+          discount_percentage?: number | null
           id?: string
           images?: string[] | null
           is_active?: boolean | null
