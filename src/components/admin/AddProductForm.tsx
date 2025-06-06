@@ -10,6 +10,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { X } from 'lucide-react';
+import ImageUploadCrop from './ImageUploadCrop';
+import MultiImageUpload from './MultiImageUpload';
 
 interface AddProductFormProps {
   onClose: () => void;
@@ -24,7 +26,7 @@ const AddProductForm = ({ onClose }: AddProductFormProps) => {
     price: '',
     categories: [] as string[],
     cover_image: '',
-    images: '',
+    images: [] as string[],
     colors: '',
     stock_quantity: ''
   });
@@ -41,10 +43,6 @@ const AddProductForm = ({ onClose }: AddProductFormProps) => {
   const addProductMutation = useMutation({
     mutationFn: async (productData: any) => {
       console.log('Adding product with data:', productData);
-      
-      const images = productData.images 
-        ? productData.images.split('\n').filter((url: string) => url.trim()) 
-        : [];
 
       const colors = productData.colors 
         ? productData.colors.split('\n').filter((color: string) => color.trim()) 
@@ -56,7 +54,7 @@ const AddProductForm = ({ onClose }: AddProductFormProps) => {
         price: parseInt(productData.price),
         categories: productData.categories,
         cover_image: productData.cover_image || null,
-        images: images,
+        images: productData.images,
         colors: colors,
         stock_quantity: parseInt(productData.stock_quantity) || 0
       };
@@ -86,7 +84,7 @@ const AddProductForm = ({ onClose }: AddProductFormProps) => {
         price: '',
         categories: [],
         cover_image: '',
-        images: '',
+        images: [],
         colors: '',
         stock_quantity: ''
       });
@@ -141,7 +139,7 @@ const AddProductForm = ({ onClose }: AddProductFormProps) => {
         </Button>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="name">اسم المنتج *</Label>
@@ -208,24 +206,21 @@ const AddProductForm = ({ onClose }: AddProductFormProps) => {
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="cover_image">رابط الصورة الرئيسية</Label>
-            <Input
-              id="cover_image"
-              value={formData.cover_image}
-              onChange={(e) => handleInputChange('cover_image', e.target.value)}
-              placeholder="https://example.com/image.jpg"
+          <div className="space-y-4">
+            <ImageUploadCrop
+              currentImage={formData.cover_image}
+              onImageUploaded={(url) => setFormData(prev => ({ ...prev, cover_image: url }))}
+              onRemove={() => setFormData(prev => ({ ...prev, cover_image: '' }))}
+              label="الصورة الرئيسية *"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="images">روابط الصور الإضافية (سطر واحد لكل رابط)</Label>
-            <Textarea
-              id="images"
-              value={formData.images}
-              onChange={(e) => handleInputChange('images', e.target.value)}
-              placeholder="https://example.com/image1.jpg&#10;https://example.com/image2.jpg"
-              rows={3}
+            <Label>الصور الإضافية</Label>
+            <MultiImageUpload
+              images={formData.images}
+              onImagesChange={(images) => setFormData(prev => ({ ...prev, images }))}
+              maxImages={5}
             />
           </div>
 
