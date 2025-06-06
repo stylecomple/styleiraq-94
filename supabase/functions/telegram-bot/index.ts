@@ -83,11 +83,13 @@ const handler = async (req: Request): Promise<Response> => {
     const userName = message.from.first_name;
     const username = message.from.username;
 
-    console.log(`💬 Message from ${userName} (${chatId}): ${text}`);
+    console.log(`💬 Message from ${userName} (@${username || 'no_username'}) (${chatId}): ${text}`);
 
-    // Store or update user in database
+    // Store or update user in database EVERY TIME they send a message
     try {
-      console.log('💾 Storing user in database...');
+      console.log('💾 Storing/updating user in database...');
+      console.log(`📊 User data: chat_id=${chatId}, first_name=${userName}, username=${username || 'null'}`);
+      
       const { data, error: upsertError } = await supabase
         .from('telegram_users')
         .upsert({
@@ -103,18 +105,32 @@ const handler = async (req: Request): Promise<Response> => {
 
       if (upsertError) {
         console.error('❌ Error storing user:', upsertError);
+        console.error('❌ Error details:', JSON.stringify(upsertError, null, 2));
       } else {
         console.log('✅ User stored/updated successfully:', data);
+        
+        // Verify the user was actually stored
+        const { data: verifyData, error: verifyError } = await supabase
+          .from('telegram_users')
+          .select('*')
+          .eq('chat_id', chatId);
+          
+        if (verifyError) {
+          console.error('❌ Error verifying user:', verifyError);
+        } else {
+          console.log('✅ User verification result:', verifyData);
+        }
       }
     } catch (error) {
       console.error('❌ Database error:', error);
+      console.error('❌ Full error details:', JSON.stringify(error, null, 2));
     }
 
     // Simple bot responses
     let responseText = '';
     
     if (text.toLowerCase().includes('/start')) {
-      responseText = `مرحباً ${userName}! 👋\nأهلاً بك في بوت ستايل العامرية. سوف تحصل على إشعارات بالطلبات الجديدة.\n\nكيف يمكنني مساعدتك؟`;
+      responseText = `مرحباً ${userName}! 👋\nأهلاً بك في بوت ستايل العامرية. سوف تحصل على إشعارات بالطلبات الجديدة.\n\nتم تسجيلك بنجاح! ✅\n\nكيف يمكنني مساعدتك؟`;
     } else if (text.toLowerCase().includes('hello') || text.toLowerCase().includes('مرحبا')) {
       responseText = `مرحباً ${userName}! 😊 كيف حالك؟`;
     } else if (text.toLowerCase().includes('order') || text.toLowerCase().includes('طلب')) {
