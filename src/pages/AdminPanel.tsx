@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -6,10 +5,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
-import { Shield, Users, Package, BarChart3, Plus, ArrowLeft, Volume2, TrendingUp } from 'lucide-react';
+import { Shield, Users, Package, BarChart3, Plus, ArrowLeft, Volume2, TrendingUp, Settings } from 'lucide-react';
 import ProductsManagement from '@/components/admin/ProductsManagement';
 import OrdersManagement from '@/components/admin/OrdersManagement';
 import AddProductForm from '@/components/admin/AddProductForm';
+import CategoryManager from '@/components/admin/CategoryManager';
 import StatisticsPanel from '@/components/admin/StatisticsPanel';
 import { useOrderNotifications } from '@/hooks/useOrderNotifications';
 import { useNotificationSound } from '@/hooks/useNotificationSound';
@@ -32,6 +32,15 @@ const AdminPanel = () => {
     totalOrders: 0
   });
   const [showAddProduct, setShowAddProduct] = useState(false);
+  const [showCategoryManager, setShowCategoryManager] = useState(false);
+  const [categories, setCategories] = useState([
+    { id: 'makeup', name: 'مكياج', icon: '💄' },
+    { id: 'perfumes', name: 'عطور', icon: '🌸' },
+    { id: 'flowers', name: 'ورد', icon: '🌹' },
+    { id: 'home', name: 'مستلزمات منزلية', icon: '🏠' },
+    { id: 'personal_care', name: 'عناية شخصية', icon: '🧴' },
+    { id: 'exclusive_offers', name: 'العروض الحصرية', icon: '✨' }
+  ]);
 
   // تفعيل مراقبة الطلبات الجديدة
   useOrderNotifications();
@@ -110,6 +119,24 @@ const AdminPanel = () => {
       loading
     });
   }, [user, isAdmin, loading]);
+
+  // تحميل الفئات من localStorage
+  useEffect(() => {
+    const savedCategories = localStorage.getItem('productCategories');
+    if (savedCategories) {
+      try {
+        setCategories(JSON.parse(savedCategories));
+      } catch (error) {
+        console.error('Error loading categories:', error);
+      }
+    }
+  }, []);
+
+  // حفظ الفئات في localStorage
+  const handleCategoriesChange = (newCategories: typeof categories) => {
+    setCategories(newCategories);
+    localStorage.setItem('productCategories', JSON.stringify(newCategories));
+  };
 
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center">
@@ -190,11 +217,25 @@ const AdminPanel = () => {
           <TabsContent value="products" className="space-y-6">
             <div className="flex justify-between items-center">
               <h2 className="text-2xl font-bold">إدارة المنتجات</h2>
-              <Button onClick={() => setShowAddProduct(true)} className="bg-pink-600 hover:bg-pink-700">
-                <Plus className="w-4 h-4 mr-2" />
-                إضافة منتج جديد
-              </Button>
+              <div className="flex gap-3">
+                <Button onClick={() => setShowCategoryManager(true)} variant="outline" className="border-pink-600 text-pink-600 hover:bg-pink-50">
+                  <Settings className="w-4 h-4 mr-2" />
+                  إدارة الفئات
+                </Button>
+                <Button onClick={() => setShowAddProduct(true)} className="bg-pink-600 hover:bg-pink-700">
+                  <Plus className="w-4 h-4 mr-2" />
+                  إضافة منتج جديد
+                </Button>
+              </div>
             </div>
+            
+            {showCategoryManager && (
+              <CategoryManager 
+                categories={categories} 
+                onCategoriesChange={handleCategoriesChange}
+                onClose={() => setShowCategoryManager(false)} 
+              />
+            )}
             
             {showAddProduct && <AddProductForm onClose={() => setShowAddProduct(false)} />}
             

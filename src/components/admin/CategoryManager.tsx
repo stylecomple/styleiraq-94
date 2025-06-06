@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,9 +16,10 @@ interface Category {
 interface CategoryManagerProps {
   categories: Category[];
   onCategoriesChange: (categories: Category[]) => void;
+  onClose: () => void;
 }
 
-const CategoryManager = ({ categories, onCategoriesChange }: CategoryManagerProps) => {
+const CategoryManager = ({ categories, onCategoriesChange, onClose }: CategoryManagerProps) => {
   const { toast } = useToast();
   const [newCategory, setNewCategory] = useState({ name: '', icon: '' });
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -106,12 +106,14 @@ const CategoryManager = ({ categories, onCategoriesChange }: CategoryManagerProp
   };
 
   return (
-    <Card>
-      <CardHeader>
+    <Card className="mb-6">
+      <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>إدارة الفئات</CardTitle>
+        <Button variant="outline" size="sm" onClick={onClose}>
+          <X className="w-4 h-4" />
+        </Button>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* إضافة فئة جديدة */}
         <div className="border rounded-lg p-4 space-y-4">
           <h3 className="font-medium">إضافة فئة جديدة</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
@@ -143,7 +145,6 @@ const CategoryManager = ({ categories, onCategoriesChange }: CategoryManagerProp
           </div>
         </div>
 
-        {/* قائمة الفئات الموجودة */}
         <div className="space-y-2">
           <h3 className="font-medium">الفئات الموجودة</h3>
           <div className="space-y-2">
