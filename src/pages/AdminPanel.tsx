@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -5,13 +6,15 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
-import { Shield, Users, Package, BarChart3, Plus, ArrowLeft, Volume2 } from 'lucide-react';
+import { Shield, Users, Package, BarChart3, Plus, ArrowLeft, Volume2, TrendingUp } from 'lucide-react';
 import ProductsManagement from '@/components/admin/ProductsManagement';
 import OrdersManagement from '@/components/admin/OrdersManagement';
 import AddProductForm from '@/components/admin/AddProductForm';
+import StatisticsPanel from '@/components/admin/StatisticsPanel';
 import { useOrderNotifications } from '@/hooks/useOrderNotifications';
 import { useNotificationSound } from '@/hooks/useNotificationSound';
 import AdminSettings from '@/components/admin/AdminSettings';
+
 const AdminPanel = () => {
   const {
     user,
@@ -32,15 +35,17 @@ const AdminPanel = () => {
 
   // تفعيل مراقبة الطلبات الجديدة
   useOrderNotifications();
+
   useEffect(() => {
     if (!loading && (!user || !isAdmin)) {
       navigate('/');
     }
   }, [user, isAdmin, loading, navigate]);
+
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        // Get total users count
+        // الحصول على عدد المستخدمين الإجمالي
         const {
           count: totalUsers
         } = await supabase.from('profiles').select('*', {
@@ -48,7 +53,7 @@ const AdminPanel = () => {
           head: true
         });
 
-        // Get admin users count
+        // الحصول على عدد المستخدمين المديرين
         const {
           count: adminUsers
         } = await supabase.from('user_roles').select('*', {
@@ -56,7 +61,7 @@ const AdminPanel = () => {
           head: true
         }).eq('role', 'admin');
 
-        // Get total products count
+        // الحصول على عدد المنتجات الإجمالي
         const {
           count: totalProducts
         } = await supabase.from('products').select('*', {
@@ -64,13 +69,14 @@ const AdminPanel = () => {
           head: true
         });
 
-        // Get total orders count
+        // الحصول على عدد الطلبات الإجمالي
         const {
           count: totalOrders
         } = await supabase.from('orders').select('*', {
           count: 'exact',
           head: true
         });
+
         setStats({
           totalUsers: totalUsers || 0,
           adminUsers: adminUsers || 0,
@@ -78,37 +84,43 @@ const AdminPanel = () => {
           totalOrders: totalOrders || 0
         });
       } catch (error) {
-        console.error('Error fetching stats:', error);
+        console.error('خطأ في جلب الإحصائيات:', error);
       }
     };
+
     if (isAdmin) {
       fetchStats();
     }
   }, [isAdmin]);
+
   const testNotificationSound = async () => {
-    console.log('🧪 Testing notification sound...');
+    console.log('🧪 اختبار صوت الإشعار...');
     try {
       const result = await playNotificationSound();
-      console.log('Test result:', result);
+      console.log('نتيجة الاختبار:', result);
     } catch (error) {
-      console.error('Test error:', error);
+      console.error('خطأ في الاختبار:', error);
     }
   };
+
   useEffect(() => {
-    console.log('Admin status:', {
+    console.log('حالة المدير:', {
       user: user?.id,
       isAdmin,
       loading
     });
   }, [user, isAdmin, loading]);
+
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center">
         <div className="text-lg">جاري التحميل...</div>
       </div>;
   }
+
   if (!user || !isAdmin) {
     return null;
   }
+
   return <div className="min-h-screen bg-background p-6">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
@@ -117,7 +129,6 @@ const AdminPanel = () => {
               <ArrowLeft className="w-4 h-4" />
               العودة للرئيسية
             </Button>
-            
           </div>
           <div className="flex items-center gap-3 mb-2">
             <Shield className="w-8 h-8 text-pink-600" />
@@ -169,9 +180,10 @@ const AdminPanel = () => {
         </div>
 
         <Tabs defaultValue="products" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="products">إدارة المنتجات</TabsTrigger>
             <TabsTrigger value="orders">إدارة الطلبات</TabsTrigger>
+            <TabsTrigger value="statistics">الإحصائيات</TabsTrigger>
             <TabsTrigger value="settings">الإعدادات</TabsTrigger>
           </TabsList>
 
@@ -194,6 +206,10 @@ const AdminPanel = () => {
             <OrdersManagement />
           </TabsContent>
 
+          <TabsContent value="statistics" className="space-y-6">
+            <StatisticsPanel />
+          </TabsContent>
+
           <TabsContent value="settings" className="space-y-6">
             <h2 className="text-2xl font-bold">إعدادات المتجر</h2>
             <AdminSettings />
@@ -202,4 +218,5 @@ const AdminPanel = () => {
       </div>
     </div>;
 };
+
 export default AdminPanel;

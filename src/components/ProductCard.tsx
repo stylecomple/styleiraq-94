@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -241,14 +240,6 @@ const ProductCard = ({ product }: ProductCardProps) => {
               </div>
             </DialogContent>
           </Dialog>
-          
-          {/* Category Badge */}
-          <Badge 
-            variant="secondary" 
-            className="absolute top-4 left-4 bg-gradient-to-r from-pink-500 to-purple-600 text-white shadow-lg border-0 rounded-full px-3 py-1"
-          >
-            {categoryLabels[primaryCategory as keyof typeof categoryLabels] || primaryCategory}
-          </Badge>
         </div>
         
         <CardHeader className="pb-3 px-6">
