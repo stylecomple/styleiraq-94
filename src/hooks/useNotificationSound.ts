@@ -30,19 +30,22 @@ export const useNotificationSound = () => {
       const playPromise = audio.play();
       
       if (playPromise !== undefined) {
-        playPromise
+        return playPromise
           .then(() => {
             console.log('Notification sound played successfully');
+            return true;
           })
           .catch(error => {
             console.log('Audio play failed, trying Web Audio API fallback:', error);
             // استخدام Web Audio API كبديل
-            playWebAudioNotification();
+            return playWebAudioNotification();
           });
       }
+      
+      return Promise.resolve(true);
     } catch (error) {
       console.error('Error with audio playback, using Web Audio API:', error);
-      playWebAudioNotification();
+      return playWebAudioNotification();
     }
   }, []);
 
@@ -75,8 +78,10 @@ export const useNotificationSound = () => {
       playBeep(800, currentTime + 0.6, 0.2);
       
       console.log('Web Audio notification played');
+      return Promise.resolve(true);
     } catch (error) {
       console.error('Web Audio API failed:', error);
+      return Promise.resolve(false);
     }
   };
 

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -71,6 +72,11 @@ const AdminPanel = () => {
       fetchStats();
     }
   }, [isAdmin]);
+
+  // إضافة تسجيل للتأكد من أن الأدمن مُعرف بشكل صحيح
+  useEffect(() => {
+    console.log('Admin status:', { user: user?.id, isAdmin, loading });
+  }, [user, isAdmin, loading]);
 
   if (loading) {
     return (

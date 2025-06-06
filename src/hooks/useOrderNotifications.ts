@@ -63,7 +63,7 @@ export const useOrderNotifications = () => {
           
           // تشغيل صوت التنبيه
           try {
-            playNotificationSound();
+            await playNotificationSound();
             console.log('Notification sound triggered');
           } catch (error) {
             console.error('Error playing notification sound:', error);
