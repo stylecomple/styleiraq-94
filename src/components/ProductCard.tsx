@@ -63,12 +63,7 @@ const ProductCard = ({ product }: ProductCardProps) => {
       return;
     }
 
-    const productToAdd = {
-      ...product,
-      selectedColor: selectedColor || undefined
-    };
-    
-    addToCart(productToAdd);
+    addToCart(product, selectedColor || undefined);
     
     toast({
       title: "تم إضافة المنتج",

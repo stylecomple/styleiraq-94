@@ -8,13 +8,14 @@ interface CartItem {
   price: number;
   quantity: number;
   image: string;
+  selectedColor?: string;
 }
 
 interface CartContextType {
   items: CartItem[];
-  addToCart: (product: any) => void;
-  removeFromCart: (productId: string) => void;
-  updateQuantity: (productId: string, quantity: number) => void;
+  addToCart: (product: any, selectedColor?: string) => void;
+  removeFromCart: (productId: string, selectedColor?: string) => void;
+  updateQuantity: (productId: string, quantity: number, selectedColor?: string) => void;
   clearCart: () => void;
   getTotalItems: () => number;
   getTotalPrice: () => number;
@@ -38,49 +39,61 @@ export const CartProvider = ({ children }: CartProviderProps) => {
   const [items, setItems] = useState<CartItem[]>([]);
   const { toast } = useToast();
 
-  const addToCart = (product: any) => {
+  const addToCart = (product: any, selectedColor?: string) => {
     setItems(prevItems => {
-      const existingItem = prevItems.find(item => item.id === product.id);
+      const itemKey = selectedColor ? `${product.id}-${selectedColor}` : product.id;
+      const existingItem = prevItems.find(item => 
+        selectedColor 
+          ? item.id === product.id && item.selectedColor === selectedColor
+          : item.id === product.id && !item.selectedColor
+      );
       
       if (existingItem) {
         toast({
           title: "تم تحديث السلة",
-          description: `تم زيادة كمية ${product.name} في السلة`,
+          description: `تم زيادة كمية ${product.name} ${selectedColor ? `(${selectedColor})` : ''} في السلة`,
         });
         return prevItems.map(item =>
-          item.id === product.id
+          (selectedColor ? (item.id === product.id && item.selectedColor === selectedColor) : (item.id === product.id && !item.selectedColor))
             ? { ...item, quantity: item.quantity + 1 }
             : item
         );
       } else {
         toast({
           title: "تم إضافة المنتج",
-          description: `تم إضافة ${product.name} إلى السلة`,
+          description: `تم إضافة ${product.name} ${selectedColor ? `(${selectedColor})` : ''} إلى السلة`,
         });
         return [...prevItems, {
           id: product.id,
           name: product.name,
-          price: Math.round(product.price), // تأكد من أن السعر رقم صحيح
+          price: Math.round(product.price),
           quantity: 1,
-          image: product.cover_image || '/placeholder.svg'
+          image: product.cover_image || '/placeholder.svg',
+          selectedColor: selectedColor
         }];
       }
     });
   };
 
-  const removeFromCart = (productId: string) => {
-    setItems(prevItems => prevItems.filter(item => item.id !== productId));
+  const removeFromCart = (productId: string, selectedColor?: string) => {
+    setItems(prevItems => prevItems.filter(item => 
+      selectedColor 
+        ? !(item.id === productId && item.selectedColor === selectedColor)
+        : !(item.id === productId && !item.selectedColor)
+    ));
   };
 
-  const updateQuantity = (productId: string, quantity: number) => {
+  const updateQuantity = (productId: string, quantity: number, selectedColor?: string) => {
     if (quantity <= 0) {
-      removeFromCart(productId);
+      removeFromCart(productId, selectedColor);
       return;
     }
     
     setItems(prevItems =>
       prevItems.map(item =>
-        item.id === productId ? { ...item, quantity } : item
+        (selectedColor ? (item.id === productId && item.selectedColor === selectedColor) : (item.id === productId && !item.selectedColor))
+          ? { ...item, quantity }
+          : item
       )
     );
   };

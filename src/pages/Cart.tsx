@@ -53,11 +53,11 @@ const Cart = () => {
     return `${price.toLocaleString('ar-IQ')} د.ع`;
   };
 
-  const handleQuantityChange = (productId: string, newQuantity: number) => {
+  const handleQuantityChange = (productId: string, newQuantity: number, selectedColor?: string) => {
     if (newQuantity < 1) {
-      removeFromCart(productId);
+      removeFromCart(productId, selectedColor);
     } else {
-      updateQuantity(productId, newQuantity);
+      updateQuantity(productId, newQuantity, selectedColor);
     }
   };
 
@@ -368,7 +368,7 @@ const Cart = () => {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleQuantityChange(item.id, item.quantity - 1)}
+                          onClick={() => handleQuantityChange(item.id, item.quantity - 1, item.selectedColor)}
                         >
                           <Minus className="w-4 h-4" />
                         </Button>
@@ -376,7 +376,7 @@ const Cart = () => {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
+                          onClick={() => handleQuantityChange(item.id, item.quantity + 1, item.selectedColor)}
                         >
                           <Plus className="w-4 h-4" />
                         </Button>
@@ -387,7 +387,7 @@ const Cart = () => {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => removeFromCart(item.id)}
+                        onClick={() => removeFromCart(item.id, item.selectedColor)}
                         className="text-red-600 hover:text-red-700 mx-auto sm:mx-0"
                       >
                         <Trash2 className="w-4 h-4" />
