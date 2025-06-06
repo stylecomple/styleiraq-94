@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -136,8 +135,21 @@ const Cart = () => {
         throw itemsError;
       }
 
-      // إرسال إشعار Telegram
-      await sendTelegramNotification(order.id);
+      // إرسال إشعار Telegram - now with the correct orderId
+      try {
+        console.log('Sending Telegram notification for order:', order.id);
+        const { error } = await supabase.functions.invoke('send-telegram-notification', {
+          body: { orderId: order.id }
+        });
+        
+        if (error) {
+          console.error('Error sending telegram notification:', error);
+        } else {
+          console.log('Telegram notification sent successfully');
+        }
+      } catch (error) {
+        console.error('Error invoking telegram function:', error);
+      }
 
       toast({
         title: "تم إرسال الطلب",
