@@ -35,10 +35,19 @@ const handler = async (req: Request): Promise<Response> => {
   try {
     const telegramToken = Deno.env.get('TELEGRAM_BOT_TOKEN');
     const functionSecret = Deno.env.get('FUNCTION_SECRET');
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     
     if (!telegramToken) {
       throw new Error('TELEGRAM_BOT_TOKEN not found');
     }
+
+    if (!supabaseUrl || !supabaseKey) {
+      throw new Error('Supabase environment variables not found');
+    }
+
+    // Initialize Supabase client
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Verify the secret parameter for webhook security
     const url = new URL(req.url);
@@ -61,22 +70,46 @@ const handler = async (req: Request): Promise<Response> => {
     const chatId = message.chat.id;
     const text = message.text;
     const userName = message.from.first_name;
+    const username = message.from.username;
 
     console.log(`💬 Message from ${userName}: ${text}`);
+
+    // Store or update user in database
+    try {
+      const { error: upsertError } = await supabase
+        .from('telegram_users')
+        .upsert({
+          chat_id: chatId,
+          first_name: userName,
+          username: username || null,
+          is_active: true,
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'chat_id'
+        });
+
+      if (upsertError) {
+        console.error('❌ Error storing user:', upsertError);
+      } else {
+        console.log('✅ User stored/updated successfully');
+      }
+    } catch (error) {
+      console.error('❌ Database error:', error);
+    }
 
     // Simple bot responses
     let responseText = '';
     
     if (text.toLowerCase().includes('/start')) {
-      responseText = `مرحباً ${userName}! 👋\nأهلاً بك في بوت ستايل العامرية. كيف يمكنني مساعدتك؟`;
+      responseText = `مرحباً ${userName}! 👋\nأهلاً بك في بوت ستايل العامرية. سوف تحصل على إشعارات بالطلبات الجديدة.\n\nكيف يمكنني مساعدتك؟`;
     } else if (text.toLowerCase().includes('hello') || text.toLowerCase().includes('مرحبا')) {
       responseText = `مرحباً ${userName}! 😊 كيف حالك؟`;
     } else if (text.toLowerCase().includes('order') || text.toLowerCase().includes('طلب')) {
       responseText = 'يمكنك تصفح منتجاتنا وتقديم طلبك من خلال موقعنا الإلكتروني. هل تحتاج مساعدة في شيء معين؟ 🛍️';
     } else if (text.toLowerCase().includes('help') || text.toLowerCase().includes('مساعدة')) {
-      responseText = `${userName}، يمكنني مساعدتك في:\n\n🛍️ معلومات عن المنتجات\n📦 تتبع الطلبات\n📞 التواصل مع خدمة العملاء\n\nما الذي تريد معرفته؟`;
+      responseText = `${userName}، يمكنني مساعدتك في:\n\n🛍️ معلومات عن المنتجات\n📦 تتبع الطلبات\n📞 التواصل مع خدمة العملاء\n🔔 إشعارات الطلبات الجديدة\n\nما الذي تريد معرفته؟`;
     } else {
-      responseText = `شكراً لك ${userName} على رسالتك! 💐\nفريق خدمة العملاء سيتواصل معك قريباً. أو يمكنك زيارة موقعنا لتصفح المنتجات.`;
+      responseText = `شكراً لك ${userName} على رسالتك! 💐\nفريق خدمة العملاء سيتواصل معك قريباً. أو يمكنك زيارة موقعنا لتصفح المنتجات.\n\nستحصل على إشعارات بالطلبات الجديدة تلقائياً.`;
     }
 
     // Send response back to Telegram

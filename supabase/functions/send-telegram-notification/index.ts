@@ -60,6 +60,34 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log('✅ Order fetched successfully:', order.id);
 
+    // Fetch all active Telegram users
+    const { data: telegramUsers, error: usersError } = await supabase
+      .from('telegram_users')
+      .select('chat_id, first_name')
+      .eq('is_active', true);
+
+    if (usersError) {
+      console.error('❌ Error fetching telegram users:', usersError);
+      throw usersError;
+    }
+
+    if (!telegramUsers || telegramUsers.length === 0) {
+      console.log('⚠️ No active Telegram users found');
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          message: 'No active Telegram users to notify',
+          notified_count: 0
+        }),
+        {
+          status: 200,
+          headers: { 'Content-Type': 'application/json', ...corsHeaders },
+        }
+      );
+    }
+
+    console.log(`👥 Found ${telegramUsers.length} active users to notify`);
+
     // Format the message
     const formatPrice = (price: number) => `${price.toLocaleString('ar-IQ')} د.ع`;
     
@@ -78,42 +106,67 @@ const handler = async (req: Request): Promise<Response> => {
       });
     }
 
-    console.log('📝 Message formatted:', message);
+    console.log('📝 Message formatted for broadcast');
 
-    // Send to Telegram
-    const channelId = '@styleafchannel';
-    const telegramUrl = `https://api.telegram.org/bot${telegramToken}/sendMessage`;
-    
-    console.log('📡 Sending to Telegram channel:', channelId);
+    // Send to all users
+    const telegramApiUrl = `https://api.telegram.org/bot${telegramToken}/sendMessage`;
+    let successCount = 0;
+    let failureCount = 0;
 
-    const telegramResponse = await fetch(telegramUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        chat_id: channelId,
-        text: message,
-        parse_mode: 'HTML',
-      }),
-    });
+    for (const user of telegramUsers) {
+      try {
+        console.log(`📤 Sending to user: ${user.first_name} (${user.chat_id})`);
+        
+        const response = await fetch(telegramApiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            chat_id: user.chat_id,
+            text: message,
+            parse_mode: 'HTML',
+          }),
+        });
 
-    const telegramResult = await telegramResponse.json();
-    
-    console.log('📨 Telegram API response:', telegramResult);
-    
-    if (!telegramResponse.ok) {
-      console.error('❌ Telegram API Error:', telegramResult);
-      throw new Error(`Telegram API Error: ${telegramResult.description || 'Unknown error'}`);
+        const result = await response.json();
+        
+        if (!response.ok) {
+          console.error(`❌ Failed to send to ${user.chat_id}:`, result);
+          
+          // If user blocked the bot or chat not found, mark as inactive
+          if (result.error_code === 403 || result.error_code === 400) {
+            await supabase
+              .from('telegram_users')
+              .update({ is_active: false })
+              .eq('chat_id', user.chat_id);
+            console.log(`🚫 Marked user ${user.chat_id} as inactive`);
+          }
+          
+          failureCount++;
+        } else {
+          console.log(`✅ Successfully sent to ${user.first_name}`);
+          successCount++;
+        }
+        
+        // Small delay between messages to avoid rate limiting
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+      } catch (error) {
+        console.error(`💥 Error sending to ${user.chat_id}:`, error);
+        failureCount++;
+      }
     }
 
-    console.log('✅ Telegram notification sent successfully!');
+    console.log(`📊 Notification summary: ${successCount} success, ${failureCount} failures`);
 
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: 'Notification sent successfully',
-        result: telegramResult 
+        message: 'Notifications sent to all active users',
+        notified_count: successCount,
+        failed_count: failureCount,
+        total_users: telegramUsers.length
       }),
       {
         status: 200,
