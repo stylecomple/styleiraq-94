@@ -3,14 +3,12 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Product } from '@/types';
+import { Product, CategoryType } from '@/types';
 import ProductCard from '@/components/ProductCard';
 import CategorySection from '@/components/CategorySection';
 import SearchBar from '@/components/SearchBar';
 import Header from '@/components/Header';
 import { useAuth } from '@/contexts/AuthContext';
-
-type CategoryType = 'all' | string;
 
 interface ProductsData {
   products: Product[];
@@ -39,7 +37,7 @@ const Products = () => {
         .select('*', { count: 'exact' });
 
       if (selectedCategory !== 'all') {
-        query = query.eq('category', selectedCategory);
+        query = query.contains('categories', [selectedCategory]);
       }
 
       if (searchQuery) {
