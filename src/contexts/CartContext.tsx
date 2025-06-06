@@ -60,7 +60,7 @@ export const CartProvider = ({ children }: CartProviderProps) => {
         return [...prevItems, {
           id: product.id,
           name: product.name,
-          price: product.price,
+          price: Math.round(product.price), // تأكد من أن السعر رقم صحيح
           quantity: 1,
           image: product.cover_image || '/placeholder.svg'
         }];
@@ -94,7 +94,7 @@ export const CartProvider = ({ children }: CartProviderProps) => {
   };
 
   const getTotalPrice = () => {
-    return items.reduce((total, item) => total + (item.price * item.quantity), 0);
+    return Math.round(items.reduce((total, item) => total + (item.price * item.quantity), 0));
   };
 
   return (

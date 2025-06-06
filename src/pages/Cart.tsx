@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
 import { useCart } from '@/contexts/CartContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,12 +10,15 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Minus, Plus, Trash2, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 const Cart = () => {
   const { items, removeFromCart, updateQuantity, clearCart, getTotalPrice } = useCart();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [showCheckout, setShowCheckout] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [orderDetails, setOrderDetails] = useState({
     address: '',
     governorate: '',
@@ -22,6 +26,10 @@ const Cart = () => {
     phone: '',
     paymentMethod: 'cash'
   });
+
+  const formatPrice = (price: number) => {
+    return `${price.toLocaleString()} دينار`;
+  };
 
   const handleQuantityChange = (productId: string, newQuantity: number) => {
     if (newQuantity < 1) {
@@ -40,10 +48,21 @@ const Cart = () => {
       });
       return;
     }
+
+    if (!user) {
+      toast({
+        title: "تسجيل الدخول مطلوب",
+        description: "يرجى تسجيل الدخول أولاً لإتمام الشراء",
+        variant: "destructive"
+      });
+      navigate('/auth');
+      return;
+    }
+
     setShowCheckout(true);
   };
 
-  const handleSubmitOrder = (e: React.FormEvent) => {
+  const handleSubmitOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!orderDetails.address || !orderDetails.governorate || !orderDetails.area || !orderDetails.phone) {
@@ -55,27 +74,72 @@ const Cart = () => {
       return;
     }
 
-    // Here you would typically send the order to your backend
-    console.log('Order submitted:', {
-      items,
-      orderDetails,
-      total: getTotalPrice()
-    });
+    if (!user) {
+      toast({
+        title: "خطأ في التحقق",
+        description: "يرجى تسجيل الدخول مرة أخرى",
+        variant: "destructive"
+      });
+      return;
+    }
 
-    toast({
-      title: "تم إرسال الطلب",
-      description: "سيتم التواصل معك قريباً لتأكيد الطلب"
-    });
+    setIsSubmitting(true);
 
-    clearCart();
-    navigate('/');
+    try {
+      // Create order
+      const { data: order, error: orderError } = await supabase
+        .from('orders')
+        .insert({
+          user_id: user.id,
+          total_amount: getTotalPrice(),
+          status: 'pending',
+          shipping_address: `${orderDetails.address}, ${orderDetails.area}, ${orderDetails.governorate}`,
+          phone: orderDetails.phone,
+          payment_method: orderDetails.paymentMethod
+        })
+        .select()
+        .single();
+
+      if (orderError) throw orderError;
+
+      // Create order items
+      const orderItems = items.map(item => ({
+        order_id: order.id,
+        product_id: item.id,
+        quantity: item.quantity,
+        price: item.price
+      }));
+
+      const { error: itemsError } = await supabase
+        .from('order_items')
+        .insert(orderItems);
+
+      if (itemsError) throw itemsError;
+
+      toast({
+        title: "تم إرسال الطلب",
+        description: "سيتم التواصل معك قريباً لتأكيد الطلب"
+      });
+
+      clearCart();
+      navigate('/');
+    } catch (error) {
+      console.error('Error submitting order:', error);
+      toast({
+        title: "خطأ في إرسال الطلب",
+        description: "حدث خطأ أثناء إرسال الطلب، يرجى المحاولة مرة أخرى",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (showCheckout) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-pink-50 to-purple-50 py-8">
+      <div className="min-h-screen bg-gradient-to-br from-pink-50 to-purple-50 py-4 md:py-8">
         <div className="container mx-auto px-4 max-w-2xl">
-          <div className="flex items-center gap-4 mb-8">
+          <div className="flex items-center gap-4 mb-6 md:mb-8">
             <Button
               variant="outline"
               size="sm"
@@ -85,94 +149,102 @@ const Cart = () => {
               <ArrowLeft className="w-4 h-4" />
               العودة للسلة
             </Button>
-            <h1 className="text-2xl font-bold">إتمام الشراء</h1>
+            <h1 className="text-xl md:text-2xl font-bold">إتمام الشراء</h1>
           </div>
 
           <Card>
             <CardHeader>
-              <CardTitle>معلومات الطلب</CardTitle>
+              <CardTitle className="text-lg md:text-xl">معلومات الطلب</CardTitle>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleSubmitOrder} className="space-y-6">
+              <form onSubmit={handleSubmitOrder} className="space-y-4 md:space-y-6">
                 <div className="space-y-4">
                   <div>
-                    <Label htmlFor="address">العنوان</Label>
+                    <Label htmlFor="address" className="text-sm md:text-base">العنوان</Label>
                     <Input
                       id="address"
                       value={orderDetails.address}
                       onChange={(e) => setOrderDetails({...orderDetails, address: e.target.value})}
                       placeholder="أدخل العنوان بالتفصيل"
+                      className="mt-1"
                       required
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="governorate">المحافظة</Label>
+                      <Label htmlFor="governorate" className="text-sm md:text-base">المحافظة</Label>
                       <Input
                         id="governorate"
                         value={orderDetails.governorate}
                         onChange={(e) => setOrderDetails({...orderDetails, governorate: e.target.value})}
                         placeholder="المحافظة"
+                        className="mt-1"
                         required
                       />
                     </div>
                     <div>
-                      <Label htmlFor="area">المنطقة السكنية</Label>
+                      <Label htmlFor="area" className="text-sm md:text-base">المنطقة السكنية</Label>
                       <Input
                         id="area"
                         value={orderDetails.area}
                         onChange={(e) => setOrderDetails({...orderDetails, area: e.target.value})}
                         placeholder="المنطقة السكنية"
+                        className="mt-1"
                         required
                       />
                     </div>
                   </div>
 
                   <div>
-                    <Label htmlFor="phone">رقم التلفون</Label>
+                    <Label htmlFor="phone" className="text-sm md:text-base">رقم التلفون</Label>
                     <Input
                       id="phone"
                       type="tel"
                       value={orderDetails.phone}
                       onChange={(e) => setOrderDetails({...orderDetails, phone: e.target.value})}
                       placeholder="07xxxxxxxx"
+                      className="mt-1"
                       required
                     />
                   </div>
 
                   <div>
-                    <Label>طريقة الدفع</Label>
+                    <Label className="text-sm md:text-base">طريقة الدفع</Label>
                     <RadioGroup 
                       value={orderDetails.paymentMethod} 
                       onValueChange={(value) => setOrderDetails({...orderDetails, paymentMethod: value})}
-                      className="mt-2"
+                      className="mt-2 space-y-2"
                     >
                       <div className="flex items-center space-x-2 rtl:space-x-reverse">
                         <RadioGroupItem value="cash" id="cash" />
-                        <Label htmlFor="cash">الدفع عند الاستلام</Label>
+                        <Label htmlFor="cash" className="text-sm md:text-base">الدفع عند الاستلام</Label>
                       </div>
                       <div className="flex items-center space-x-2 rtl:space-x-reverse">
                         <RadioGroupItem value="zaincash" id="zaincash" />
-                        <Label htmlFor="zaincash">زين كاش</Label>
+                        <Label htmlFor="zaincash" className="text-sm md:text-base">زين كاش</Label>
                       </div>
                       <div className="flex items-center space-x-2 rtl:space-x-reverse">
                         <RadioGroupItem value="visa" id="visa" />
-                        <Label htmlFor="visa">فيزا كارد</Label>
+                        <Label htmlFor="visa" className="text-sm md:text-base">فيزا كارد</Label>
                       </div>
                     </RadioGroup>
                   </div>
                 </div>
 
                 <div className="border-t pt-4">
-                  <div className="flex justify-between items-center text-lg font-bold">
+                  <div className="flex justify-between items-center text-lg md:text-xl font-bold">
                     <span>المجموع الكلي:</span>
-                    <span>{getTotalPrice().toLocaleString()} دينار</span>
+                    <span>{formatPrice(getTotalPrice())}</span>
                   </div>
                 </div>
 
-                <Button type="submit" className="w-full bg-pink-600 hover:bg-pink-700">
-                  تأكيد الطلب
+                <Button 
+                  type="submit" 
+                  className="w-full bg-pink-600 hover:bg-pink-700 py-3"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? 'جاري الإرسال...' : 'تأكيد الطلب'}
                 </Button>
               </form>
             </CardContent>
@@ -183,9 +255,9 @@ const Cart = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-50 to-purple-50 py-8">
+    <div className="min-h-screen bg-gradient-to-br from-pink-50 to-purple-50 py-4 md:py-8">
       <div className="container mx-auto px-4 max-w-4xl">
-        <div className="flex items-center gap-4 mb-8">
+        <div className="flex items-center gap-4 mb-6 md:mb-8">
           <Button
             variant="outline"
             size="sm"
@@ -195,12 +267,12 @@ const Cart = () => {
             <ArrowLeft className="w-4 h-4" />
             العودة للمتجر
           </Button>
-          <h1 className="text-3xl font-bold">سلة التسوق</h1>
+          <h1 className="text-2xl md:text-3xl font-bold">سلة التسوق</h1>
         </div>
 
         {items.length === 0 ? (
           <Card>
-            <CardContent className="text-center py-12">
+            <CardContent className="text-center py-8 md:py-12">
               <p className="text-gray-500 text-lg mb-4">سلة التسوق فارغة</p>
               <Button onClick={() => navigate('/')} className="bg-pink-600 hover:bg-pink-700">
                 ابدأ التسوق
@@ -208,22 +280,22 @@ const Cart = () => {
             </CardContent>
           </Card>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-4 md:space-y-6">
             <Card>
-              <CardContent className="p-6">
+              <CardContent className="p-4 md:p-6">
                 <div className="space-y-4">
                   {items.map((item) => (
-                    <div key={item.id} className="flex items-center gap-4 p-4 border rounded-lg">
+                    <div key={item.id} className="flex flex-col sm:flex-row items-start sm:items-center gap-4 p-3 md:p-4 border rounded-lg">
                       <img
                         src={item.image}
                         alt={item.name}
-                        className="w-20 h-20 object-cover rounded-lg"
+                        className="w-16 h-16 md:w-20 md:h-20 object-cover rounded-lg mx-auto sm:mx-0"
                       />
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-lg">{item.name}</h3>
-                        <p className="text-pink-600 font-bold">{item.price.toLocaleString()} دينار</p>
+                      <div className="flex-1 text-center sm:text-right">
+                        <h3 className="font-semibold text-base md:text-lg">{item.name}</h3>
+                        <p className="text-pink-600 font-bold text-sm md:text-base">{formatPrice(item.price)}</p>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 mx-auto sm:mx-0">
                         <Button
                           variant="outline"
                           size="sm"
@@ -240,14 +312,14 @@ const Cart = () => {
                           <Plus className="w-4 h-4" />
                         </Button>
                       </div>
-                      <div className="text-lg font-bold">
-                        {(item.price * item.quantity).toLocaleString()} دينار
+                      <div className="text-base md:text-lg font-bold mx-auto sm:mx-0">
+                        {formatPrice(item.price * item.quantity)}
                       </div>
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => removeFromCart(item.id)}
-                        className="text-red-600 hover:text-red-700"
+                        className="text-red-600 hover:text-red-700 mx-auto sm:mx-0"
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
@@ -258,24 +330,24 @@ const Cart = () => {
             </Card>
 
             <Card>
-              <CardContent className="p-6">
+              <CardContent className="p-4 md:p-6">
                 <div className="flex justify-between items-center mb-4">
-                  <span className="text-xl font-bold">المجموع الكلي:</span>
-                  <span className="text-2xl font-bold text-pink-600">
-                    {getTotalPrice().toLocaleString()} دينار
+                  <span className="text-lg md:text-xl font-bold">المجموع الكلي:</span>
+                  <span className="text-xl md:text-2xl font-bold text-pink-600">
+                    {formatPrice(getTotalPrice())}
                   </span>
                 </div>
-                <div className="flex gap-4">
+                <div className="flex flex-col sm:flex-row gap-4">
                   <Button
                     variant="outline"
                     onClick={clearCart}
-                    className="flex-1"
+                    className="flex-1 py-3"
                   >
                     إفراغ السلة
                   </Button>
                   <Button
                     onClick={handleCheckout}
-                    className="flex-1 bg-pink-600 hover:bg-pink-700"
+                    className="flex-1 bg-pink-600 hover:bg-pink-700 py-3"
                   >
                     إتمام الشراء
                   </Button>
