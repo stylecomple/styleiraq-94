@@ -38,7 +38,8 @@ const handler = async (req: Request): Promise<Response> => {
           quantity,
           price,
           products (name, cover_image)
-        )
+        ),
+        profiles (full_name, email)
       `)
       .eq('id', orderId)
       .single();
@@ -55,6 +56,7 @@ const handler = async (req: Request): Promise<Response> => {
     
     let message = `🛒 *طلب جديد!*\n\n`;
     message += `📋 *رقم الطلب:* \`${order.id.slice(0, 8)}...\`\n`;
+    message += `👤 *العميل:* ${order.profiles?.full_name || 'غير محدد'}\n`;
     message += `💰 *المبلغ الإجمالي:* ${formatPrice(order.total_amount)}\n`;
     message += `📞 *رقم الهاتف:* ${order.phone || 'غير محدد'}\n`;
     message += `📍 *عنوان التوصيل:* ${order.shipping_address || 'غير محدد'}\n`;
@@ -68,9 +70,8 @@ const handler = async (req: Request): Promise<Response> => {
       });
     }
 
-    // استخدام معرف القناة من الرابط المقدم
-    // يجب تحويل الرابط إلى معرف القناة
-    const channelId = '-1002459829141'; // معرف القناة المستخرج من الرابط
+    // استخدام معرف القناة الخاص بك
+    const channelId = '@styleafchannel'; // يمكنك تغيير هذا إلى معرف القناة الصحيح
     
     console.log('Sending message to Telegram channel:', channelId);
 
@@ -97,6 +98,7 @@ const handler = async (req: Request): Promise<Response> => {
       console.error('Telegram API Error:', telegramResult);
       
       // إذا فشل MarkdownV2، جرب بدون تنسيق
+      const plainMessage = message.replace(/[_*\[\]()~`>#+\-=|{}.!\\]/g, '');
       const fallbackResponse = await fetch(telegramUrl, {
         method: 'POST',
         headers: {
@@ -104,7 +106,7 @@ const handler = async (req: Request): Promise<Response> => {
         },
         body: JSON.stringify({
           chat_id: channelId,
-          text: message.replace(/[_*\[\]()~`>#+\-=|{}.!\\]/g, ''),
+          text: plainMessage,
         }),
       });
       
