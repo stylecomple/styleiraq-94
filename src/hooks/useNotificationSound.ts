@@ -1,18 +1,22 @@
 
 import { useCallback } from 'react';
-import { useAdminSettings } from './useAdminSettings';
+import { supabase } from '@/integrations/supabase/client';
 
 export const useNotificationSound = () => {
-  const { settings } = useAdminSettings();
-
-  const playNotificationSound = useCallback(() => {
+  const playNotificationSound = useCallback(async () => {
     console.log('Playing notification sound...');
     
     try {
+      // جلب الإعدادات من قاعدة البيانات مباشرة
+      const { data: settings } = await (supabase as any)
+        .from('admin_settings')
+        .select('notification_sound_url')
+        .single();
+      
       // Use custom sound if available, otherwise use default
       const audio = new Audio();
       
-      if (settings.notification_sound_url) {
+      if (settings?.notification_sound_url) {
         console.log('Using custom notification sound:', settings.notification_sound_url);
         audio.src = settings.notification_sound_url;
       } else {
@@ -40,7 +44,7 @@ export const useNotificationSound = () => {
       console.error('Error with audio playback, using Web Audio API:', error);
       playWebAudioNotification();
     }
-  }, [settings.notification_sound_url]);
+  }, []);
 
   const playWebAudioNotification = () => {
     try {
