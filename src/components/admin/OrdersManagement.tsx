@@ -94,7 +94,6 @@ const OrdersManagement = () => {
               <TableHead className="text-right min-w-[100px]">الحالة</TableHead>
               <TableHead className="text-right min-w-[120px]">رقم الهاتف</TableHead>
               <TableHead className="text-right min-w-[200px]">عنوان الشحن</TableHead>
-              <TableHead className="text-right min-w-[120px]">طريقة الدفع</TableHead>
               <TableHead className="text-right min-w-[100px]">تاريخ الطلب</TableHead>
               <TableHead className="text-right min-w-[150px]">الإجراءات</TableHead>
             </TableRow>
@@ -120,11 +119,6 @@ const OrdersManagement = () => {
                   <div className="truncate" title={order.shipping_address || 'غير محدد'}>
                     {order.shipping_address || 'غير محدد'}
                   </div>
-                </TableCell>
-                <TableCell>
-                  {order.payment_method === 'cash' ? 'الدفع عند الاستلام' :
-                   order.payment_method === 'zaincash' ? 'زين كاش' :
-                   order.payment_method === 'visa' ? 'فيزا كارد' : order.payment_method}
                 </TableCell>
                 <TableCell>
                   {new Date(order.created_at).toLocaleDateString('ar-SA')}
@@ -208,14 +202,6 @@ const OrdersManagement = () => {
                     <span>{order.phone}</span>
                   </div>
                 )}
-                <div>
-                  <span className="font-medium">طريقة الدفع: </span>
-                  <span>
-                    {order.payment_method === 'cash' ? 'الدفع عند الاستلام' :
-                     order.payment_method === 'zaincash' ? 'زين كاش' :
-                     order.payment_method === 'visa' ? 'فيزا كارد' : order.payment_method}
-                  </span>
-                </div>
                 {order.shipping_address && (
                   <div>
                     <span className="font-medium">عنوان الشحن: </span>
