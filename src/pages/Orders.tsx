@@ -86,11 +86,7 @@ const Orders = () => {
   };
 
   const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('ar-IQ', {
-      style: 'currency',
-      currency: 'IQD',
-      minimumFractionDigits: 0
-    }).format(price * 1000);
+    return `${price.toLocaleString('ar-IQ')} د.ع`;
   };
 
   if (!user) {

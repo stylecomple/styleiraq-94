@@ -30,33 +30,54 @@ const AddProductForm = ({ onClose }: AddProductFormProps) => {
 
   const addProductMutation = useMutation({
     mutationFn: async (productData: any) => {
+      console.log('Adding product with data:', productData);
+      
       const images = productData.images 
         ? productData.images.split('\n').filter((url: string) => url.trim()) 
         : [];
 
-      const { error } = await supabase
+      const productToInsert = {
+        name: productData.name,
+        description: productData.description || null,
+        price: parseInt(productData.price), // تحويل إلى رقم صحيح للدينار العراقي
+        category: productData.category,
+        cover_image: productData.cover_image || null,
+        images: images,
+        stock_quantity: parseInt(productData.stock_quantity) || 0
+      };
+
+      console.log('Product to insert:', productToInsert);
+
+      const { data, error } = await supabase
         .from('products')
-        .insert({
-          name: productData.name,
-          description: productData.description,
-          price: parseFloat(productData.price),
-          category: productData.category,
-          cover_image: productData.cover_image,
-          images: images,
-          stock_quantity: parseInt(productData.stock_quantity) || 0
-        });
+        .insert(productToInsert)
+        .select();
+      
+      console.log('Insert response:', { data, error });
       
       if (error) throw error;
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
       toast({
         title: 'تم إضافة المنتج',
         description: 'تم إضافة المنتج الجديد بنجاح',
       });
+      setFormData({
+        name: '',
+        description: '',
+        price: '',
+        category: '',
+        cover_image: '',
+        images: '',
+        stock_quantity: ''
+      });
       onClose();
     },
-    onError: () => {
+    onError: (error) => {
+      console.error('Error adding product:', error);
       toast({
         title: 'خطأ',
         description: 'فشل في إضافة المنتج',
@@ -67,6 +88,8 @@ const AddProductForm = ({ onClose }: AddProductFormProps) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('Form submitted with data:', formData);
+    
     if (!formData.name || !formData.price || !formData.category) {
       toast({
         title: 'خطأ',
@@ -75,10 +98,12 @@ const AddProductForm = ({ onClose }: AddProductFormProps) => {
       });
       return;
     }
+    
     addProductMutation.mutate(formData);
   };
 
   const handleInputChange = (field: string, value: string) => {
+    console.log(`Updating ${field} to:`, value);
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
@@ -106,7 +131,7 @@ const AddProductForm = ({ onClose }: AddProductFormProps) => {
 
             <div className="space-y-2">
               <Label htmlFor="category">الفئة *</Label>
-              <Select onValueChange={(value) => handleInputChange('category', value)}>
+              <Select value={formData.category} onValueChange={(value) => handleInputChange('category', value)}>
                 <SelectTrigger>
                   <SelectValue placeholder="اختر الفئة" />
                 </SelectTrigger>

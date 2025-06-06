@@ -85,6 +85,10 @@ const ProductsManagement = () => {
     personal_care: 'عناية شخصية'
   };
 
+  const formatPrice = (price: number) => {
+    return `${price.toLocaleString('ar-IQ')} د.ع`;
+  };
+
   if (isLoading) {
     return <div className="text-center">جاري التحميل...</div>;
   }
@@ -127,7 +131,7 @@ const ProductsManagement = () => {
                     {categoryLabels[product.category as keyof typeof categoryLabels]}
                   </Badge>
                 </TableCell>
-                <TableCell>{product.price} ر.س</TableCell>
+                <TableCell>{formatPrice(product.price)}</TableCell>
                 <TableCell>{product.stock_quantity}</TableCell>
                 <TableCell>
                   <Badge 

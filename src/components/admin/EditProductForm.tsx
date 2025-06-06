@@ -31,34 +31,46 @@ const EditProductForm = ({ product, onClose }: EditProductFormProps) => {
 
   const updateProductMutation = useMutation({
     mutationFn: async (productData: any) => {
+      console.log('Updating product with data:', productData);
+      
       const images = productData.images 
         ? productData.images.split('\n').filter((url: string) => url.trim()) 
         : [];
 
-      const { error } = await supabase
+      const productToUpdate = {
+        name: productData.name,
+        description: productData.description || null,
+        price: parseInt(productData.price), // تحويل إلى رقم صحيح للدينار العراقي
+        category: productData.category,
+        cover_image: productData.cover_image || null,
+        images: images,
+        stock_quantity: parseInt(productData.stock_quantity) || 0
+      };
+
+      console.log('Product to update:', productToUpdate);
+
+      const { data, error } = await supabase
         .from('products')
-        .update({
-          name: productData.name,
-          description: productData.description,
-          price: parseFloat(productData.price),
-          category: productData.category,
-          cover_image: productData.cover_image,
-          images: images,
-          stock_quantity: parseInt(productData.stock_quantity) || 0
-        })
-        .eq('id', product.id);
+        .update(productToUpdate)
+        .eq('id', product.id)
+        .select();
+      
+      console.log('Update response:', { data, error });
       
       if (error) throw error;
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
       toast({
         title: 'تم تحديث المنتج',
         description: 'تم تحديث المنتج بنجاح',
       });
       onClose();
     },
-    onError: () => {
+    onError: (error) => {
+      console.error('Error updating product:', error);
       toast({
         title: 'خطأ',
         description: 'فشل في تحديث المنتج',
@@ -69,6 +81,8 @@ const EditProductForm = ({ product, onClose }: EditProductFormProps) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('Form submitted with data:', formData);
+    
     if (!formData.name || !formData.price || !formData.category) {
       toast({
         title: 'خطأ',
@@ -77,10 +91,12 @@ const EditProductForm = ({ product, onClose }: EditProductFormProps) => {
       });
       return;
     }
+    
     updateProductMutation.mutate(formData);
   };
 
   const handleInputChange = (field: string, value: string) => {
+    console.log(`Updating ${field} to:`, value);
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
