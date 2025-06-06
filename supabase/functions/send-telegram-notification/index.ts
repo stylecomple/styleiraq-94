@@ -24,6 +24,8 @@ const handler = async (req: Request): Promise<Response> => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const telegramToken = Deno.env.get('TELEGRAM_BOT_TOKEN')!;
     
+    console.log('Processing order notification for:', orderId);
+    
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     // جلب تفاصيل الطلب
@@ -42,14 +44,17 @@ const handler = async (req: Request): Promise<Response> => {
       .single();
 
     if (orderError) {
+      console.error('Error fetching order:', orderError);
       throw orderError;
     }
+
+    console.log('Order data fetched successfully:', order);
 
     // تنسيق رسالة Telegram
     const formatPrice = (price: number) => `${price.toLocaleString('ar-IQ')} د.ع`;
     
     let message = `🛒 *طلب جديد!*\n\n`;
-    message += `📋 *رقم الطلب:* ${order.id.slice(0, 8)}...\n`;
+    message += `📋 *رقم الطلب:* \`${order.id.slice(0, 8)}...\`\n`;
     message += `💰 *المبلغ الإجمالي:* ${formatPrice(order.total_amount)}\n`;
     message += `📞 *رقم الهاتف:* ${order.phone || 'غير محدد'}\n`;
     message += `📍 *عنوان التوصيل:* ${order.shipping_address || 'غير محدد'}\n`;
@@ -58,16 +63,19 @@ const handler = async (req: Request): Promise<Response> => {
     if (order.order_items && order.order_items.length > 0) {
       message += `📦 *المنتجات:*\n`;
       order.order_items.forEach((item: any, index: number) => {
-        message += `${index + 1}. ${item.products?.name || 'منتج غير معروف'}\n`;
+        message += `${index + 1}\\. ${item.products?.name || 'منتج غير معروف'}\n`;
         message += `   الكمية: ${item.quantity} × ${formatPrice(item.price)}\n`;
       });
     }
 
+    // استخدام معرف القناة من الرابط المقدم
+    // يجب تحويل الرابط إلى معرف القناة
+    const channelId = '-1002459829141'; // معرف القناة المستخرج من الرابط
+    
+    console.log('Sending message to Telegram channel:', channelId);
+
     // إرسال الرسالة إلى Telegram
     const telegramUrl = `https://api.telegram.org/bot${telegramToken}/sendMessage`;
-    
-    // إذا لم يتم تحديد chatId، استخدم chat id افتراضي
-    const defaultChatId = chatId || '@your_channel_or_chat_id'; // يجب تحديث هذا
     
     const telegramResponse = await fetch(telegramUrl, {
       method: 'POST',
@@ -75,23 +83,51 @@ const handler = async (req: Request): Promise<Response> => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        chat_id: defaultChatId,
+        chat_id: channelId,
         text: message,
-        parse_mode: 'Markdown',
+        parse_mode: 'MarkdownV2',
       }),
     });
 
     const telegramResult = await telegramResponse.json();
     
+    console.log('Telegram API response:', telegramResult);
+    
     if (!telegramResponse.ok) {
       console.error('Telegram API Error:', telegramResult);
-      throw new Error(`Telegram API Error: ${telegramResult.description}`);
+      
+      // إذا فشل MarkdownV2، جرب بدون تنسيق
+      const fallbackResponse = await fetch(telegramUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          chat_id: channelId,
+          text: message.replace(/[_*\[\]()~`>#+\-=|{}.!\\]/g, ''),
+        }),
+      });
+      
+      const fallbackResult = await fallbackResponse.json();
+      console.log('Fallback response:', fallbackResult);
+      
+      if (!fallbackResponse.ok) {
+        throw new Error(`Telegram API Error: ${fallbackResult.description}`);
+      }
+      
+      return new Response(
+        JSON.stringify({ success: true, result: fallbackResult }),
+        {
+          status: 200,
+          headers: { 'Content-Type': 'application/json', ...corsHeaders },
+        }
+      );
     }
 
-    console.log('Telegram notification sent successfully:', telegramResult);
+    console.log('Telegram notification sent successfully');
 
     return new Response(
-      JSON.stringify({ success: true, telegramResult }),
+      JSON.stringify({ success: true, result: telegramResult }),
       {
         status: 200,
         headers: { 'Content-Type': 'application/json', ...corsHeaders },

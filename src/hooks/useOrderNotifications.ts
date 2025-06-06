@@ -14,13 +14,20 @@ export const useOrderNotifications = () => {
   useEffect(() => {
     if (!isAdmin) return;
 
+    console.log('Setting up order notifications for admin...');
+
     // جلب عدد الطلبات الحالي
     const fetchInitialOrderCount = async () => {
-      const { count } = await supabase
-        .from('orders')
-        .select('*', { count: 'exact', head: true });
-      
-      lastOrderCountRef.current = count || 0;
+      try {
+        const { count } = await supabase
+          .from('orders')
+          .select('*', { count: 'exact', head: true });
+        
+        lastOrderCountRef.current = count || 0;
+        console.log('Initial order count:', count);
+      } catch (error) {
+        console.error('Error fetching initial order count:', error);
+      }
     };
 
     fetchInitialOrderCount();
@@ -39,7 +46,12 @@ export const useOrderNotifications = () => {
           console.log('New order detected:', payload);
           
           // تشغيل صوت التنبيه
-          playNotificationSound();
+          try {
+            playNotificationSound();
+            console.log('Notification sound triggered');
+          } catch (error) {
+            console.error('Error playing notification sound:', error);
+          }
           
           // عرض إشعار
           toast({
@@ -50,17 +62,27 @@ export const useOrderNotifications = () => {
           
           // إرسال إشعار Telegram
           try {
-            await supabase.functions.invoke('send-telegram-notification', {
+            console.log('Sending Telegram notification...');
+            const { data, error } = await supabase.functions.invoke('send-telegram-notification', {
               body: { orderId: payload.new.id }
             });
+            
+            if (error) {
+              console.error('Error sending telegram notification:', error);
+            } else {
+              console.log('Telegram notification sent successfully:', data);
+            }
           } catch (error) {
-            console.error('Error sending telegram notification:', error);
+            console.error('Error invoking telegram function:', error);
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('Subscription status:', status);
+      });
 
     return () => {
+      console.log('Cleaning up order notifications...');
       supabase.removeChannel(channel);
     };
   }, [isAdmin, playNotificationSound, toast]);
