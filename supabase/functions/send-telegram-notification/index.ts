@@ -61,19 +61,6 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log('✅ Order fetched successfully:', order.id);
 
-    // Fetch all active Telegram users
-    const { data: telegramUsers, error: usersError } = await supabase
-      .from('telegram_users')
-      .select('chat_id, first_name')
-      .eq('is_active', true);
-
-    if (usersError) {
-      console.error('❌ Error fetching telegram users:', usersError);
-      throw usersError;
-    }
-
-    console.log(`👥 Found ${telegramUsers?.length || 0} active users to notify`);
-
     // Format the message with payment method and colors
     const formatPrice = (price: number) => `${price.toLocaleString('ar-IQ')} د.ع`;
     
@@ -118,56 +105,79 @@ const handler = async (req: Request): Promise<Response> => {
     let successCount = 0;
     let failureCount = 0;
 
-    // List of channels/groups to notify
-    const channelsAndGroups = [];
+    // Get bot updates to find all groups and channels the bot has been added to
+    const channelsAndGroups: number[] = [];
 
-    // Get bot updates to find channels/groups
     try {
-      console.log('🔍 Checking for channels and groups...');
+      console.log('🔍 Getting bot updates to find groups and channels...');
       
-      const updatesResponse = await fetch(`https://api.telegram.org/bot${telegramToken}/getUpdates?limit=100`);
+      // Get recent updates to find chat IDs
+      const updatesResponse = await fetch(`https://api.telegram.org/bot${telegramToken}/getUpdates?limit=100&offset=-100`);
       const updatesData = await updatesResponse.json();
       
       if (updatesData.ok && updatesData.result) {
-        const uniqueChats = new Set();
+        const uniqueChats = new Set<number>();
         
+        // Extract chat IDs from messages and member updates
         updatesData.result.forEach((update: any) => {
-          if (update.message?.chat?.type === 'group' || 
-              update.message?.chat?.type === 'supergroup' || 
-              update.message?.chat?.type === 'channel') {
-            uniqueChats.add(update.message.chat.id);
+          // From regular messages
+          if (update.message?.chat) {
+            const chat = update.message.chat;
+            if (chat.type === 'group' || chat.type === 'supergroup' || chat.type === 'channel') {
+              uniqueChats.add(chat.id);
+              console.log(`📍 Found ${chat.type}: ${chat.title || chat.id} (${chat.id})`);
+            }
           }
           
-          if (update.my_chat_member?.chat?.type === 'group' || 
-              update.my_chat_member?.chat?.type === 'supergroup' || 
-              update.my_chat_member?.chat?.type === 'channel') {
-            if (update.my_chat_member.new_chat_member?.status === 'administrator' ||
-                update.my_chat_member.new_chat_member?.status === 'member') {
-              uniqueChats.add(update.my_chat_member.chat.id);
+          // From chat member updates (when bot is added/removed)
+          if (update.my_chat_member?.chat) {
+            const chat = update.my_chat_member.chat;
+            const memberStatus = update.my_chat_member.new_chat_member?.status;
+            
+            if ((chat.type === 'group' || chat.type === 'supergroup' || chat.type === 'channel') &&
+                (memberStatus === 'administrator' || memberStatus === 'member')) {
+              uniqueChats.add(chat.id);
+              console.log(`📍 Found ${chat.type} from member update: ${chat.title || chat.id} (${chat.id})`);
             }
           }
         });
         
         uniqueChats.forEach(chatId => {
-          if (!channelsAndGroups.includes(chatId)) {
-            channelsAndGroups.push(chatId);
-          }
+          channelsAndGroups.push(chatId);
         });
         
-        console.log(`🔍 Found ${uniqueChats.size} channels/groups from updates`);
+        console.log(`🔍 Found ${uniqueChats.size} total groups/channels from updates`);
       }
     } catch (error) {
-      console.error('⚠️ Error fetching updates for channels:', error);
+      console.error('⚠️ Error fetching updates:', error);
     }
 
-    // Send to all channels and groups first
+    // If no chats found from updates, try some common methods to get chat info
+    if (channelsAndGroups.length === 0) {
+      console.log('ℹ️ No chats found in recent updates. Bot might need to be added to groups/channels first.');
+    }
+
+    // Send to all discovered channels and groups
     if (channelsAndGroups.length > 0) {
-      console.log(`📢 Sending to ${channelsAndGroups.length} channels/groups...`);
+      console.log(`📢 Sending to ${channelsAndGroups.length} groups/channels...`);
       
       for (const chatId of channelsAndGroups) {
         try {
-          console.log(`📤 Sending to channel/group: ${chatId}`);
+          console.log(`📤 Sending to chat: ${chatId}`);
           
+          // First, try to get chat info to verify bot has access
+          const chatInfoResponse = await fetch(`https://api.telegram.org/bot${telegramToken}/getChat?chat_id=${chatId}`);
+          const chatInfo = await chatInfoResponse.json();
+          
+          if (!chatInfo.ok) {
+            console.log(`⚠️ Cannot access chat ${chatId}: ${chatInfo.description}`);
+            failureCount++;
+            continue;
+          }
+          
+          console.log(`✅ Chat accessible: ${chatInfo.result.title || chatInfo.result.first_name || chatId}`);
+          
+          // Send the message
           const response = await fetch(telegramApiUrl, {
             method: 'POST',
             headers: {
@@ -183,86 +193,55 @@ const handler = async (req: Request): Promise<Response> => {
           const result = await response.json();
           
           if (!response.ok) {
-            console.error(`❌ Failed to send to channel/group ${chatId}:`, result);
+            console.error(`❌ Failed to send to ${chatId}:`, result);
             failureCount++;
           } else {
-            console.log(`✅ Successfully sent to channel/group ${chatId}`);
+            console.log(`✅ Successfully sent to ${chatInfo.result.title || chatInfo.result.first_name || chatId}`);
             successCount++;
           }
           
+          // Small delay between messages to avoid rate limiting
           await new Promise(resolve => setTimeout(resolve, 100));
           
         } catch (error) {
-          console.error(`💥 Error sending to channel/group ${chatId}:`, error);
+          console.error(`💥 Error sending to chat ${chatId}:`, error);
           failureCount++;
         }
       }
     } else {
-      console.log('ℹ️ No channels/groups found to notify');
-    }
-
-    // Send to all individual users
-    if (telegramUsers && telegramUsers.length > 0) {
-      console.log(`👤 Sending to ${telegramUsers.length} individual users...`);
+      console.log('ℹ️ No groups/channels found. Make sure the bot has been added to at least one group or channel.');
       
-      for (const user of telegramUsers) {
-        try {
-          console.log(`📤 Sending to user: ${user.first_name} (${user.chat_id})`);
-          
-          const response = await fetch(telegramApiUrl, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              chat_id: user.chat_id,
-              text: message,
-              parse_mode: 'HTML',
-            }),
-          });
-
-          const result = await response.json();
-          
-          if (!response.ok) {
-            console.error(`❌ Failed to send to ${user.chat_id}:`, result);
-            
-            if (result.error_code === 403 || result.error_code === 400) {
-              await supabase
-                .from('telegram_users')
-                .update({ is_active: false })
-                .eq('chat_id', user.chat_id);
-              console.log(`🚫 Marked user ${user.chat_id} as inactive`);
-            }
-            
-            failureCount++;
-          } else {
-            console.log(`✅ Successfully sent to ${user.first_name}`);
-            successCount++;
-          }
-          
-          await new Promise(resolve => setTimeout(resolve, 100));
-          
-        } catch (error) {
-          console.error(`💥 Error sending to ${user.chat_id}:`, error);
-          failureCount++;
+      // Try to send a test message to see if there are any active chats
+      try {
+        const getMeResponse = await fetch(`https://api.telegram.org/bot${telegramToken}/getMe`);
+        const getMeData = await getMeResponse.json();
+        
+        if (getMeData.ok) {
+          console.log(`🤖 Bot info: @${getMeData.result.username} (${getMeData.result.first_name})`);
+          console.log('💡 To receive notifications, add this bot to your groups/channels and make sure it has permission to send messages.');
         }
+      } catch (error) {
+        console.error('❌ Error getting bot info:', error);
       }
-    } else {
-      console.log('ℹ️ No individual users found to notify');
     }
 
+    const totalRecipients = channelsAndGroups.length;
+    
     console.log(`📊 Notification summary: ${successCount} success, ${failureCount} failures`);
-    console.log(`📈 Sent to ${channelsAndGroups.length} channels/groups and ${telegramUsers?.length || 0} individual users`);
+    console.log(`📈 Attempted to send to ${totalRecipients} groups/channels`);
 
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: 'Notifications sent to all recipients',
+        message: totalRecipients > 0 ? 
+          `Notifications sent to discovered groups/channels` : 
+          'No groups/channels found. Bot needs to be added to groups/channels first.',
         notified_count: successCount,
         failed_count: failureCount,
-        channels_count: channelsAndGroups.length,
-        users_count: telegramUsers?.length || 0,
-        total_recipients: channelsAndGroups.length + (telegramUsers?.length || 0)
+        total_discovered: totalRecipients,
+        note: totalRecipients === 0 ? 
+          'Add the bot to your groups/channels to receive notifications' : 
+          undefined
       }),
       {
         status: 200,
