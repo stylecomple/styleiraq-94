@@ -82,7 +82,8 @@ const ProductsManagement = () => {
     perfumes: 'عطور',
     flowers: 'ورد',
     home: 'مستلزمات منزلية',
-    personal_care: 'عناية شخصية'
+    personal_care: 'عناية شخصية',
+    exclusive_offers: 'العروض الحصرية'
   };
 
   const formatPrice = (price: number) => {
@@ -108,7 +109,7 @@ const ProductsManagement = () => {
             <TableRow>
               <TableHead className="text-right">الصورة</TableHead>
               <TableHead className="text-right">اسم المنتج</TableHead>
-              <TableHead className="text-right">الفئة</TableHead>
+              <TableHead className="text-right">الفئات</TableHead>
               <TableHead className="text-right">السعر</TableHead>
               <TableHead className="text-right">المخزون</TableHead>
               <TableHead className="text-right">الحالة</TableHead>
@@ -127,9 +128,13 @@ const ProductsManagement = () => {
                 </TableCell>
                 <TableCell className="font-medium">{product.name}</TableCell>
                 <TableCell>
-                  <Badge variant="outline">
-                    {categoryLabels[product.category as keyof typeof categoryLabels]}
-                  </Badge>
+                  <div className="flex flex-wrap gap-1">
+                    {product.categories?.map((category: string) => (
+                      <Badge key={category} variant="outline" className="text-xs">
+                        {categoryLabels[category as keyof typeof categoryLabels] || category}
+                      </Badge>
+                    ))}
+                  </div>
                 </TableCell>
                 <TableCell>{formatPrice(product.price)}</TableCell>
                 <TableCell>{product.stock_quantity}</TableCell>

@@ -15,7 +15,7 @@ interface Product {
   name: string;
   description: string | null;
   price: number;
-  category: string;
+  categories: string[] | null;
   cover_image: string | null;
   images: string[] | null;
   colors: string[] | null;
@@ -38,7 +38,8 @@ const ProductCard = ({ product }: ProductCardProps) => {
     perfumes: 'عطور',
     flowers: 'ورد',
     home: 'مستلزمات منزلية',
-    personal_care: 'عناية شخصية'
+    personal_care: 'عناية شخصية',
+    exclusive_offers: 'العروض الحصرية'
   };
 
   const formatPrice = (price: number) => {
@@ -73,6 +74,11 @@ const ProductCard = ({ product }: ProductCardProps) => {
 
   const isOutOfStock = !product.stock_quantity || product.stock_quantity === 0;
   const hasColors = product.colors && product.colors.length > 0;
+
+  // الحصول على الفئة الأولى لعرضها كشارة
+  const primaryCategory = product.categories && product.categories.length > 0 
+    ? product.categories[0] 
+    : 'makeup';
 
   return (
     <>
@@ -147,9 +153,13 @@ const ProductCard = ({ product }: ProductCardProps) => {
                 
                 <div className="space-y-6">
                   <div>
-                    <Badge variant="secondary" className="bg-pink-100 text-pink-700 mb-3">
-                      {categoryLabels[product.category as keyof typeof categoryLabels]}
-                    </Badge>
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      {product.categories?.map((category) => (
+                        <Badge key={category} variant="secondary" className="bg-pink-100 text-pink-700">
+                          {categoryLabels[category as keyof typeof categoryLabels] || category}
+                        </Badge>
+                      ))}
+                    </div>
                     
                     <div className="flex items-center gap-2 mb-4">
                       {[...Array(5)].map((_, i) => (
@@ -207,7 +217,7 @@ const ProductCard = ({ product }: ProductCardProps) => {
             variant="secondary" 
             className="absolute top-4 left-4 bg-gradient-to-r from-pink-500 to-purple-600 text-white shadow-lg border-0 rounded-full px-3 py-1"
           >
-            {categoryLabels[product.category as keyof typeof categoryLabels]}
+            {categoryLabels[primaryCategory as keyof typeof categoryLabels] || primaryCategory}
           </Badge>
         </div>
         
@@ -226,6 +236,22 @@ const ProductCard = ({ product }: ProductCardProps) => {
             ))}
             <span className="text-xs text-gray-500 mr-2">(4.8)</span>
           </div>
+
+          {/* Categories */}
+          {product.categories && product.categories.length > 1 && (
+            <div className="flex flex-wrap gap-1 justify-center pt-2">
+              {product.categories.slice(0, 2).map((category) => (
+                <Badge key={category} variant="outline" className="text-xs">
+                  {categoryLabels[category as keyof typeof categoryLabels] || category}
+                </Badge>
+              ))}
+              {product.categories.length > 2 && (
+                <Badge variant="outline" className="text-xs">
+                  +{product.categories.length - 2}
+                </Badge>
+              )}
+            </div>
+          )}
 
           {hasColors && (
             <div className="flex flex-wrap gap-1 justify-center pt-2">

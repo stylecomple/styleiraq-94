@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { X } from 'lucide-react';
@@ -22,12 +22,21 @@ const AddProductForm = ({ onClose }: AddProductFormProps) => {
     name: '',
     description: '',
     price: '',
-    category: '',
+    categories: [] as string[],
     cover_image: '',
     images: '',
     colors: '',
     stock_quantity: ''
   });
+
+  const availableCategories = [
+    { id: 'makeup', label: 'مكياج' },
+    { id: 'perfumes', label: 'عطور' },
+    { id: 'flowers', label: 'ورد' },
+    { id: 'home', label: 'مستلزمات منزلية' },
+    { id: 'personal_care', label: 'عناية شخصية' },
+    { id: 'exclusive_offers', label: 'العروض الحصرية' }
+  ];
 
   const addProductMutation = useMutation({
     mutationFn: async (productData: any) => {
@@ -45,7 +54,7 @@ const AddProductForm = ({ onClose }: AddProductFormProps) => {
         name: productData.name,
         description: productData.description || null,
         price: parseInt(productData.price),
-        category: productData.category,
+        categories: productData.categories,
         cover_image: productData.cover_image || null,
         images: images,
         colors: colors,
@@ -75,7 +84,7 @@ const AddProductForm = ({ onClose }: AddProductFormProps) => {
         name: '',
         description: '',
         price: '',
-        category: '',
+        categories: [],
         cover_image: '',
         images: '',
         colors: '',
@@ -97,10 +106,10 @@ const AddProductForm = ({ onClose }: AddProductFormProps) => {
     e.preventDefault();
     console.log('Form submitted with data:', formData);
     
-    if (!formData.name || !formData.price || !formData.category) {
+    if (!formData.name || !formData.price || formData.categories.length === 0) {
       toast({
         title: 'خطأ',
-        description: 'يرجى ملء جميع الحقول المطلوبة',
+        description: 'يرجى ملء جميع الحقول المطلوبة واختيار فئة واحدة على الأقل',
         variant: 'destructive',
       });
       return;
@@ -112,6 +121,15 @@ const AddProductForm = ({ onClose }: AddProductFormProps) => {
   const handleInputChange = (field: string, value: string) => {
     console.log(`Updating ${field} to:`, value);
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleCategoryChange = (categoryId: string, checked: boolean) => {
+    setFormData(prev => ({
+      ...prev,
+      categories: checked 
+        ? [...prev.categories, categoryId]
+        : prev.categories.filter(id => id !== categoryId)
+    }));
   };
 
   return (
@@ -137,22 +155,6 @@ const AddProductForm = ({ onClose }: AddProductFormProps) => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="category">الفئة *</Label>
-              <Select value={formData.category} onValueChange={(value) => handleInputChange('category', value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="اختر الفئة" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="makeup">مكياج</SelectItem>
-                  <SelectItem value="perfumes">عطور</SelectItem>
-                  <SelectItem value="flowers">ورد</SelectItem>
-                  <SelectItem value="home">مستلزمات منزلية</SelectItem>
-                  <SelectItem value="personal_care">عناية شخصية</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
               <Label htmlFor="price">السعر (د.ع) *</Label>
               <Input
                 id="price"
@@ -164,17 +166,35 @@ const AddProductForm = ({ onClose }: AddProductFormProps) => {
                 required
               />
             </div>
+          </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="stock">الكمية المتوفرة</Label>
-              <Input
-                id="stock"
-                type="number"
-                value={formData.stock_quantity}
-                onChange={(e) => handleInputChange('stock_quantity', e.target.value)}
-                placeholder="0"
-              />
+          <div className="space-y-2">
+            <Label>الفئات * (اختر فئة واحدة أو أكثر)</Label>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              {availableCategories.map((category) => (
+                <div key={category.id} className="flex items-center space-x-2 space-x-reverse">
+                  <Checkbox
+                    id={category.id}
+                    checked={formData.categories.includes(category.id)}
+                    onCheckedChange={(checked) => handleCategoryChange(category.id, !!checked)}
+                  />
+                  <Label htmlFor={category.id} className="text-sm">
+                    {category.label}
+                  </Label>
+                </div>
+              ))}
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="stock">الكمية المتوفرة</Label>
+            <Input
+              id="stock"
+              type="number"
+              value={formData.stock_quantity}
+              onChange={(e) => handleInputChange('stock_quantity', e.target.value)}
+              placeholder="0"
+            />
           </div>
 
           <div className="space-y-2">

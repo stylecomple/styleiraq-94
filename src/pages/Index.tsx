@@ -7,18 +7,19 @@ import ProductCard from '@/components/ProductCard';
 import Hero from '@/components/Hero';
 import CategorySection from '@/components/CategorySection';
 import FeaturesSection from '@/components/FeaturesSection';
-import Newsletter from '@/components/Newsletter';
+import SearchBar from '@/components/SearchBar';
 import { supabase } from '@/integrations/supabase/client';
 
-type CategoryType = 'all' | 'makeup' | 'perfumes' | 'flowers' | 'home' | 'personal_care';
+type CategoryType = 'all' | 'makeup' | 'perfumes' | 'flowers' | 'home' | 'personal_care' | 'exclusive_offers';
 
 const Index = () => {
   const { user } = useAuth();
   const [selectedCategory, setSelectedCategory] = useState<CategoryType>('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const productsRef = useRef<HTMLDivElement>(null);
 
   const { data: products, isLoading } = useQuery({
-    queryKey: ['products', selectedCategory],
+    queryKey: ['products', selectedCategory, searchQuery],
     queryFn: async () => {
       let query = supabase
         .from('products')
@@ -26,12 +27,22 @@ const Index = () => {
         .eq('is_active', true)
         .order('created_at', { ascending: false });
 
+      // تطبيق فلتر الفئة
       if (selectedCategory !== 'all') {
-        query = query.eq('category', selectedCategory as 'makeup' | 'perfumes' | 'flowers' | 'home' | 'personal_care');
+        query = query.contains('categories', [selectedCategory]);
       }
 
       const { data, error } = await query;
       if (error) throw error;
+
+      // تطبيق البحث على النتائج
+      if (searchQuery && data) {
+        return data.filter(product => 
+          product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (product.description && product.description.toLowerCase().includes(searchQuery.toLowerCase()))
+        );
+      }
+
       return data;
     }
   });
@@ -42,7 +53,8 @@ const Index = () => {
     { id: 'perfumes' as const, name: 'عطور', icon: '🌸' },
     { id: 'flowers' as const, name: 'ورد', icon: '🌹' },
     { id: 'home' as const, name: 'مستلزمات منزلية', icon: '🏠' },
-    { id: 'personal_care' as const, name: 'عناية شخصية', icon: '🧴' }
+    { id: 'personal_care' as const, name: 'عناية شخصية', icon: '🧴' },
+    { id: 'exclusive_offers' as const, name: 'العروض الحصرية', icon: '🎁' }
   ];
 
   const handleStartShopping = () => {
@@ -73,6 +85,14 @@ const Index = () => {
           </div>
         )}
 
+        {/* شريط البحث */}
+        <div className="mb-8">
+          <SearchBar 
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+          />
+        </div>
+
         <CategorySection 
           categories={categories}
           selectedCategory={selectedCategory}
@@ -82,7 +102,12 @@ const Index = () => {
         <div className="mb-16">
           <div className="text-center mb-12">
             <h2 className="text-4xl font-bold mb-4 bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent">
-              {selectedCategory === 'all' ? 'جميع المنتجات' : categories.find(c => c.id === selectedCategory)?.name}
+              {searchQuery 
+                ? `نتائج البحث عن "${searchQuery}"` 
+                : selectedCategory === 'all' 
+                  ? 'جميع المنتجات' 
+                  : categories.find(c => c.id === selectedCategory)?.name
+              }
             </h2>
             <div className="w-24 h-1 bg-gradient-to-r from-pink-500 to-purple-500 mx-auto rounded-full"></div>
           </div>
@@ -111,14 +136,19 @@ const Index = () => {
           {!isLoading && (!products || products.length === 0) && (
             <div className="text-center py-16">
               <div className="text-6xl mb-4">🔍</div>
-              <p className="text-xl text-gray-500">لا توجد منتجات في هذه الفئة حالياً</p>
-              <p className="text-gray-400 mt-2">تحقق مرة أخرى قريباً!</p>
+              <p className="text-xl text-gray-500">
+                {searchQuery 
+                  ? `لا توجد منتجات تحتوي على "${searchQuery}"` 
+                  : 'لا توجد منتجات في هذه الفئة حالياً'
+                }
+              </p>
+              <p className="text-gray-400 mt-2">
+                {searchQuery ? 'جرب البحث بكلمات أخرى' : 'تحقق مرة أخرى قريباً!'}
+              </p>
             </div>
           )}
         </div>
       </main>
-
-      <Newsletter />
     </div>
   );
 };
