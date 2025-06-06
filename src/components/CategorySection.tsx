@@ -1,8 +1,8 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 
-type CategoryType = 'all' | 'makeup' | 'perfumes' | 'flowers' | 'home' | 'personal_care' | 'exclusive_offers';
+type CategoryType = 'all' | string;
 
 interface Category {
   id: CategoryType;
@@ -11,12 +11,38 @@ interface Category {
 }
 
 interface CategorySectionProps {
-  categories: Category[];
   selectedCategory: CategoryType;
   onCategorySelect: (categoryId: CategoryType) => void;
 }
 
-const CategorySection = ({ categories, selectedCategory, onCategorySelect }: CategorySectionProps) => {
+const CategorySection = ({ selectedCategory, onCategorySelect }: CategorySectionProps) => {
+  const [categories, setCategories] = useState<Category[]>([
+    { id: 'all', name: 'جميع المنتجات', icon: '🛍️' },
+    { id: 'makeup', name: 'مكياج', icon: '💄' },
+    { id: 'perfumes', name: 'عطور', icon: '🌸' },
+    { id: 'flowers', name: 'ورد', icon: '🌹' },
+    { id: 'home', name: 'مستلزمات منزلية', icon: '🏠' },
+    { id: 'personal_care', name: 'عناية شخصية', icon: '🧴' },
+    { id: 'exclusive_offers', name: 'العروض الحصرية', icon: '✨' }
+  ]);
+
+  // تحميل الفئات من localStorage عند بدء تشغيل المكون
+  useEffect(() => {
+    const savedCategories = localStorage.getItem('productCategories');
+    if (savedCategories) {
+      try {
+        const loadedCategories = JSON.parse(savedCategories);
+        // إضافة خيار "جميع المنتجات" في البداية
+        setCategories([
+          { id: 'all', name: 'جميع المنتجات', icon: '🛍️' },
+          ...loadedCategories
+        ]);
+      } catch (error) {
+        console.error('Error loading categories from localStorage:', error);
+      }
+    }
+  }, []);
+
   return (
     <div className="mb-16">
       <div className="text-center mb-12">
