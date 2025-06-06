@@ -10,6 +10,7 @@ import ProductsManagement from '@/components/admin/ProductsManagement';
 import OrdersManagement from '@/components/admin/OrdersManagement';
 import AddProductForm from '@/components/admin/AddProductForm';
 import { useOrderNotifications } from '@/hooks/useOrderNotifications';
+import AdminSettings from '@/components/admin/AdminSettings';
 
 const AdminPanel = () => {
   const { user, isAdmin, loading } = useAuth();
@@ -147,9 +148,10 @@ const AdminPanel = () => {
         </div>
 
         <Tabs defaultValue="products" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="products">إدارة المنتجات</TabsTrigger>
             <TabsTrigger value="orders">إدارة الطلبات</TabsTrigger>
+            <TabsTrigger value="settings">الإعدادات</TabsTrigger>
           </TabsList>
 
           <TabsContent value="products" className="space-y-6">
@@ -174,6 +176,11 @@ const AdminPanel = () => {
           <TabsContent value="orders" className="space-y-6">
             <h2 className="text-2xl font-bold">إدارة الطلبات</h2>
             <OrdersManagement />
+          </TabsContent>
+
+          <TabsContent value="settings" className="space-y-6">
+            <h2 className="text-2xl font-bold">إعدادات المتجر</h2>
+            <AdminSettings />
           </TabsContent>
         </Tabs>
       </div>

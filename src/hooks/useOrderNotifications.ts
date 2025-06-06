@@ -4,9 +4,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useNotificationSound } from './useNotificationSound';
 import { useToast } from './use-toast';
+import { useAdminSettings } from './useAdminSettings';
 
 export const useOrderNotifications = () => {
   const { isAdmin } = useAuth();
+  const { settings } = useAdminSettings();
   const { playNotificationSound } = useNotificationSound();
   const { toast } = useToast();
   const lastOrderCountRef = useRef<number | null>(null);
@@ -44,6 +46,12 @@ export const useOrderNotifications = () => {
         },
         async (payload) => {
           console.log('New order detected:', payload);
+          
+          // التحقق من حالة المتجر
+          if (!settings.is_store_open) {
+            console.log('Store is closed, not processing notification');
+            return;
+          }
           
           // تشغيل صوت التنبيه
           try {
@@ -85,5 +93,5 @@ export const useOrderNotifications = () => {
       console.log('Cleaning up order notifications...');
       supabase.removeChannel(channel);
     };
-  }, [isAdmin, playNotificationSound, toast]);
+  }, [isAdmin, playNotificationSound, toast, settings.is_store_open]);
 };
