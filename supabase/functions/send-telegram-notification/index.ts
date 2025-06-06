@@ -38,8 +38,7 @@ const handler = async (req: Request): Promise<Response> => {
           quantity,
           price,
           products (name, cover_image)
-        ),
-        profiles (full_name, email)
+        )
       `)
       .eq('id', orderId)
       .single();
@@ -56,7 +55,6 @@ const handler = async (req: Request): Promise<Response> => {
     
     let message = `🛒 *طلب جديد!*\n\n`;
     message += `📋 *رقم الطلب:* \`${order.id.slice(0, 8)}...\`\n`;
-    message += `👤 *العميل:* ${order.profiles?.full_name || 'غير محدد'}\n`;
     message += `💰 *المبلغ الإجمالي:* ${formatPrice(order.total_amount)}\n`;
     message += `📞 *رقم الهاتف:* ${order.phone || 'غير محدد'}\n`;
     message += `📍 *عنوان التوصيل:* ${order.shipping_address || 'غير محدد'}\n`;
