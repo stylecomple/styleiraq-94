@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { ShoppingCart, User, Shield, LogOut } from 'lucide-react';
+import { ShoppingCart, User, Shield, LogOut, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -26,22 +26,40 @@ const Header = ({ cartItemsCount, onCartClick }: HeaderProps) => {
     navigate('/admin');
   };
 
+  const handleOrdersClick = () => {
+    navigate('/orders');
+  };
+
   return (
-    <header className="bg-white shadow-md sticky top-0 z-50">
+    <header className="bg-white shadow-lg sticky top-0 z-50 border-b border-pink-100">
       <div className="container mx-auto px-4 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4 rtl:space-x-reverse">
-            <h1 className="text-2xl font-bold text-pink-600">مجمع ستايل العامرية</h1>
-            <span className="text-sm text-gray-600">متجر متكامل لاحتياجاتك</span>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent">
+              Style
+            </h1>
+            <span className="text-sm text-gray-500 hidden md:block">متجر الجمال والأناقة</span>
           </div>
           
-          <div className="flex items-center space-x-4 rtl:space-x-reverse">
+          <div className="flex items-center space-x-3 rtl:space-x-reverse">
+            {user && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleOrdersClick}
+                className="flex items-center gap-2 border-pink-200 text-pink-600 hover:bg-pink-50"
+              >
+                <Package className="w-4 h-4" />
+                طلباتي
+              </Button>
+            )}
+            
             {user && isAdmin && (
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleAdminClick}
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 border-purple-200 text-purple-600 hover:bg-purple-50"
               >
                 <Shield className="w-4 h-4" />
                 لوحة التحكم
@@ -52,7 +70,7 @@ const Header = ({ cartItemsCount, onCartClick }: HeaderProps) => {
               variant="outline"
               size="sm"
               onClick={handleAuthClick}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 border-gray-200 hover:bg-gray-50"
             >
               {user ? (
                 <>
@@ -71,7 +89,7 @@ const Header = ({ cartItemsCount, onCartClick }: HeaderProps) => {
               variant="outline"
               size="sm"
               onClick={onCartClick}
-              className="relative flex items-center gap-2"
+              className="relative flex items-center gap-2 border-pink-200 text-pink-600 hover:bg-pink-50"
             >
               <ShoppingCart className="w-5 h-5" />
               <span>السلة</span>
@@ -83,16 +101,6 @@ const Header = ({ cartItemsCount, onCartClick }: HeaderProps) => {
             </Button>
           </div>
         </div>
-        
-        <nav className="mt-4">
-          <ul className="flex space-x-6 rtl:space-x-reverse text-gray-700">
-            <li><a href="#makeup" className="hover:text-pink-600 transition-colors">مكياج</a></li>
-            <li><a href="#perfumes" className="hover:text-pink-600 transition-colors">عطور</a></li>
-            <li><a href="#flowers" className="hover:text-pink-600 transition-colors">ورد</a></li>
-            <li><a href="#home" className="hover:text-pink-600 transition-colors">مستلزمات منزلية</a></li>
-            <li><a href="#personal-care" className="hover:text-pink-600 transition-colors">عناية شخصية</a></li>
-          </ul>
-        </nav>
       </div>
     </header>
   );
