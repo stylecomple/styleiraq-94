@@ -7,9 +7,32 @@ import { useToast } from './use-toast';
 
 export const useOrderNotifications = () => {
   const { isAdmin } = useAuth();
-  const { playNotificationSound } = useNotificationSound();
+  const { playNotificationSound, enableAudio } = useNotificationSound();
   const { toast } = useToast();
   const lastOrderCountRef = useRef<number | null>(null);
+  const audioEnabledRef = useRef(false);
+
+  // Enable audio on first user interaction
+  useEffect(() => {
+    const enableAudioOnInteraction = () => {
+      if (!audioEnabledRef.current) {
+        enableAudio();
+        audioEnabledRef.current = true;
+        console.log('🔊 Audio enabled for notifications');
+      }
+    };
+
+    // Add listeners for user interaction
+    document.addEventListener('click', enableAudioOnInteraction, { once: true });
+    document.addEventListener('keydown', enableAudioOnInteraction, { once: true });
+    document.addEventListener('touchstart', enableAudioOnInteraction, { once: true });
+
+    return () => {
+      document.removeEventListener('click', enableAudioOnInteraction);
+      document.removeEventListener('keydown', enableAudioOnInteraction);
+      document.removeEventListener('touchstart', enableAudioOnInteraction);
+    };
+  }, [enableAudio]);
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -43,7 +66,7 @@ export const useOrderNotifications = () => {
           table: 'orders'
         },
         async (payload) => {
-          console.log('New order detected:', payload);
+          console.log('🆕 New order detected:', payload);
           
           // التحقق من حالة المتجر من قاعدة البيانات مباشرة
           try {
@@ -61,19 +84,26 @@ export const useOrderNotifications = () => {
             // في حالة خطأ، نستمر بالإشعار
           }
           
-          // تشغيل صوت التنبيه
-          try {
-            await playNotificationSound();
-            console.log('Notification sound triggered');
-          } catch (error) {
-            console.error('Error playing notification sound:', error);
-          }
+          // تشغيل صوت التنبيه مع تأخير قصير للتأكد من أن العملية مكتملة
+          setTimeout(async () => {
+            try {
+              console.log('🔔 Playing notification sound for new order...');
+              const soundPlayed = await playNotificationSound();
+              if (soundPlayed) {
+                console.log('✅ Notification sound played successfully');
+              } else {
+                console.log('⚠️ Sound failed, but fallback should have been triggered');
+              }
+            } catch (error) {
+              console.error('❌ Error playing notification sound:', error);
+            }
+          }, 500);
           
           // عرض إشعار
           toast({
-            title: "طلب جديد!",
+            title: "🔔 طلب جديد!",
             description: `تم استلام طلب جديد برقم: ${payload.new.id.slice(0, 8)}...`,
-            duration: 5000,
+            duration: 8000,
           });
           
           // إرسال إشعار Telegram
@@ -101,5 +131,5 @@ export const useOrderNotifications = () => {
       console.log('Cleaning up order notifications...');
       supabase.removeChannel(channel);
     };
-  }, [isAdmin, playNotificationSound, toast]);
+  }, [isAdmin, playNotificationSound, toast, enableAudio]);
 };

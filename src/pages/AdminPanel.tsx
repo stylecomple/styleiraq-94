@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -6,16 +5,18 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
-import { Shield, Users, Package, BarChart3, Plus, ArrowLeft } from 'lucide-react';
+import { Shield, Users, Package, BarChart3, Plus, ArrowLeft, Volume2 } from 'lucide-react';
 import ProductsManagement from '@/components/admin/ProductsManagement';
 import OrdersManagement from '@/components/admin/OrdersManagement';
 import AddProductForm from '@/components/admin/AddProductForm';
 import { useOrderNotifications } from '@/hooks/useOrderNotifications';
+import { useNotificationSound } from '@/hooks/useNotificationSound';
 import AdminSettings from '@/components/admin/AdminSettings';
 
 const AdminPanel = () => {
   const { user, isAdmin, loading } = useAuth();
   const navigate = useNavigate();
+  const { playNotificationSound } = useNotificationSound();
   const [stats, setStats] = useState({
     totalUsers: 0,
     adminUsers: 0,
@@ -73,7 +74,16 @@ const AdminPanel = () => {
     }
   }, [isAdmin]);
 
-  // إضافة تسجيل للتأكد من أن الأدمن مُعرف بشكل صحيح
+  const testNotificationSound = async () => {
+    console.log('🧪 Testing notification sound...');
+    try {
+      const result = await playNotificationSound();
+      console.log('Test result:', result);
+    } catch (error) {
+      console.error('Test error:', error);
+    }
+  };
+
   useEffect(() => {
     console.log('Admin status:', { user: user?.id, isAdmin, loading });
   }, [user, isAdmin, loading]);
@@ -102,6 +112,14 @@ const AdminPanel = () => {
             >
               <ArrowLeft className="w-4 h-4" />
               العودة للرئيسية
+            </Button>
+            <Button
+              variant="outline"
+              onClick={testNotificationSound}
+              className="flex items-center gap-2 bg-green-50 hover:bg-green-100 border-green-200"
+            >
+              <Volume2 className="w-4 h-4" />
+              اختبار صوت التنبيه
             </Button>
           </div>
           <div className="flex items-center gap-3 mb-2">
