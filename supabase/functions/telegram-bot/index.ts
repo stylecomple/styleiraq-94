@@ -34,7 +34,6 @@ const handler = async (req: Request): Promise<Response> => {
 
   try {
     const telegramToken = Deno.env.get('TELEGRAM_BOT_TOKEN');
-    const functionSecret = Deno.env.get('FUNCTION_SECRET');
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     
@@ -48,15 +47,6 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Initialize Supabase client
     const supabase = createClient(supabaseUrl, supabaseKey);
-
-    // Verify the secret parameter for webhook security
-    const url = new URL(req.url);
-    const secret = url.searchParams.get('secret');
-    
-    if (functionSecret && secret !== functionSecret) {
-      console.log('❌ Invalid secret provided');
-      return new Response('Unauthorized', { status: 401 });
-    }
 
     const update: TelegramUpdate = await req.json();
     console.log('📨 Received update:', JSON.stringify(update, null, 2));
@@ -72,11 +62,11 @@ const handler = async (req: Request): Promise<Response> => {
     const userName = message.from.first_name;
     const username = message.from.username;
 
-    console.log(`💬 Message from ${userName}: ${text}`);
+    console.log(`💬 Message from ${userName} (${chatId}): ${text}`);
 
     // Store or update user in database
     try {
-      const { error: upsertError } = await supabase
+      const { data, error: upsertError } = await supabase
         .from('telegram_users')
         .upsert({
           chat_id: chatId,
@@ -91,7 +81,7 @@ const handler = async (req: Request): Promise<Response> => {
       if (upsertError) {
         console.error('❌ Error storing user:', upsertError);
       } else {
-        console.log('✅ User stored/updated successfully');
+        console.log('✅ User stored/updated successfully:', data);
       }
     } catch (error) {
       console.error('❌ Database error:', error);
