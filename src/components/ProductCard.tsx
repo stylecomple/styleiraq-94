@@ -1,10 +1,9 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { ShoppingCart, Eye, Star } from 'lucide-react';
+import { ShoppingCart, Eye, Star, Heart } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 
 interface Product {
@@ -24,6 +23,7 @@ interface ProductCardProps {
 
 const ProductCard = ({ product }: ProductCardProps) => {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [isLiked, setIsLiked] = useState(false);
   const { addToCart } = useCart();
   
   const categoryLabels = {
@@ -56,27 +56,42 @@ const ProductCard = ({ product }: ProductCardProps) => {
 
   return (
     <>
-      <Card className="group overflow-hidden hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 bg-white border-0 shadow-lg">
-        <div className="relative overflow-hidden">
+      <Card className="group overflow-hidden hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-3 bg-white border-0 shadow-lg rounded-2xl">
+        <div className="relative overflow-hidden rounded-t-2xl">
           <img
             src={product.cover_image || '/placeholder.svg'}
             alt={product.name}
-            className="w-full h-56 object-cover group-hover:scale-110 transition-transform duration-500"
+            className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-700"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
           
+          {/* Gradient Overlay */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+          
+          {/* Action Buttons */}
+          <div className="absolute top-4 right-4 flex flex-col gap-2">
+            <button
+              onClick={() => setIsLiked(!isLiked)}
+              className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ${
+                isLiked ? 'bg-red-500 text-white' : 'bg-white/80 backdrop-blur-sm text-gray-600 hover:bg-red-500 hover:text-white'
+              }`}
+            >
+              <Heart className={`w-5 h-5 ${isLiked ? 'fill-current' : ''}`} />
+            </button>
+          </div>
+
+          {/* Quick View Button */}
           <Dialog>
             <DialogTrigger asChild>
               <Button
                 variant="secondary"
                 size="sm"
-                className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all duration-300 bg-white/90 hover:bg-white text-gray-800 shadow-lg"
+                className="absolute bottom-4 left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 translate-y-4 group-hover:translate-y-0 transition-all duration-300 bg-white/90 backdrop-blur-sm hover:bg-white text-gray-800 shadow-lg rounded-full px-6"
               >
                 <Eye className="w-4 h-4 mr-2" />
                 عرض سريع
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto rounded-2xl">
               <DialogHeader>
                 <DialogTitle className="text-2xl font-bold text-right">{product.name}</DialogTitle>
               </DialogHeader>
@@ -137,7 +152,7 @@ const ProductCard = ({ product }: ProductCardProps) => {
                     
                     <Button 
                       onClick={handleAddToCart}
-                      className="w-full bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-700 hover:to-purple-700 text-white py-3 text-lg"
+                      className="w-full bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-700 hover:to-purple-700 text-white py-3 text-lg rounded-full"
                       disabled={isOutOfStock}
                     >
                       <ShoppingCart className="w-5 h-5 mr-2" />
@@ -149,31 +164,42 @@ const ProductCard = ({ product }: ProductCardProps) => {
             </DialogContent>
           </Dialog>
           
+          {/* Category Badge */}
           <Badge 
             variant="secondary" 
-            className="absolute top-3 right-3 bg-pink-600 text-white shadow-lg"
+            className="absolute top-4 left-4 bg-gradient-to-r from-pink-500 to-purple-600 text-white shadow-lg border-0 rounded-full px-3 py-1"
           >
             {categoryLabels[product.category as keyof typeof categoryLabels]}
           </Badge>
         </div>
         
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg text-right font-semibold">{product.name}</CardTitle>
+        <CardHeader className="pb-3 px-6">
+          <CardTitle className="text-lg text-right font-bold text-gray-800 group-hover:text-purple-700 transition-colors line-clamp-1">
+            {product.name}
+          </CardTitle>
           <CardDescription className="text-right text-sm line-clamp-2 text-gray-600">
-            {product.description || 'منتج عالي الجودة'}
+            {product.description || 'منتج عالي الجودة من أفضل العلامات التجارية'}
           </CardDescription>
+          
+          {/* Rating */}
+          <div className="flex items-center justify-center gap-1 pt-2">
+            {[...Array(5)].map((_, i) => (
+              <Star key={i} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+            ))}
+            <span className="text-xs text-gray-500 mr-2">(4.8)</span>
+          </div>
         </CardHeader>
         
-        <CardContent className="pt-0">
+        <CardContent className="pt-0 px-6 pb-6">
           <div className="flex items-center justify-center mb-4">
-            <span className="text-2xl font-bold text-pink-600">
+            <span className="text-2xl font-bold bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent">
               {formatPrice(product.price)}
             </span>
           </div>
           
           <Button 
             onClick={handleAddToCart}
-            className="w-full bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-700 hover:to-purple-700 text-white shadow-lg"
+            className="w-full bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 rounded-full py-6"
             disabled={isOutOfStock}
           >
             <ShoppingCart className="w-4 h-4 mr-2" />

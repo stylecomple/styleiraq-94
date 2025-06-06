@@ -6,6 +6,8 @@ import Header from '@/components/Header';
 import ProductCard from '@/components/ProductCard';
 import Hero from '@/components/Hero';
 import CategorySection from '@/components/CategorySection';
+import FeaturesSection from '@/components/FeaturesSection';
+import Newsletter from '@/components/Newsletter';
 import { supabase } from '@/integrations/supabase/client';
 
 type CategoryType = 'all' | 'makeup' | 'perfumes' | 'flowers' | 'home' | 'personal_care';
@@ -52,46 +54,22 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-50 to-purple-50">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
       <Header />
       
       <Hero onStartShopping={handleStartShopping} onBrowseCollections={handleBrowseCollections} />
       
-      {/* Features Section */}
-      <section className="py-16 bg-white">
-        <div className="container mx-auto px-4">
-          <div className="grid md:grid-cols-3 gap-8 text-center">
-            <div className="p-6">
-              <div className="w-16 h-16 bg-pink-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-2xl">🚚</span>
-              </div>
-              <h3 className="text-xl font-semibold mb-2">توصيل سريع</h3>
-              <p className="text-gray-600">توصيل مجاني لجميع أنحاء العراق خلال 24-48 ساعة</p>
-            </div>
-            <div className="p-6">
-              <div className="w-16 h-16 bg-pink-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-2xl">💎</span>
-              </div>
-              <h3 className="text-xl font-semibold mb-2">منتجات أصلية</h3>
-              <p className="text-gray-600">جميع منتجاتنا أصلية ومضمونة الجودة</p>
-            </div>
-            <div className="p-6">
-              <div className="w-16 h-16 bg-pink-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-2xl">🎁</span>
-              </div>
-              <h3 className="text-xl font-semibold mb-2">عروض حصرية</h3>
-              <p className="text-gray-600">خصومات وعروض خاصة للعملاء المميزين</p>
-            </div>
-          </div>
-        </div>
-      </section>
+      <FeaturesSection />
 
-      <main className="container mx-auto px-4 py-12" ref={productsRef}>
+      <main className="container mx-auto px-4 py-16" ref={productsRef}>
         {user && (
-          <div className="text-center mb-8">
-            <p className="text-lg text-gray-700">
-              مرحباً {user.user_metadata?.full_name || user.email}
-            </p>
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center gap-2 bg-gradient-to-r from-pink-100 to-purple-100 rounded-full px-6 py-3">
+              <span className="text-lg text-gray-700">
+                مرحباً <span className="font-semibold text-purple-700">{user.user_metadata?.full_name || user.email}</span>
+              </span>
+              <span className="text-2xl">👋</span>
+            </div>
           </div>
         )}
 
@@ -101,23 +79,29 @@ const Index = () => {
           onCategorySelect={setSelectedCategory}
         />
 
-        <div className="mb-12">
-          <h2 className="text-3xl font-bold text-center mb-8 text-gray-800">
-            {selectedCategory === 'all' ? 'جميع المنتجات' : categories.find(c => c.id === selectedCategory)?.name}
-          </h2>
+        <div className="mb-16">
+          <div className="text-center mb-12">
+            <h2 className="text-4xl font-bold mb-4 bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent">
+              {selectedCategory === 'all' ? 'جميع المنتجات' : categories.find(c => c.id === selectedCategory)?.name}
+            </h2>
+            <div className="w-24 h-1 bg-gradient-to-r from-pink-500 to-purple-500 mx-auto rounded-full"></div>
+          </div>
           
           {isLoading ? (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
               {[...Array(8)].map((_, i) => (
-                <div key={i} className="bg-white rounded-xl shadow-md p-4 animate-pulse">
-                  <div className="bg-gray-200 h-56 rounded-lg mb-4"></div>
-                  <div className="bg-gray-200 h-4 rounded mb-2"></div>
-                  <div className="bg-gray-200 h-4 rounded w-2/3"></div>
+                <div key={i} className="bg-white rounded-2xl shadow-lg p-6 animate-pulse">
+                  <div className="bg-gray-200 h-64 rounded-xl mb-6"></div>
+                  <div className="space-y-3">
+                    <div className="bg-gray-200 h-4 rounded-full"></div>
+                    <div className="bg-gray-200 h-4 rounded-full w-2/3"></div>
+                    <div className="bg-gray-200 h-6 rounded-full w-1/2"></div>
+                  </div>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
               {products?.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}
@@ -125,30 +109,16 @@ const Index = () => {
           )}
           
           {!isLoading && (!products || products.length === 0) && (
-            <div className="text-center py-12">
-              <p className="text-gray-500 text-lg">لا توجد منتجات في هذه الفئة حالياً</p>
+            <div className="text-center py-16">
+              <div className="text-6xl mb-4">🔍</div>
+              <p className="text-xl text-gray-500">لا توجد منتجات في هذه الفئة حالياً</p>
+              <p className="text-gray-400 mt-2">تحقق مرة أخرى قريباً!</p>
             </div>
           )}
         </div>
       </main>
 
-      {/* Newsletter Section */}
-      <section className="bg-gradient-to-r from-pink-600 to-purple-600 text-white py-16">
-        <div className="container mx-auto px-4 text-center">
-          <h2 className="text-3xl font-bold mb-4">اشترك في نشرتنا الإخبارية</h2>
-          <p className="text-xl mb-8">احصل على آخر العروض والمنتجات الجديدة</p>
-          <div className="max-w-md mx-auto flex gap-4">
-            <input 
-              type="email" 
-              placeholder="أدخل بريدك الإلكتروني"
-              className="flex-1 px-4 py-3 rounded-lg text-gray-800"
-            />
-            <button className="bg-white text-pink-600 px-6 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors">
-              اشتراك
-            </button>
-          </div>
-        </div>
-      </section>
+      <Newsletter />
     </div>
   );
 };
