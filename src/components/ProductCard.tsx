@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ShoppingCart, Eye, Star } from 'lucide-react';
+import { useCart } from '@/contexts/CartContext';
 
 interface Product {
   id: string;
@@ -23,6 +24,7 @@ interface ProductCardProps {
 
 const ProductCard = ({ product }: ProductCardProps) => {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const { addToCart } = useCart();
   
   const categoryLabels = {
     makeup: 'مكياج',
@@ -37,7 +39,7 @@ const ProductCard = ({ product }: ProductCardProps) => {
       style: 'currency',
       currency: 'IQD',
       minimumFractionDigits: 0
-    }).format(price * 1000); // Convert to Iraqi Dinar (assuming price is in USD equivalent)
+    }).format(price * 1000);
   };
 
   const allImages = product.images && product.images.length > 0 
@@ -45,6 +47,12 @@ const ProductCard = ({ product }: ProductCardProps) => {
     : product.cover_image 
     ? [product.cover_image] 
     : ['/placeholder.svg'];
+
+  const handleAddToCart = () => {
+    addToCart(product);
+  };
+
+  const isOutOfStock = !product.stock_quantity || product.stock_quantity === 0;
 
   return (
     <>
@@ -121,21 +129,19 @@ const ProductCard = ({ product }: ProductCardProps) => {
                   </p>
                   
                   <div className="border-t pt-4">
-                    <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center justify-center mb-4">
                       <span className="text-3xl font-bold text-pink-600">
                         {formatPrice(product.price)}
-                      </span>
-                      <span className="text-sm text-gray-500">
-                        متوفر: {product.stock_quantity || 0}
                       </span>
                     </div>
                     
                     <Button 
+                      onClick={handleAddToCart}
                       className="w-full bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-700 hover:to-purple-700 text-white py-3 text-lg"
-                      disabled={!product.stock_quantity || product.stock_quantity === 0}
+                      disabled={isOutOfStock}
                     >
                       <ShoppingCart className="w-5 h-5 mr-2" />
-                      {product.stock_quantity && product.stock_quantity > 0 ? 'أضف للسلة' : 'غير متوفر'}
+                      {isOutOfStock ? 'غير متوفر' : 'أضف للسلة'}
                     </Button>
                   </div>
                 </div>
@@ -159,21 +165,19 @@ const ProductCard = ({ product }: ProductCardProps) => {
         </CardHeader>
         
         <CardContent className="pt-0">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-center mb-4">
             <span className="text-2xl font-bold text-pink-600">
               {formatPrice(product.price)}
-            </span>
-            <span className="text-sm text-gray-500">
-              متوفر: {product.stock_quantity || 0}
             </span>
           </div>
           
           <Button 
+            onClick={handleAddToCart}
             className="w-full bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-700 hover:to-purple-700 text-white shadow-lg"
-            disabled={!product.stock_quantity || product.stock_quantity === 0}
+            disabled={isOutOfStock}
           >
             <ShoppingCart className="w-4 h-4 mr-2" />
-            {product.stock_quantity && product.stock_quantity > 0 ? 'أضف للسلة' : 'غير متوفر'}
+            {isOutOfStock ? 'غير متوفر' : 'أضف للسلة'}
           </Button>
         </CardContent>
       </Card>

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -6,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
-import { Shield, Users, Package, BarChart3, Plus } from 'lucide-react';
+import { Shield, Users, Package, BarChart3, Plus, ArrowLeft } from 'lucide-react';
 import ProductsManagement from '@/components/admin/ProductsManagement';
 import OrdersManagement from '@/components/admin/OrdersManagement';
 import AddProductForm from '@/components/admin/AddProductForm';
@@ -84,6 +83,16 @@ const AdminPanel = () => {
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
+          <div className="flex items-center gap-4 mb-4">
+            <Button
+              variant="outline"
+              onClick={() => navigate('/')}
+              className="flex items-center gap-2"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              العودة للرئيسية
+            </Button>
+          </div>
           <div className="flex items-center gap-3 mb-2">
             <Shield className="w-8 h-8 text-pink-600" />
             <h1 className="text-3xl font-bold text-foreground">لوحة التحكم الإدارية</h1>

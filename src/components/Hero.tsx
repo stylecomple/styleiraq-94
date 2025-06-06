@@ -2,7 +2,12 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 
-const Hero = () => {
+interface HeroProps {
+  onStartShopping: () => void;
+  onBrowseCollections: () => void;
+}
+
+const Hero = ({ onStartShopping, onBrowseCollections }: HeroProps) => {
   return (
     <section className="relative bg-gradient-to-r from-pink-500 via-purple-500 to-pink-600 text-white py-24 overflow-hidden">
       <div className="absolute inset-0 bg-black/10"></div>
@@ -27,6 +32,7 @@ const Hero = () => {
           <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
             <Button 
               size="lg" 
+              onClick={onStartShopping}
               className="bg-white text-pink-600 hover:bg-pink-50 px-10 py-4 text-lg font-semibold rounded-full shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
             >
               ابدأ التسوق الآن
@@ -34,6 +40,7 @@ const Hero = () => {
             <Button 
               variant="outline" 
               size="lg" 
+              onClick={onBrowseCollections}
               className="border-2 border-white text-white hover:bg-white hover:text-pink-600 px-10 py-4 text-lg font-semibold rounded-full transition-all duration-300"
             >
               تصفح المجموعات

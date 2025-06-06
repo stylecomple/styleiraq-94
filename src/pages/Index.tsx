@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import Header from '@/components/Header';
@@ -12,12 +12,8 @@ type CategoryType = 'all' | 'makeup' | 'perfumes' | 'flowers' | 'home' | 'person
 
 const Index = () => {
   const { user } = useAuth();
-  const [cartItemsCount] = useState(0);
   const [selectedCategory, setSelectedCategory] = useState<CategoryType>('all');
-
-  const handleCartClick = () => {
-    console.log('Cart clicked');
-  };
+  const productsRef = useRef<HTMLDivElement>(null);
 
   const { data: products, isLoading } = useQuery({
     queryKey: ['products', selectedCategory],
@@ -47,11 +43,19 @@ const Index = () => {
     { id: 'personal_care' as const, name: 'عناية شخصية', icon: '🧴' }
   ];
 
+  const handleStartShopping = () => {
+    productsRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const handleBrowseCollections = () => {
+    productsRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-pink-50 to-purple-50">
-      <Header cartItemsCount={cartItemsCount} onCartClick={handleCartClick} />
+      <Header />
       
-      <Hero />
+      <Hero onStartShopping={handleStartShopping} onBrowseCollections={handleBrowseCollections} />
       
       {/* Features Section */}
       <section className="py-16 bg-white">
@@ -82,7 +86,7 @@ const Index = () => {
         </div>
       </section>
 
-      <main className="container mx-auto px-4 py-12">
+      <main className="container mx-auto px-4 py-12" ref={productsRef}>
         {user && (
           <div className="text-center mb-8">
             <p className="text-lg text-gray-700">
