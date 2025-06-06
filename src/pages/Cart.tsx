@@ -65,6 +65,15 @@ const Cart = () => {
     "النجف", "كربلاء", "ميسان", "المثنى", "واسط", "أربيل", "دهوك", "السليمانية", "حلبجة"
   ];
 
+  const getShippingCost = () => {
+    if (!governorate) return 0;
+    return governorate === 'بغداد' ? 5000 : 6000;
+  };
+
+  const getTotalWithShipping = () => {
+    return getTotalPrice() + getShippingCost();
+  };
+
   const formatPrice = (price: number) => {
     return `${price.toLocaleString('ar-IQ')} د.ع`;
   };
@@ -119,12 +128,12 @@ const Cart = () => {
     setIsSubmitting(true);
 
     try {
-      // Create order in database
+      // Create order in database with shipping cost included
       const { data: order, error: orderError } = await supabase
         .from('orders')
         .insert({
           user_id: user.id,
-          total_amount: getTotalPrice(),
+          total_amount: getTotalWithShipping(),
           shipping_address: shippingAddress,
           phone: phone,
           governorate: governorate,
@@ -155,7 +164,7 @@ const Cart = () => {
       if (paymentMethod === 'visa_card' || paymentMethod === 'zain_cash') {
         const orderData = {
           orderId: order.id,
-          totalAmount: getTotalPrice(),
+          totalAmount: getTotalWithShipping(),
           items: items
         };
         openPaymentDialog(paymentMethod, orderData);
@@ -337,9 +346,17 @@ const Cart = () => {
                     <span>المجموع الفرعي:</span>
                     <span>{formatPrice(getTotalPrice())}</span>
                   </div>
-                  <div className="flex justify-between font-bold text-lg">
-                    <span>المجموع:</span>
-                    <span>{formatPrice(getTotalPrice())}</span>
+                  {governorate && (
+                    <div className="flex justify-between">
+                      <span>تكلفة التوصيل:</span>
+                      <span>{formatPrice(getShippingCost())}</span>
+                    </div>
+                  )}
+                  <div className="border-t pt-2">
+                    <div className="flex justify-between font-bold text-lg">
+                      <span>المجموع الكلي:</span>
+                      <span>{formatPrice(getTotalWithShipping())}</span>
+                    </div>
                   </div>
                 </div>
               </CardContent>
@@ -359,10 +376,23 @@ const Cart = () => {
                       </SelectTrigger>
                       <SelectContent>
                         {governorates.map((gov) => (
-                          <SelectItem key={gov} value={gov}>{gov}</SelectItem>
+                          <SelectItem key={gov} value={gov}>
+                            {gov}
+                            {gov === 'بغداد' && (
+                              <span className="text-sm text-green-600 mr-2">(5,000 د.ع)</span>
+                            )}
+                            {gov !== 'بغداد' && (
+                              <span className="text-sm text-orange-600 mr-2">(6,000 د.ع)</span>
+                            )}
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
+                    {governorate && (
+                      <p className="text-sm text-gray-600 mt-1">
+                        تكلفة التوصيل: {formatPrice(getShippingCost())}
+                      </p>
+                    )}
                   </div>
 
                   <div>
@@ -413,7 +443,7 @@ const Cart = () => {
                     onClick={handleSubmitOrder}
                     disabled={isSubmitting}
                   >
-                    {isSubmitting ? 'جاري المعالجة...' : 'تأكيد الطلب'}
+                    {isSubmitting ? 'جاري المعالجة...' : `تأكيد الطلب (${formatPrice(getTotalWithShipping())})`}
                   </Button>
                 </CardContent>
               </Card>
