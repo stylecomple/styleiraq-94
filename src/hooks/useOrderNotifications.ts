@@ -9,29 +9,26 @@ export const useOrderNotifications = () => {
   const { isAdmin } = useAuth();
   const { playNotificationSound, enableAudio } = useNotificationSound();
   const { toast } = useToast();
-  const lastOrderCountRef = useRef<number | null>(null);
-  const audioEnabledRef = useRef(false);
   const channelRef = useRef<any>(null);
+  const audioEnabledRef = useRef(false);
+  const lastProcessedOrderRef = useRef<string | null>(null);
 
   // Enable audio on first user interaction
   useEffect(() => {
-    const enableAudioOnInteraction = () => {
+    const enableAudioOnInteraction = async () => {
       if (!audioEnabledRef.current) {
-        enableAudio();
+        await enableAudio();
         audioEnabledRef.current = true;
         console.log('🔊 Audio enabled for notifications');
       }
     };
 
-    // Add listeners for user interaction
     document.addEventListener('click', enableAudioOnInteraction, { once: true });
     document.addEventListener('keydown', enableAudioOnInteraction, { once: true });
-    document.addEventListener('touchstart', enableAudioOnInteraction, { once: true });
 
     return () => {
       document.removeEventListener('click', enableAudioOnInteraction);
       document.removeEventListener('keydown', enableAudioOnInteraction);
-      document.removeEventListener('touchstart', enableAudioOnInteraction);
     };
   }, [enableAudio]);
 
@@ -40,138 +37,97 @@ export const useOrderNotifications = () => {
 
     console.log('🔔 Setting up order notifications for admin...');
 
-    // Cleanup existing channel if any
+    // Cleanup existing channel
     if (channelRef.current) {
-      console.log('🧹 Cleaning up existing channel...');
       supabase.removeChannel(channelRef.current);
       channelRef.current = null;
     }
 
-    // Fetch initial order count
-    const fetchInitialOrderCount = async () => {
-      try {
-        const { count } = await supabase
-          .from('orders')
-          .select('*', { count: 'exact', head: true });
-        
-        lastOrderCountRef.current = count || 0;
-        console.log('📊 Initial order count:', count);
-      } catch (error) {
-        console.error('❌ Error fetching initial order count:', error);
-      }
-    };
-
-    fetchInitialOrderCount();
-
-    // Set up real-time subscription with better error handling
-    const setupChannel = () => {
-      const channel = supabase
-        .channel('orders-realtime', {
-          config: {
-            presence: {
-              key: 'admin-notifications'
-            }
-          }
-        })
-        .on(
-          'postgres_changes',
-          {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'orders'
-          },
-          async (payload) => {
-            console.log('🆕 NEW ORDER DETECTED!', payload);
-            
-            // Check store status
-            try {
-              const { data: settings } = await (supabase as any)
-                .from('admin_settings')
-                .select('is_store_open')
-                .single();
-              
-              if (settings && !settings.is_store_open) {
-                console.log('🏪 Store is closed, skipping notification');
-                return;
-              }
-            } catch (error) {
-              console.error('⚠️ Error checking store status:', error);
-            }
-            
-            // Play notification sound immediately
-            console.log('🔔 Playing notification sound for new order...');
-            try {
-              const soundPlayed = await playNotificationSound();
-              if (soundPlayed) {
-                console.log('✅ Notification sound played successfully');
-              } else {
-                console.log('⚠️ Sound failed to play');
-              }
-            } catch (error) {
-              console.error('❌ Error playing notification sound:', error);
-            }
-            
-            // Show toast notification
-            toast({
-              title: "🔔 طلب جديد!",
-              description: `تم استلام طلب جديد برقم: ${payload.new.id.slice(0, 8)}...`,
-              duration: 8000,
-            });
-            
-            // Send Telegram notification (existing functionality)
-            try {
-              console.log('📱 Sending Telegram notification...');
-              const { data, error } = await supabase.functions.invoke('send-telegram-notification', {
-                body: { orderId: payload.new.id }
-              });
-              
-              if (error) {
-                console.error('❌ Error sending telegram notification:', error);
-              } else {
-                console.log('✅ Telegram notification sent successfully:', data);
-              }
-            } catch (error) {
-              console.error('❌ Error invoking telegram function:', error);
-            }
-          }
-        )
-        .subscribe((status, err) => {
-          console.log('📡 Subscription status:', status);
-          if (err) {
-            console.error('❌ Subscription error:', err);
+    // Create a unique channel name to avoid conflicts
+    const channelName = `orders-notifications-${Date.now()}`;
+    
+    const channel = supabase
+      .channel(channelName)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'orders'
+        },
+        async (payload) => {
+          console.log('🆕 NEW ORDER DETECTED!', payload);
+          
+          const orderId = payload.new.id;
+          
+          // Prevent duplicate notifications
+          if (lastProcessedOrderRef.current === orderId) {
+            console.log('⚠️ Duplicate order notification prevented');
+            return;
           }
           
-          if (status === 'SUBSCRIBED') {
-            console.log('✅ Successfully subscribed to order notifications');
-          } else if (status === 'CHANNEL_ERROR') {
-            console.error('❌ Channel error, attempting to reconnect...');
-            // Attempt to reconnect after a delay
-            setTimeout(() => {
-              if (channelRef.current) {
-                supabase.removeChannel(channelRef.current);
-              }
-              setupChannel();
-            }, 5000);
-          } else if (status === 'TIMED_OUT') {
-            console.error('⏰ Subscription timed out, attempting to reconnect...');
-            // Attempt to reconnect after a delay
-            setTimeout(() => {
-              if (channelRef.current) {
-                supabase.removeChannel(channelRef.current);
-              }
-              setupChannel();
-            }, 2000);
+          lastProcessedOrderRef.current = orderId;
+          
+          // Check store status
+          try {
+            const { data: settings } = await (supabase as any)
+              .from('admin_settings')
+              .select('is_store_open')
+              .single();
+            
+            if (settings && !settings.is_store_open) {
+              console.log('🏪 Store is closed, skipping notification');
+              return;
+            }
+          } catch (error) {
+            console.error('⚠️ Error checking store status:', error);
           }
-        });
+          
+          // Play notification sound
+          console.log('🔔 Playing notification sound for new order...');
+          try {
+            const soundPlayed = await playNotificationSound();
+            if (soundPlayed) {
+              console.log('✅ Notification sound played successfully');
+            } else {
+              console.log('⚠️ Sound failed to play, showing alert');
+              alert('🔔 طلب جديد! New Order Received!');
+            }
+          } catch (error) {
+            console.error('❌ Error playing notification sound:', error);
+            alert('🔔 طلب جديد! New Order Received!');
+          }
+          
+          // Show toast notification
+          toast({
+            title: "🔔 طلب جديد!",
+            description: `تم استلام طلب جديد برقم: ${orderId.slice(0, 8)}...`,
+            duration: 8000,
+          });
+          
+          // Send Telegram notification
+          try {
+            const { error } = await supabase.functions.invoke('send-telegram-notification', {
+              body: { orderId }
+            });
+            
+            if (error) {
+              console.error('❌ Error sending telegram notification:', error);
+            }
+          } catch (error) {
+            console.error('❌ Error invoking telegram function:', error);
+          }
+        }
+      )
+      .subscribe((status) => {
+        console.log('📡 Subscription status:', status);
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Successfully subscribed to order notifications');
+        }
+      });
 
-      channelRef.current = channel;
-      return channel;
-    };
+    channelRef.current = channel;
 
-    // Initial setup
-    setupChannel();
-
-    // Cleanup function
     return () => {
       console.log('🧹 Cleaning up order notifications...');
       if (channelRef.current) {
@@ -181,24 +137,37 @@ export const useOrderNotifications = () => {
     };
   }, [isAdmin, playNotificationSound, toast, enableAudio]);
 
-  // Return a manual trigger function for testing
+  // Test notification function
   const triggerTestNotification = async () => {
-    console.log('🧪 Manually triggering test notification...');
+    console.log('🧪 Testing notification sound...');
     
     try {
       const soundPlayed = await playNotificationSound();
       if (soundPlayed) {
         console.log('✅ Test notification sound played successfully');
+        toast({
+          title: "🔔 اختبار الإشعار",
+          description: "تم تشغيل صوت الإشعار بنجاح",
+          duration: 4000,
+        });
+      } else {
+        console.log('⚠️ Test sound failed');
+        toast({
+          title: "⚠️ فشل الاختبار",
+          description: "لم يتم تشغيل الصوت، تحقق من إعدادات المتصفح",
+          variant: "destructive",
+          duration: 4000,
+        });
       }
     } catch (error) {
-      console.error('❌ Error playing test notification:', error);
+      console.error('❌ Error in test notification:', error);
+      toast({
+        title: "❌ خطأ في الاختبار",
+        description: "حدث خطأ أثناء اختبار الصوت",
+        variant: "destructive",
+        duration: 4000,
+      });
     }
-    
-    toast({
-      title: "🔔 اختبار الإشعار",
-      description: "هذا اختبار لنظام الإشعارات",
-      duration: 4000,
-    });
   };
 
   return { triggerTestNotification };
