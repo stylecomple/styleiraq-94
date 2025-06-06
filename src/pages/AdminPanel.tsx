@@ -12,11 +12,16 @@ import AddProductForm from '@/components/admin/AddProductForm';
 import { useOrderNotifications } from '@/hooks/useOrderNotifications';
 import { useNotificationSound } from '@/hooks/useNotificationSound';
 import AdminSettings from '@/components/admin/AdminSettings';
-
 const AdminPanel = () => {
-  const { user, isAdmin, loading } = useAuth();
+  const {
+    user,
+    isAdmin,
+    loading
+  } = useAuth();
   const navigate = useNavigate();
-  const { playNotificationSound } = useNotificationSound();
+  const {
+    playNotificationSound
+  } = useNotificationSound();
   const [stats, setStats] = useState({
     totalUsers: 0,
     adminUsers: 0,
@@ -27,37 +32,45 @@ const AdminPanel = () => {
 
   // تفعيل مراقبة الطلبات الجديدة
   useOrderNotifications();
-
   useEffect(() => {
     if (!loading && (!user || !isAdmin)) {
       navigate('/');
     }
   }, [user, isAdmin, loading, navigate]);
-
   useEffect(() => {
     const fetchStats = async () => {
       try {
         // Get total users count
-        const { count: totalUsers } = await supabase
-          .from('profiles')
-          .select('*', { count: 'exact', head: true });
-        
+        const {
+          count: totalUsers
+        } = await supabase.from('profiles').select('*', {
+          count: 'exact',
+          head: true
+        });
+
         // Get admin users count
-        const { count: adminUsers } = await supabase
-          .from('user_roles')
-          .select('*', { count: 'exact', head: true })
-          .eq('role', 'admin');
+        const {
+          count: adminUsers
+        } = await supabase.from('user_roles').select('*', {
+          count: 'exact',
+          head: true
+        }).eq('role', 'admin');
 
         // Get total products count
-        const { count: totalProducts } = await supabase
-          .from('products')
-          .select('*', { count: 'exact', head: true });
+        const {
+          count: totalProducts
+        } = await supabase.from('products').select('*', {
+          count: 'exact',
+          head: true
+        });
 
         // Get total orders count
-        const { count: totalOrders } = await supabase
-          .from('orders')
-          .select('*', { count: 'exact', head: true });
-
+        const {
+          count: totalOrders
+        } = await supabase.from('orders').select('*', {
+          count: 'exact',
+          head: true
+        });
         setStats({
           totalUsers: totalUsers || 0,
           adminUsers: adminUsers || 0,
@@ -68,12 +81,10 @@ const AdminPanel = () => {
         console.error('Error fetching stats:', error);
       }
     };
-
     if (isAdmin) {
       fetchStats();
     }
   }, [isAdmin]);
-
   const testNotificationSound = async () => {
     console.log('🧪 Testing notification sound...');
     try {
@@ -83,44 +94,30 @@ const AdminPanel = () => {
       console.error('Test error:', error);
     }
   };
-
   useEffect(() => {
-    console.log('Admin status:', { user: user?.id, isAdmin, loading });
+    console.log('Admin status:', {
+      user: user?.id,
+      isAdmin,
+      loading
+    });
   }, [user, isAdmin, loading]);
-
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
+    return <div className="min-h-screen flex items-center justify-center">
         <div className="text-lg">جاري التحميل...</div>
-      </div>
-    );
+      </div>;
   }
-
   if (!user || !isAdmin) {
     return null;
   }
-
-  return (
-    <div className="min-h-screen bg-background p-6">
+  return <div className="min-h-screen bg-background p-6">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
           <div className="flex items-center gap-4 mb-4">
-            <Button
-              variant="outline"
-              onClick={() => navigate('/')}
-              className="flex items-center gap-2"
-            >
+            <Button variant="outline" onClick={() => navigate('/')} className="flex items-center gap-2">
               <ArrowLeft className="w-4 h-4" />
               العودة للرئيسية
             </Button>
-            <Button
-              variant="outline"
-              onClick={testNotificationSound}
-              className="flex items-center gap-2 bg-green-50 hover:bg-green-100 border-green-200"
-            >
-              <Volume2 className="w-4 h-4" />
-              اختبار صوت التنبيه
-            </Button>
+            
           </div>
           <div className="flex items-center gap-3 mb-2">
             <Shield className="w-8 h-8 text-pink-600" />
@@ -181,18 +178,13 @@ const AdminPanel = () => {
           <TabsContent value="products" className="space-y-6">
             <div className="flex justify-between items-center">
               <h2 className="text-2xl font-bold">إدارة المنتجات</h2>
-              <Button 
-                onClick={() => setShowAddProduct(true)}
-                className="bg-pink-600 hover:bg-pink-700"
-              >
+              <Button onClick={() => setShowAddProduct(true)} className="bg-pink-600 hover:bg-pink-700">
                 <Plus className="w-4 h-4 mr-2" />
                 إضافة منتج جديد
               </Button>
             </div>
             
-            {showAddProduct && (
-              <AddProductForm onClose={() => setShowAddProduct(false)} />
-            )}
+            {showAddProduct && <AddProductForm onClose={() => setShowAddProduct(false)} />}
             
             <ProductsManagement />
           </TabsContent>
@@ -208,8 +200,6 @@ const AdminPanel = () => {
           </TabsContent>
         </Tabs>
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default AdminPanel;
