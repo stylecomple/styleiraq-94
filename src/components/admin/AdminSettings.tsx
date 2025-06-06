@@ -9,25 +9,45 @@ import { useToast } from '@/hooks/use-toast';
 import { useAdminSettings } from '@/hooks/useAdminSettings';
 import { Separator } from '@/components/ui/separator';
 
+interface PaymentConfig {
+  enabled: boolean;
+  merchant_id?: string;
+  api_key?: string;
+  secret_key?: string;
+}
+
 const AdminSettings = () => {
   const { toast } = useToast();
   const { data: settings, isLoading, updateSettings } = useAdminSettings();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Helper functions to safely cast payment configs
+  const getVisaConfig = (): PaymentConfig => {
+    if (!settings?.visa_card_config) return { enabled: false };
+    return settings.visa_card_config as PaymentConfig;
+  };
+
+  const getZainConfig = (): PaymentConfig => {
+    if (!settings?.zain_cash_config) return { enabled: false };
+    return settings.zain_cash_config as PaymentConfig;
+  };
+
   // Local state for form data
   const [storeOpen, setStoreOpen] = useState(settings?.is_store_open ?? true);
   
   // Visa Card Configuration
-  const [visaEnabled, setVisaEnabled] = useState(settings?.visa_card_config?.enabled ?? false);
-  const [visaMerchantId, setVisaMerchantId] = useState(settings?.visa_card_config?.merchant_id ?? '');
-  const [visaApiKey, setVisaApiKey] = useState(settings?.visa_card_config?.api_key ?? '');
-  const [visaSecretKey, setVisaSecretKey] = useState(settings?.visa_card_config?.secret_key ?? '');
+  const visaConfig = getVisaConfig();
+  const [visaEnabled, setVisaEnabled] = useState(visaConfig.enabled);
+  const [visaMerchantId, setVisaMerchantId] = useState(visaConfig.merchant_id ?? '');
+  const [visaApiKey, setVisaApiKey] = useState(visaConfig.api_key ?? '');
+  const [visaSecretKey, setVisaSecretKey] = useState(visaConfig.secret_key ?? '');
   
   // Zain Cash Configuration
-  const [zainEnabled, setZainEnabled] = useState(settings?.zain_cash_config?.enabled ?? false);
-  const [zainMerchantId, setZainMerchantId] = useState(settings?.zain_cash_config?.merchant_id ?? '');
-  const [zainApiKey, setZainApiKey] = useState(settings?.zain_cash_config?.api_key ?? '');
-  const [zainSecretKey, setZainSecretKey] = useState(settings?.zain_cash_config?.secret_key ?? '');
+  const zainConfig = getZainConfig();
+  const [zainEnabled, setZainEnabled] = useState(zainConfig.enabled);
+  const [zainMerchantId, setZainMerchantId] = useState(zainConfig.merchant_id ?? '');
+  const [zainApiKey, setZainApiKey] = useState(zainConfig.api_key ?? '');
+  const [zainSecretKey, setZainSecretKey] = useState(zainConfig.secret_key ?? '');
 
   // Update local state when settings change
   React.useEffect(() => {
@@ -35,16 +55,18 @@ const AdminSettings = () => {
       setStoreOpen(settings.is_store_open ?? true);
       
       // Visa Card settings
-      setVisaEnabled(settings.visa_card_config?.enabled ?? false);
-      setVisaMerchantId(settings.visa_card_config?.merchant_id ?? '');
-      setVisaApiKey(settings.visa_card_config?.api_key ?? '');
-      setVisaSecretKey(settings.visa_card_config?.secret_key ?? '');
+      const visa = getVisaConfig();
+      setVisaEnabled(visa.enabled);
+      setVisaMerchantId(visa.merchant_id ?? '');
+      setVisaApiKey(visa.api_key ?? '');
+      setVisaSecretKey(visa.secret_key ?? '');
       
       // Zain Cash settings
-      setZainEnabled(settings.zain_cash_config?.enabled ?? false);
-      setZainMerchantId(settings.zain_cash_config?.merchant_id ?? '');
-      setZainApiKey(settings.zain_cash_config?.api_key ?? '');
-      setZainSecretKey(settings.zain_cash_config?.secret_key ?? '');
+      const zain = getZainConfig();
+      setZainEnabled(zain.enabled);
+      setZainMerchantId(zain.merchant_id ?? '');
+      setZainApiKey(zain.api_key ?? '');
+      setZainSecretKey(zain.secret_key ?? '');
     }
   }, [settings]);
 
