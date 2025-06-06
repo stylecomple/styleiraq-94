@@ -93,7 +93,25 @@ const Hero = ({ onStartShopping, onBrowseCollections }: HeroProps) => {
               <div className="w-80 h-80 md:w-96 md:h-96 mx-auto bg-gradient-to-br from-pink-400 via-purple-500 to-indigo-500 rounded-full relative overflow-hidden shadow-2xl">
                 <div className="absolute inset-4 bg-white/10 backdrop-blur-sm rounded-full flex items-center justify-center">
                   <div className="text-center text-white space-y-4">
-                    <div className="text-6xl">💄</div>
+                    {/* Beautiful Perfume Bottle Icon */}
+                    <div className="relative">
+                      <div className="w-20 h-24 mx-auto bg-gradient-to-b from-white/20 to-white/10 rounded-xl border-2 border-white/30 backdrop-blur-sm">
+                        {/* Bottle Body */}
+                        <div className="w-16 h-16 mx-auto mt-4 bg-gradient-to-b from-white/30 to-white/10 rounded-lg relative">
+                          {/* Liquid */}
+                          <div className="absolute bottom-0 left-1 right-1 h-12 bg-gradient-to-t from-pink-300/60 to-purple-300/40 rounded-lg"></div>
+                          {/* Spray Nozzle */}
+                          <div className="absolute -top-2 left-1/2 transform -translate-x-1/2 w-3 h-3 bg-white/50 rounded-full"></div>
+                          <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 w-1 h-2 bg-white/40 rounded"></div>
+                        </div>
+                        {/* Cap */}
+                        <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-8 h-4 bg-gradient-to-b from-white/40 to-white/20 rounded-t-lg"></div>
+                      </div>
+                      {/* Sparkle Effects */}
+                      <div className="absolute -top-2 -right-2 w-2 h-2 bg-white rounded-full animate-pulse"></div>
+                      <div className="absolute -bottom-1 -left-1 w-1 h-1 bg-white/80 rounded-full animate-ping"></div>
+                      <div className="absolute top-1/2 -right-3 w-1 h-1 bg-pink-200 rounded-full animate-pulse"></div>
+                    </div>
                     <div className="text-xl font-semibold">جمالك يبدأ هنا</div>
                   </div>
                 </div>
