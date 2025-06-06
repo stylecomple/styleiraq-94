@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,6 +14,28 @@ const AdminSettings = () => {
   const { settings, loading, saveSettings } = useAdminSettings();
   const { toast } = useToast();
   const [uploading, setUploading] = useState(false);
+
+  // Create storage bucket if it doesn't exist
+  useEffect(() => {
+    const createBucketIfNeeded = async () => {
+      const { data: buckets } = await supabase.storage.listBuckets();
+      const bucketExists = buckets?.some(bucket => bucket.name === 'admin-files');
+      
+      if (!bucketExists) {
+        const { error } = await supabase.storage.createBucket('admin-files', {
+          public: true,
+          allowedMimeTypes: ['audio/mpeg', 'audio/mp3'],
+          fileSizeLimit: 5242880 // 5MB
+        });
+        
+        if (error) {
+          console.error('Error creating bucket:', error);
+        }
+      }
+    };
+
+    createBucketIfNeeded();
+  }, []);
 
   const handleSoundUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];

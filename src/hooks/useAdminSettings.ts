@@ -27,7 +27,8 @@ export const useAdminSettings = () => {
 
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      // Use type assertion since the types haven't been regenerated yet
+      const { data, error } = await (supabase as any)
         .from('admin_settings')
         .select('*')
         .single();
@@ -38,7 +39,7 @@ export const useAdminSettings = () => {
       }
 
       if (data) {
-        setSettings(data);
+        setSettings(data as AdminSettings);
       }
     } catch (error) {
       console.error('Error fetching admin settings:', error);
@@ -54,7 +55,8 @@ export const useAdminSettings = () => {
     try {
       setLoading(true);
       
-      const { data, error } = await supabase
+      // Use type assertion since the types haven't been regenerated yet
+      const { data, error } = await (supabase as any)
         .from('admin_settings')
         .upsert({
           ...settings,
@@ -74,7 +76,7 @@ export const useAdminSettings = () => {
         return;
       }
 
-      setSettings(data);
+      setSettings(data as AdminSettings);
       toast({
         title: "تم الحفظ",
         description: "تم حفظ الإعدادات بنجاح",
