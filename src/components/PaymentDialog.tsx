@@ -23,7 +23,7 @@ interface PaymentDialogProps {
     orderId: string;
     totalAmount: number;
     items: any[];
-  };
+  } | null;
   onPaymentSuccess: () => void;
 }
 
@@ -40,6 +40,11 @@ const PaymentDialog = ({ isOpen, onClose, paymentMethod, orderData, onPaymentSuc
     phoneNumber: '',
     pin: ''
   });
+
+  // Don't render if orderData is null
+  if (!orderData) {
+    return null;
+  }
 
   const handleInputChange = (field: string, value: string) => {
     setPaymentData(prev => ({

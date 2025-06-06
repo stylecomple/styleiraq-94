@@ -14,6 +14,16 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import PaymentDialog from '@/components/PaymentDialog';
 
+interface PaymentConfig {
+  enabled: boolean;
+  [key: string]: any;
+}
+
+interface AdminSettingsData {
+  visa_card_config?: PaymentConfig;
+  zain_cash_config?: PaymentConfig;
+}
+
 const Cart = () => {
   const { 
     items, 
@@ -49,9 +59,11 @@ const Cart = () => {
         .single();
       
       if (error) throw error;
-      return data;
+      return data as AdminSettingsData;
     }
   });
+
+  // ... keep existing code (governorates array, formatPrice function)
 
   const governorates = [
     "بغداد", "البصرة", "نينوى", "ذي قار", "الأنبار", "ديالى", "صلاح الدين", "كركوك", "بابل", "القادسية",
@@ -237,7 +249,7 @@ const Cart = () => {
             ) : (
               <div className="space-y-4">
                 {items.map((item) => (
-                  <div key={item.id} className="flex items-center justify-between border-b pb-4">
+                  <div key={`${item.id}-${item.selectedColor || 'default'}`} className="flex items-center justify-between border-b pb-4">
                     <div className="flex items-center space-x-4">
                       <img
                         src={item.image || '/placeholder.svg'}
