@@ -25,6 +25,7 @@ const AddProductForm = ({ onClose }: AddProductFormProps) => {
     category: '',
     cover_image: '',
     images: '',
+    colors: '',
     stock_quantity: ''
   });
 
@@ -36,13 +37,18 @@ const AddProductForm = ({ onClose }: AddProductFormProps) => {
         ? productData.images.split('\n').filter((url: string) => url.trim()) 
         : [];
 
+      const colors = productData.colors 
+        ? productData.colors.split('\n').filter((color: string) => color.trim()) 
+        : [];
+
       const productToInsert = {
         name: productData.name,
         description: productData.description || null,
-        price: parseInt(productData.price), // تحويل إلى رقم صحيح للدينار العراقي
+        price: parseInt(productData.price),
         category: productData.category,
         cover_image: productData.cover_image || null,
         images: images,
+        colors: colors,
         stock_quantity: parseInt(productData.stock_quantity) || 0
       };
 
@@ -72,6 +78,7 @@ const AddProductForm = ({ onClose }: AddProductFormProps) => {
         category: '',
         cover_image: '',
         images: '',
+        colors: '',
         stock_quantity: ''
       });
       onClose();
@@ -198,6 +205,17 @@ const AddProductForm = ({ onClose }: AddProductFormProps) => {
               value={formData.images}
               onChange={(e) => handleInputChange('images', e.target.value)}
               placeholder="https://example.com/image1.jpg&#10;https://example.com/image2.jpg"
+              rows={3}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="colors">الألوان المتوفرة (سطر واحد لكل لون)</Label>
+            <Textarea
+              id="colors"
+              value={formData.colors}
+              onChange={(e) => handleInputChange('colors', e.target.value)}
+              placeholder="أحمر&#10;أزرق&#10;أخضر"
               rows={3}
             />
           </div>

@@ -1,8 +1,10 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ShoppingCart, Eye, Star, Heart } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 
@@ -14,6 +16,7 @@ interface Product {
   category: string;
   cover_image: string | null;
   images: string[] | null;
+  colors: string[] | null;
   stock_quantity: number | null;
 }
 
@@ -23,6 +26,7 @@ interface ProductCardProps {
 
 const ProductCard = ({ product }: ProductCardProps) => {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [selectedColor, setSelectedColor] = useState<string>('');
   const [isLiked, setIsLiked] = useState(false);
   const { addToCart } = useCart();
   
@@ -45,10 +49,15 @@ const ProductCard = ({ product }: ProductCardProps) => {
     : ['/placeholder.svg'];
 
   const handleAddToCart = () => {
-    addToCart(product);
+    const productToAdd = {
+      ...product,
+      selectedColor: selectedColor || undefined
+    };
+    addToCart(productToAdd);
   };
 
   const isOutOfStock = !product.stock_quantity || product.stock_quantity === 0;
+  const hasColors = product.colors && product.colors.length > 0;
 
   return (
     <>
@@ -138,6 +147,24 @@ const ProductCard = ({ product }: ProductCardProps) => {
                   <p className="text-gray-700 text-right leading-relaxed">
                     {product.description || 'منتج عالي الجودة من أفضل العلامات التجارية العالمية'}
                   </p>
+
+                  {hasColors && (
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">اختر اللون:</Label>
+                      <Select value={selectedColor} onValueChange={setSelectedColor}>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="اختر لون" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {product.colors!.map((color) => (
+                            <SelectItem key={color} value={color}>
+                              {color}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                   
                   <div className="border-t pt-4">
                     <div className="flex items-center justify-center mb-4">
@@ -149,7 +176,7 @@ const ProductCard = ({ product }: ProductCardProps) => {
                     <Button 
                       onClick={handleAddToCart}
                       className="w-full bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-700 hover:to-purple-700 text-white py-3 text-lg rounded-full"
-                      disabled={isOutOfStock}
+                      disabled={isOutOfStock || (hasColors && !selectedColor)}
                     >
                       <ShoppingCart className="w-5 h-5 mr-2" />
                       {isOutOfStock ? 'غير متوفر' : 'أضف للسلة'}
@@ -184,6 +211,21 @@ const ProductCard = ({ product }: ProductCardProps) => {
             ))}
             <span className="text-xs text-gray-500 mr-2">(4.8)</span>
           </div>
+
+          {hasColors && (
+            <div className="flex flex-wrap gap-1 justify-center pt-2">
+              {product.colors!.slice(0, 3).map((color, index) => (
+                <Badge key={index} variant="outline" className="text-xs">
+                  {color}
+                </Badge>
+              ))}
+              {product.colors!.length > 3 && (
+                <Badge variant="outline" className="text-xs">
+                  +{product.colors!.length - 3}
+                </Badge>
+              )}
+            </div>
+          )}
         </CardHeader>
         
         <CardContent className="pt-0 px-6 pb-6">

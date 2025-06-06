@@ -44,6 +44,7 @@ export type Database = {
           price: number
           product_id: string
           quantity: number
+          selected_color: string | null
         }
         Insert: {
           created_at?: string | null
@@ -52,6 +53,7 @@ export type Database = {
           price: number
           product_id: string
           quantity: number
+          selected_color?: string | null
         }
         Update: {
           created_at?: string | null
@@ -60,6 +62,7 @@ export type Database = {
           price?: number
           product_id?: string
           quantity?: number
+          selected_color?: string | null
         }
         Relationships: [
           {
@@ -114,6 +117,7 @@ export type Database = {
       products: {
         Row: {
           category: Database["public"]["Enums"]["product_category"]
+          colors: string[] | null
           cover_image: string | null
           created_at: string | null
           description: string | null
@@ -127,6 +131,7 @@ export type Database = {
         }
         Insert: {
           category: Database["public"]["Enums"]["product_category"]
+          colors?: string[] | null
           cover_image?: string | null
           created_at?: string | null
           description?: string | null
@@ -140,6 +145,7 @@ export type Database = {
         }
         Update: {
           category?: Database["public"]["Enums"]["product_category"]
+          colors?: string[] | null
           cover_image?: string | null
           created_at?: string | null
           description?: string | null
