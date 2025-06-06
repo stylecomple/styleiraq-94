@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -14,10 +14,14 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
+import { Eye } from 'lucide-react';
+import OrderDetailsDialog from './OrderDetailsDialog';
 
 const OrdersManagement = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [selectedOrder, setSelectedOrder] = useState<any>(null);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
   const { data: orders, isLoading } = useQuery({
     queryKey: ['admin-orders'],
@@ -30,6 +34,7 @@ const OrdersManagement = () => {
             id,
             quantity,
             price,
+            selected_color,
             products (name, cover_image)
           )
         `)
@@ -74,8 +79,19 @@ const OrdersManagement = () => {
     cancelled: 'bg-red-100 text-red-800'
   };
 
+  const paymentMethodLabels = {
+    cash_on_delivery: 'الدفع عند الاستلام',
+    zain_cash: 'زين كاش',
+    visa_card: 'فيزا كارد'
+  };
+
   const formatPrice = (price: number) => {
     return `${price.toLocaleString()} دينار`;
+  };
+
+  const handleViewOrder = (order: any) => {
+    setSelectedOrder(order);
+    setIsDetailsOpen(true);
   };
 
   if (isLoading) {
@@ -93,14 +109,15 @@ const OrdersManagement = () => {
               <TableHead className="text-right min-w-[100px]">المبلغ الإجمالي</TableHead>
               <TableHead className="text-right min-w-[100px]">الحالة</TableHead>
               <TableHead className="text-right min-w-[120px]">رقم الهاتف</TableHead>
-              <TableHead className="text-right min-w-[200px]">عنوان الشحن</TableHead>
+              <TableHead className="text-right min-w-[100px]">المحافظة</TableHead>
+              <TableHead className="text-right min-w-[120px]">طريقة الدفع</TableHead>
               <TableHead className="text-right min-w-[100px]">تاريخ الطلب</TableHead>
               <TableHead className="text-right min-w-[150px]">الإجراءات</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {orders?.map((order) => (
-              <TableRow key={order.id}>
+              <TableRow key={order.id} className="cursor-pointer hover:bg-gray-50">
                 <TableCell className="font-mono text-sm">
                   {order.id.slice(0, 8)}...
                 </TableCell>
@@ -115,16 +132,24 @@ const OrdersManagement = () => {
                   </Badge>
                 </TableCell>
                 <TableCell>{order.phone || 'غير محدد'}</TableCell>
-                <TableCell className="max-w-xs">
-                  <div className="truncate" title={order.shipping_address || 'غير محدد'}>
-                    {order.shipping_address || 'غير محدد'}
-                  </div>
+                <TableCell>{order.governorate || 'غير محدد'}</TableCell>
+                <TableCell>
+                  {order.payment_method ? paymentMethodLabels[order.payment_method as keyof typeof paymentMethodLabels] || order.payment_method : 'غير محدد'}
                 </TableCell>
                 <TableCell>
                   {new Date(order.created_at).toLocaleDateString('ar-SA')}
                 </TableCell>
                 <TableCell>
                   <div className="flex gap-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleViewOrder(order)}
+                      className="flex items-center gap-1"
+                    >
+                      <Eye className="w-4 h-4" />
+                      عرض
+                    </Button>
                     {order.status === 'pending' && (
                       <Button
                         variant="outline"
@@ -172,7 +197,7 @@ const OrdersManagement = () => {
       {/* Mobile Card View */}
       <div className="lg:hidden space-y-4">
         {orders?.map((order) => (
-          <Card key={order.id}>
+          <Card key={order.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => handleViewOrder(order)}>
             <CardHeader className="pb-3">
               <div className="flex justify-between items-start">
                 <div>
@@ -202,10 +227,16 @@ const OrdersManagement = () => {
                     <span>{order.phone}</span>
                   </div>
                 )}
-                {order.shipping_address && (
+                {order.governorate && (
                   <div>
-                    <span className="font-medium">عنوان الشحن: </span>
-                    <span className="text-gray-600">{order.shipping_address}</span>
+                    <span className="font-medium">المحافظة: </span>
+                    <span>{order.governorate}</span>
+                  </div>
+                )}
+                {order.payment_method && (
+                  <div>
+                    <span className="font-medium">طريقة الدفع: </span>
+                    <span>{paymentMethodLabels[order.payment_method as keyof typeof paymentMethodLabels] || order.payment_method}</span>
                   </div>
                 )}
               </div>
@@ -225,6 +256,7 @@ const OrdersManagement = () => {
                           <p className="font-medium text-sm">{item.products?.name || 'منتج غير معروف'}</p>
                           <p className="text-xs text-gray-600">
                             الكمية: {item.quantity} × {formatPrice(item.price)}
+                            {item.selected_color && ` - ${item.selected_color}`}
                           </p>
                         </div>
                       </div>
@@ -234,14 +266,29 @@ const OrdersManagement = () => {
               )}
 
               <div className="flex gap-2 pt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleViewOrder(order);
+                  }}
+                  className="flex items-center gap-1"
+                >
+                  <Eye className="w-4 h-4" />
+                  عرض التفاصيل
+                </Button>
                 {order.status === 'pending' && (
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => updateOrderStatus.mutate({ 
-                      orderId: order.id, 
-                      status: 'processing' 
-                    })}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      updateOrderStatus.mutate({ 
+                        orderId: order.id, 
+                        status: 'processing' 
+                      });
+                    }}
                     className="flex-1"
                   >
                     معالجة
@@ -251,10 +298,13 @@ const OrdersManagement = () => {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => updateOrderStatus.mutate({ 
-                      orderId: order.id, 
-                      status: 'shipped' 
-                    })}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      updateOrderStatus.mutate({ 
+                        orderId: order.id, 
+                        status: 'shipped' 
+                      });
+                    }}
                     className="flex-1"
                   >
                     شحن
@@ -264,10 +314,13 @@ const OrdersManagement = () => {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => updateOrderStatus.mutate({ 
-                      orderId: order.id, 
-                      status: 'delivered' 
-                    })}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      updateOrderStatus.mutate({ 
+                        orderId: order.id, 
+                        status: 'delivered' 
+                      });
+                    }}
                     className="flex-1"
                   >
                     تسليم
@@ -284,6 +337,12 @@ const OrdersManagement = () => {
           <p className="text-muted-foreground">لا توجد طلبات حالياً</p>
         </div>
       )}
+
+      <OrderDetailsDialog 
+        order={selectedOrder}
+        isOpen={isDetailsOpen}
+        onClose={() => setIsDetailsOpen(false)}
+      />
     </div>
   );
 };

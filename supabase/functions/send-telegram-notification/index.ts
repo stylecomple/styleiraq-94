@@ -34,7 +34,7 @@ const handler = async (req: Request): Promise<Response> => {
     
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Fetch order details
+    // Fetch order details with items, products, and selected colors
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .select(`
@@ -43,6 +43,7 @@ const handler = async (req: Request): Promise<Response> => {
           id,
           quantity,
           price,
+          selected_color,
           products (name, cover_image)
         )
       `)
@@ -73,14 +74,31 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log(`👥 Found ${telegramUsers?.length || 0} active users to notify`);
 
-    // Format the message
+    // Format the message with payment method and colors
     const formatPrice = (price: number) => `${price.toLocaleString('ar-IQ')} د.ع`;
+    
+    const paymentMethodLabels = {
+      cash_on_delivery: 'الدفع عند الاستلام',
+      zain_cash: 'زين كاش',
+      visa_card: 'فيزا كارد'
+    };
     
     let message = `🛒 طلب جديد!\n\n`;
     message += `📋 رقم الطلب: ${order.id.slice(0, 8)}...\n`;
     message += `💰 المبلغ الإجمالي: ${formatPrice(order.total_amount)}\n`;
     message += `📞 رقم الهاتف: ${order.phone || 'غير محدد'}\n`;
+    
+    if (order.governorate) {
+      message += `🏛️ المحافظة: ${order.governorate}\n`;
+    }
+    
     message += `📍 عنوان التوصيل: ${order.shipping_address || 'غير محدد'}\n`;
+    
+    if (order.payment_method) {
+      const paymentLabel = paymentMethodLabels[order.payment_method as keyof typeof paymentMethodLabels] || order.payment_method;
+      message += `💳 طريقة الدفع: ${paymentLabel}\n`;
+    }
+    
     message += `📅 تاريخ الطلب: ${new Date(order.created_at).toLocaleDateString('ar-IQ')}\n\n`;
     
     if (order.order_items && order.order_items.length > 0) {
@@ -88,6 +106,9 @@ const handler = async (req: Request): Promise<Response> => {
       order.order_items.forEach((item: any, index: number) => {
         message += `${index + 1}. ${item.products?.name || 'منتج غير معروف'}\n`;
         message += `   الكمية: ${item.quantity} × ${formatPrice(item.price)}\n`;
+        if (item.selected_color) {
+          message += `   اللون: ${item.selected_color}\n`;
+        }
       });
     }
 
@@ -97,19 +118,13 @@ const handler = async (req: Request): Promise<Response> => {
     let successCount = 0;
     let failureCount = 0;
 
-    // List of channels/groups to notify (these are chat IDs for channels/groups the bot is added to)
-    // You can add more channel/group IDs here as needed
-    const channelsAndGroups = [
-      // Add your channel/group chat IDs here
-      // Example: -1001234567890 (for supergroups/channels)
-      // You can get these IDs when the bot is added to a group/channel
-    ];
+    // List of channels/groups to notify
+    const channelsAndGroups = [];
 
-    // Get bot updates to find channels/groups the bot is member of
+    // Get bot updates to find channels/groups
     try {
       console.log('🔍 Checking for channels and groups...');
       
-      // Try to get recent updates to find channels/groups
       const updatesResponse = await fetch(`https://api.telegram.org/bot${telegramToken}/getUpdates?limit=100`);
       const updatesData = await updatesResponse.json();
       
@@ -117,18 +132,15 @@ const handler = async (req: Request): Promise<Response> => {
         const uniqueChats = new Set();
         
         updatesData.result.forEach((update: any) => {
-          // Check for group/channel messages or bot being added to groups
           if (update.message?.chat?.type === 'group' || 
               update.message?.chat?.type === 'supergroup' || 
               update.message?.chat?.type === 'channel') {
             uniqueChats.add(update.message.chat.id);
           }
           
-          // Check for my_chat_member updates (bot added to groups/channels)
           if (update.my_chat_member?.chat?.type === 'group' || 
               update.my_chat_member?.chat?.type === 'supergroup' || 
               update.my_chat_member?.chat?.type === 'channel') {
-            // Only add if bot is still a member
             if (update.my_chat_member.new_chat_member?.status === 'administrator' ||
                 update.my_chat_member.new_chat_member?.status === 'member') {
               uniqueChats.add(update.my_chat_member.chat.id);
@@ -136,7 +148,6 @@ const handler = async (req: Request): Promise<Response> => {
           }
         });
         
-        // Add discovered chats to our channels list
         uniqueChats.forEach(chatId => {
           if (!channelsAndGroups.includes(chatId)) {
             channelsAndGroups.push(chatId);
@@ -179,7 +190,6 @@ const handler = async (req: Request): Promise<Response> => {
             successCount++;
           }
           
-          // Small delay between messages to avoid rate limiting
           await new Promise(resolve => setTimeout(resolve, 100));
           
         } catch (error) {
@@ -216,7 +226,6 @@ const handler = async (req: Request): Promise<Response> => {
           if (!response.ok) {
             console.error(`❌ Failed to send to ${user.chat_id}:`, result);
             
-            // If user blocked the bot or chat not found, mark as inactive
             if (result.error_code === 403 || result.error_code === 400) {
               await supabase
                 .from('telegram_users')
@@ -231,7 +240,6 @@ const handler = async (req: Request): Promise<Response> => {
             successCount++;
           }
           
-          // Small delay between messages to avoid rate limiting
           await new Promise(resolve => setTimeout(resolve, 100));
           
         } catch (error) {

@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ShoppingCart, Eye, Star, Heart } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
+import { useToast } from '@/hooks/use-toast';
 
 interface Product {
   id: string;
@@ -30,6 +31,7 @@ const ProductCard = ({ product }: ProductCardProps) => {
   const [selectedColor, setSelectedColor] = useState<string>('');
   const [isLiked, setIsLiked] = useState(false);
   const { addToCart } = useCart();
+  const { toast } = useToast();
   
   const categoryLabels = {
     makeup: 'مكياج',
@@ -50,11 +52,28 @@ const ProductCard = ({ product }: ProductCardProps) => {
     : ['/placeholder.svg'];
 
   const handleAddToCart = () => {
+    const hasColors = product.colors && product.colors.length > 0;
+    
+    if (hasColors && !selectedColor) {
+      toast({
+        title: "يجب اختيار اللون",
+        description: "يرجى اختيار لون للمنتج قبل إضافته للسلة",
+        variant: "destructive"
+      });
+      return;
+    }
+
     const productToAdd = {
       ...product,
       selectedColor: selectedColor || undefined
     };
+    
     addToCart(productToAdd);
+    
+    toast({
+      title: "تم إضافة المنتج",
+      description: `تم إضافة ${product.name} ${selectedColor ? `(${selectedColor})` : ''} إلى السلة`,
+    });
   };
 
   const isOutOfStock = !product.stock_quantity || product.stock_quantity === 0;
@@ -151,7 +170,7 @@ const ProductCard = ({ product }: ProductCardProps) => {
 
                   {hasColors && (
                     <div className="space-y-2">
-                      <Label className="text-sm font-medium">اختر اللون:</Label>
+                      <Label className="text-sm font-medium">اختر اللون: <span className="text-red-500">*</span></Label>
                       <Select value={selectedColor} onValueChange={setSelectedColor}>
                         <SelectTrigger className="w-full">
                           <SelectValue placeholder="اختر لون" />
@@ -177,7 +196,7 @@ const ProductCard = ({ product }: ProductCardProps) => {
                     <Button 
                       onClick={handleAddToCart}
                       className="w-full bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-700 hover:to-purple-700 text-white py-3 text-lg rounded-full"
-                      disabled={isOutOfStock || (hasColors && !selectedColor)}
+                      disabled={isOutOfStock}
                     >
                       <ShoppingCart className="w-5 h-5 mr-2" />
                       {isOutOfStock ? 'غير متوفر' : 'أضف للسلة'}

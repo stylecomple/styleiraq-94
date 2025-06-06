@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -5,11 +6,33 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Minus, Plus, Trash2, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+
+const iraqGovernorates = [
+  'بغداد',
+  'البصرة', 
+  'نينوى',
+  'الأنبار',
+  'أربيل',
+  'كركوك',
+  'النجف',
+  'كربلاء',
+  'واسط',
+  'صلاح الدين',
+  'القادسية',
+  'ديالى',
+  'بابل',
+  'دهوك',
+  'السليمانية',
+  'المثنى',
+  'ذي قار',
+  'ميسان'
+];
 
 const Cart = () => {
   const { items, removeFromCart, updateQuantity, clearCart, getTotalPrice } = useCart();
@@ -22,7 +45,8 @@ const Cart = () => {
     address: '',
     governorate: '',
     area: '',
-    phone: ''
+    phone: '',
+    paymentMethod: ''
   });
 
   const formatPrice = (price: number) => {
@@ -35,6 +59,12 @@ const Cart = () => {
     } else {
       updateQuantity(productId, newQuantity);
     }
+  };
+
+  const validateIraqiPhoneNumber = (phone: string) => {
+    // Iraqi phone number patterns: 07XXXXXXXX or +9647XXXXXXXX
+    const iraqiPhonePattern = /^(07[3-9]\d{8}|(\+964)?7[3-9]\d{8})$/;
+    return iraqiPhonePattern.test(phone.replace(/\s/g, ''));
   };
 
   const handleCheckout = () => {
@@ -60,29 +90,22 @@ const Cart = () => {
     setShowCheckout(true);
   };
 
-  const sendTelegramNotification = async (orderId: string) => {
-    try {
-      const { error } = await supabase.functions.invoke('send-telegram-notification', {
-        body: { orderId }
-      });
-      
-      if (error) {
-        console.error('Error sending telegram notification:', error);
-      } else {
-        console.log('Telegram notification sent successfully');
-      }
-    } catch (error) {
-      console.error('Error invoking telegram function:', error);
-    }
-  };
-
   const handleSubmitOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!orderDetails.address || !orderDetails.governorate || !orderDetails.area || !orderDetails.phone) {
+    if (!orderDetails.address || !orderDetails.governorate || !orderDetails.area || !orderDetails.phone || !orderDetails.paymentMethod) {
       toast({
         title: "معلومات ناقصة",
         description: "يرجى ملء جميع الحقول المطلوبة",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!validateIraqiPhoneNumber(orderDetails.phone)) {
+      toast({
+        title: "رقم هاتف غير صحيح",
+        description: "يرجى إدخال رقم هاتف عراقي صحيح (مثال: 07XXXXXXXX)",
         variant: "destructive"
       });
       return;
@@ -100,7 +123,7 @@ const Cart = () => {
     setIsSubmitting(true);
 
     try {
-      // Create order without payment_method field
+      // Create order with payment method and governorate
       const { data: order, error: orderError } = await supabase
         .from('orders')
         .insert({
@@ -108,7 +131,9 @@ const Cart = () => {
           total_amount: getTotalPrice(),
           status: 'pending',
           shipping_address: `${orderDetails.address}, ${orderDetails.area}, ${orderDetails.governorate}`,
-          phone: orderDetails.phone
+          phone: orderDetails.phone,
+          payment_method: orderDetails.paymentMethod,
+          governorate: orderDetails.governorate
         })
         .select()
         .single();
@@ -118,12 +143,13 @@ const Cart = () => {
         throw orderError;
       }
 
-      // Create order items
+      // Create order items with selected colors
       const orderItems = items.map(item => ({
         order_id: order.id,
         product_id: item.id,
         quantity: item.quantity,
-        price: item.price
+        price: item.price,
+        selected_color: item.selectedColor || null
       }));
 
       const { error: itemsError } = await supabase
@@ -135,7 +161,7 @@ const Cart = () => {
         throw itemsError;
       }
 
-      // إرسال إشعار Telegram - now with the correct orderId
+      // Send Telegram notification
       try {
         console.log('Sending Telegram notification for order:', order.id);
         const { error } = await supabase.functions.invoke('send-telegram-notification', {
@@ -209,14 +235,18 @@ const Cart = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="governorate" className="text-sm md:text-base">المحافظة</Label>
-                      <Input
-                        id="governorate"
-                        value={orderDetails.governorate}
-                        onChange={(e) => setOrderDetails({...orderDetails, governorate: e.target.value})}
-                        placeholder="المحافظة"
-                        className="mt-1"
-                        required
-                      />
+                      <Select value={orderDetails.governorate} onValueChange={(value) => setOrderDetails({...orderDetails, governorate: value})}>
+                        <SelectTrigger className="mt-1">
+                          <SelectValue placeholder="اختر المحافظة" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {iraqGovernorates.map((gov) => (
+                            <SelectItem key={gov} value={gov}>
+                              {gov}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div>
                       <Label htmlFor="area" className="text-sm md:text-base">المنطقة السكنية</Label>
@@ -238,10 +268,33 @@ const Cart = () => {
                       type="tel"
                       value={orderDetails.phone}
                       onChange={(e) => setOrderDetails({...orderDetails, phone: e.target.value})}
-                      placeholder="07xxxxxxxx"
+                      placeholder="07XXXXXXXX"
                       className="mt-1"
                       required
                     />
+                    <p className="text-xs text-gray-500 mt-1">يجب أن يكون رقم عراقي صحيح</p>
+                  </div>
+
+                  <div>
+                    <Label className="text-sm md:text-base">طريقة الدفع</Label>
+                    <RadioGroup 
+                      value={orderDetails.paymentMethod} 
+                      onValueChange={(value) => setOrderDetails({...orderDetails, paymentMethod: value})}
+                      className="mt-2"
+                    >
+                      <div className="flex items-center space-x-2 space-x-reverse">
+                        <RadioGroupItem value="cash_on_delivery" id="cash_on_delivery" />
+                        <Label htmlFor="cash_on_delivery">الدفع عند الاستلام</Label>
+                      </div>
+                      <div className="flex items-center space-x-2 space-x-reverse">
+                        <RadioGroupItem value="zain_cash" id="zain_cash" />
+                        <Label htmlFor="zain_cash">زين كاش</Label>
+                      </div>
+                      <div className="flex items-center space-x-2 space-x-reverse">
+                        <RadioGroupItem value="visa_card" id="visa_card" />
+                        <Label htmlFor="visa_card">فيزا كارد</Label>
+                      </div>
+                    </RadioGroup>
                   </div>
                 </div>
 
@@ -298,7 +351,7 @@ const Cart = () => {
               <CardContent className="p-4 md:p-6">
                 <div className="space-y-4">
                   {items.map((item) => (
-                    <div key={item.id} className="flex flex-col sm:flex-row items-start sm:items-center gap-4 p-3 md:p-4 border rounded-lg">
+                    <div key={`${item.id}-${item.selectedColor || 'default'}`} className="flex flex-col sm:flex-row items-start sm:items-center gap-4 p-3 md:p-4 border rounded-lg">
                       <img
                         src={item.image}
                         alt={item.name}
@@ -306,6 +359,9 @@ const Cart = () => {
                       />
                       <div className="flex-1 text-center sm:text-right">
                         <h3 className="font-semibold text-base md:text-lg">{item.name}</h3>
+                        {item.selectedColor && (
+                          <p className="text-sm text-gray-600">اللون: {item.selectedColor}</p>
+                        )}
                         <p className="text-pink-600 font-bold text-sm md:text-base">{formatPrice(item.price)}</p>
                       </div>
                       <div className="flex items-center gap-2 mx-auto sm:mx-0">
