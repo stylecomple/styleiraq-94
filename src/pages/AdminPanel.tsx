@@ -9,6 +9,7 @@ import { Shield, Users, Package, BarChart3, Plus, ArrowLeft } from 'lucide-react
 import ProductsManagement from '@/components/admin/ProductsManagement';
 import OrdersManagement from '@/components/admin/OrdersManagement';
 import AddProductForm from '@/components/admin/AddProductForm';
+import { useOrderNotifications } from '@/hooks/useOrderNotifications';
 
 const AdminPanel = () => {
   const { user, isAdmin, loading } = useAuth();
@@ -20,6 +21,9 @@ const AdminPanel = () => {
     totalOrders: 0
   });
   const [showAddProduct, setShowAddProduct] = useState(false);
+
+  // تفعيل مراقبة الطلبات الجديدة
+  useOrderNotifications();
 
   useEffect(() => {
     if (!loading && (!user || !isAdmin)) {
