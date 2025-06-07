@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -20,11 +19,13 @@ interface EditProductFormProps {
 const EditProductForm = ({ product, onClose }: EditProductFormProps) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [categories, setCategories] = useState<any[]>([]);
   const [formData, setFormData] = useState({
     name: product.name || '',
     description: product.description || '',
     price: product.price?.toString() || '',
     categories: product.categories || [],
+    subcategories: product.subcategories || [],
     cover_image: product.cover_image || '',
     images: product.images?.join('\n') || '',
     colors: product.colors?.join('\n') || '',
@@ -32,14 +33,17 @@ const EditProductForm = ({ product, onClose }: EditProductFormProps) => {
     discount_percentage: product.discount_percentage?.toString() || '0'
   });
 
-  const availableCategories = [
-    { value: 'makeup', label: 'مكياج' },
-    { value: 'perfumes', label: 'عطور' },
-    { value: 'flowers', label: 'ورد' },
-    { value: 'home', label: 'مستلزمات منزلية' },
-    { value: 'personal_care', label: 'عناية شخصية' },
-    { value: 'exclusive_offers', label: 'العروض الحصرية' }
-  ];
+  // Load categories from localStorage
+  useEffect(() => {
+    const savedCategories = localStorage.getItem('productCategories');
+    if (savedCategories) {
+      try {
+        setCategories(JSON.parse(savedCategories));
+      } catch (error) {
+        console.error('Error loading categories:', error);
+      }
+    }
+  }, []);
 
   const updateProductMutation = useMutation({
     mutationFn: async (productData: any) => {
@@ -58,6 +62,7 @@ const EditProductForm = ({ product, onClose }: EditProductFormProps) => {
         description: productData.description || null,
         price: parseInt(productData.price),
         categories: productData.categories,
+        subcategories: productData.subcategories,
         cover_image: productData.cover_image || null,
         images: images,
         colors: colors,
@@ -127,7 +132,21 @@ const EditProductForm = ({ product, onClose }: EditProductFormProps) => {
     }));
   };
 
+  const handleSubcategoryChange = (subcategoryValue: string, checked: boolean) => {
+    setFormData(prev => ({
+      ...prev,
+      subcategories: checked 
+        ? [...prev.subcategories, subcategoryValue]
+        : prev.subcategories.filter(sub => sub !== subcategoryValue)
+    }));
+  };
+
   const isExclusiveOffer = formData.categories.includes('exclusive_offers');
+
+  // Get all available subcategories based on selected categories
+  const availableSubcategories = categories
+    .filter(cat => formData.categories.includes(cat.id))
+    .flatMap(cat => cat.subcategories || []);
 
   return (
     <Card className="mb-6">
@@ -192,25 +211,48 @@ const EditProductForm = ({ product, onClose }: EditProductFormProps) => {
           </div>
 
           <div className="space-y-2">
-            <Label>الفئات *</Label>
+            <Label>الفئات الرئيسية *</Label>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              {availableCategories.map((category) => (
-                <div key={category.value} className="flex items-center space-x-2">
+              {categories.map((category) => (
+                <div key={category.id} className="flex items-center space-x-2">
                   <Checkbox
-                    id={category.value}
-                    checked={formData.categories.includes(category.value)}
-                    onCheckedChange={(checked) => handleCategoryChange(category.value, checked as boolean)}
+                    id={category.id}
+                    checked={formData.categories.includes(category.id)}
+                    onCheckedChange={(checked) => handleCategoryChange(category.id, checked as boolean)}
                   />
                   <Label 
-                    htmlFor={category.value} 
+                    htmlFor={category.id} 
                     className="text-sm font-normal cursor-pointer"
                   >
-                    {category.label}
+                    {category.icon} {category.name}
                   </Label>
                 </div>
               ))}
             </div>
           </div>
+
+          {availableSubcategories.length > 0 && (
+            <div className="space-y-2">
+              <Label>الفئات الفرعية</Label>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                {availableSubcategories.map((subcategory) => (
+                  <div key={subcategory.id} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={subcategory.id}
+                      checked={formData.subcategories.includes(subcategory.id)}
+                      onCheckedChange={(checked) => handleSubcategoryChange(subcategory.id, checked as boolean)}
+                    />
+                    <Label 
+                      htmlFor={subcategory.id} 
+                      className="text-sm font-normal cursor-pointer"
+                    >
+                      {subcategory.icon} {subcategory.name}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="description">الوصف</Label>

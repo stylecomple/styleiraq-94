@@ -31,30 +31,47 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [isOwner, setIsOwner] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  const checkUserRoles = async (userId: string) => {
+    try {
+      console.log('Checking roles for user:', userId);
+      const { data: roles, error } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId);
+      
+      if (error) {
+        console.error('Error fetching user roles:', error);
+        setIsAdmin(false);
+        setIsOwner(false);
+        return;
+      }
+
+      console.log('User roles found:', roles);
+      const userRoles = roles?.map(r => r.role) || [];
+      const adminStatus = userRoles.includes('admin');
+      const ownerStatus = userRoles.includes('owner');
+      
+      setIsAdmin(adminStatus);
+      setIsOwner(ownerStatus);
+      
+      console.log('Role status:', { isAdmin: adminStatus, isOwner: ownerStatus });
+    } catch (error) {
+      console.error('Error in checkUserRoles:', error);
+      setIsAdmin(false);
+      setIsOwner(false);
+    }
+  };
+
   useEffect(() => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('Auth state changed:', event, session?.user?.id);
         setSession(session);
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          // Check if user is admin or owner
-          setTimeout(async () => {
-            try {
-              const { data: roles } = await supabase
-                .from('user_roles')
-                .select('role')
-                .eq('user_id', session.user.id);
-              
-              const userRoles = roles?.map(r => r.role) || [];
-              setIsAdmin(userRoles.includes('admin'));
-              setIsOwner(userRoles.includes('owner'));
-            } catch (error) {
-              setIsAdmin(false);
-              setIsOwner(false);
-            }
-          }, 0);
+          await checkUserRoles(session.user.id);
         } else {
           setIsAdmin(false);
           setIsOwner(false);
@@ -66,9 +83,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     // Check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('Initial session check:', session?.user?.id);
       setSession(session);
       setUser(session?.user ?? null);
-      setLoading(false);
+      
+      if (session?.user) {
+        checkUserRoles(session.user.id);
+      } else {
+        setLoading(false);
+      }
     });
 
     return () => subscription.unsubscribe();

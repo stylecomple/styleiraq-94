@@ -38,15 +38,40 @@ const ProductsManagement = () => {
 
   const deleteProductMutation = useMutation({
     mutationFn: async (product: any) => {
-      // First, delete related order_items
-      const { error: orderItemsError } = await supabase
+      console.log('Starting product deletion process for:', product.id);
+      
+      // First, check if product exists in any orders
+      const { data: orderItems, error: checkError } = await supabase
         .from('order_items')
-        .delete()
+        .select('id')
         .eq('product_id', product.id);
       
-      if (orderItemsError) throw orderItemsError;
+      if (checkError) {
+        console.error('Error checking order items:', checkError);
+        throw checkError;
+      }
 
-      // Then delete the product
+      // If product has order items, we can't delete it physically
+      if (orderItems && orderItems.length > 0) {
+        // Instead of deleting, we'll deactivate the product
+        const { error: deactivateError } = await supabase
+          .from('products')
+          .update({ is_active: false })
+          .eq('id', product.id);
+        
+        if (deactivateError) throw deactivateError;
+
+        // Log the change as deactivation instead of deletion
+        await logChange('product_deactivated', 'product', product.id, {
+          product_name: product.name,
+          product_price: product.price,
+          reason: 'Product has existing orders, deactivated instead of deleted'
+        });
+
+        return { ...product, deleted: false, deactivated: true };
+      }
+
+      // If no order items exist, we can safely delete the product
       const { error } = await supabase
         .from('products')
         .delete()
@@ -60,14 +85,21 @@ const ProductsManagement = () => {
         product_price: product.price
       });
 
-      return product;
+      return { ...product, deleted: true, deactivated: false };
     },
-    onSuccess: (deletedProduct) => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['admin-products'] });
-      toast({
-        title: 'تم حذف المنتج',
-        description: `تم حذف ${deletedProduct.name} بنجاح`,
-      });
+      if (result.deactivated) {
+        toast({
+          title: 'تم إلغاء تفعيل المنتج',
+          description: `تم إلغاء تفعيل ${result.name} لأنه مرتبط بطلبات موجودة`,
+        });
+      } else {
+        toast({
+          title: 'تم حذف المنتج',
+          description: `تم حذف ${result.name} بنجاح`,
+        });
+      }
     },
     onError: (error: any) => {
       console.error('Error deleting product:', error);
