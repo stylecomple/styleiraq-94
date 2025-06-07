@@ -7,6 +7,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import { CartProvider } from "./contexts/CartContext";
+import FeedbackForm from "./components/FeedbackForm";
 import Index from "./pages/Index";
 import Products from "./pages/Products";
 import Auth from "./pages/Auth";
@@ -42,6 +43,7 @@ const App = () => {
                 <Route path="/admin" element={<AdminPanel />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
+              <FeedbackForm />
             </BrowserRouter>
           </TooltipProvider>
         </CartProvider>

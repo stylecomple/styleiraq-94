@@ -5,13 +5,15 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
-import { Shield, Users, Package, BarChart3, Plus, ArrowLeft, Volume2, TrendingUp, Settings, Clock } from 'lucide-react';
+import { Shield, Users, Package, BarChart3, Plus, ArrowLeft, Volume2, TrendingUp, Settings, Clock, MessageSquare, UserCog } from 'lucide-react';
 import ProductsManagement from '@/components/admin/ProductsManagement';
 import OrdersManagement from '@/components/admin/OrdersManagement';
 import AddProductForm from '@/components/admin/AddProductForm';
 import CategoryManager from '@/components/admin/CategoryManager';
 import StatisticsPanel from '@/components/admin/StatisticsPanel';
 import ChangesLogPanel from '@/components/admin/ChangesLogPanel';
+import UserManagement from '@/components/admin/UserManagement';
+import FeedbackManagement from '@/components/admin/FeedbackManagement';
 import { useOrderNotifications } from '@/hooks/useOrderNotifications';
 import { useNotificationSound } from '@/hooks/useNotificationSound';
 import AdminSettings from '@/components/admin/AdminSettings';
@@ -212,10 +214,12 @@ const AdminPanel = () => {
         </div>
 
         <Tabs defaultValue="products" className="space-y-6">
-          <TabsList className={`grid w-full ${isOwner ? 'grid-cols-5' : 'grid-cols-3'}`}>
+          <TabsList className={`grid w-full ${isOwner ? 'grid-cols-7' : 'grid-cols-4'}`}>
             <TabsTrigger value="products">إدارة المنتجات</TabsTrigger>
             <TabsTrigger value="orders">إدارة الطلبات</TabsTrigger>
+            <TabsTrigger value="feedback">التعليقات</TabsTrigger>
             <TabsTrigger value="statistics">الإحصائيات</TabsTrigger>
+            {isOwner && <TabsTrigger value="user-management">إدارة المستخدمين</TabsTrigger>}
             {isOwner && <TabsTrigger value="changes-log">سجل التغييرات</TabsTrigger>}
             {isOwner && <TabsTrigger value="settings">الإعدادات</TabsTrigger>}
           </TabsList>
@@ -253,9 +257,27 @@ const AdminPanel = () => {
             <OrdersManagement />
           </TabsContent>
 
+          <TabsContent value="feedback" className="space-y-6">
+            <h2 className="text-2xl font-bold flex items-center gap-2">
+              <MessageSquare className="w-6 h-6" />
+              إدارة التعليقات
+            </h2>
+            <FeedbackManagement />
+          </TabsContent>
+
           <TabsContent value="statistics" className="space-y-6">
             <StatisticsPanel />
           </TabsContent>
+
+          {isOwner && (
+            <TabsContent value="user-management" className="space-y-6">
+              <h2 className="text-2xl font-bold flex items-center gap-2">
+                <UserCog className="w-6 h-6" />
+                إدارة المستخدمين
+              </h2>
+              <UserManagement />
+            </TabsContent>
+          )}
 
           {isOwner && (
             <TabsContent value="changes-log" className="space-y-6">
