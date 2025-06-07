@@ -51,13 +51,13 @@ const Footer = () => {
           <p className="text-gray-400">تواصلوا معنا عبر القنوات التالية</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-          {/* Social Media Links */}
-          <div className="space-y-4">
-            <h3 className="text-xl font-semibold text-center md:text-right mb-6 text-pink-300">
+        <div className="max-w-5xl mx-auto">
+          {/* Social Media Links - Better arranged */}
+          <div className="mb-12">
+            <h3 className="text-2xl font-semibold text-center mb-8 text-pink-300">
               تابعونا على وسائل التواصل
             </h3>
-            <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {socialLinks.map((link) => {
                 const IconComponent = link.icon;
                 return (
@@ -70,13 +70,10 @@ const Footer = () => {
                   >
                     <Button
                       variant="outline"
-                      className={`w-full justify-start gap-4 bg-gradient-to-r ${link.color} ${link.hoverColor} border-0 text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 text-lg py-6`}
+                      className={`w-full justify-center gap-4 bg-gradient-to-r ${link.color} ${link.hoverColor} border-0 text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 text-lg py-8 group-hover:transform group-hover:-translate-y-1`}
                     >
                       <IconComponent />
-                      <span>{link.name}</span>
-                      <div className="mr-auto opacity-60 group-hover:opacity-100 transition-opacity">
-                        ←
-                      </div>
+                      <span className="font-semibold">{link.name}</span>
                     </Button>
                   </a>
                 );
@@ -84,12 +81,13 @@ const Footer = () => {
             </div>
           </div>
 
-          {/* Contact Information */}
-          <div className="space-y-4">
-            <h3 className="text-xl font-semibold text-center md:text-right mb-6 text-pink-300">
-              معلومات التواصل
-            </h3>
-            <div className="space-y-4">
+          {/* Contact and Working Hours */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {/* Contact Information */}
+            <div className="space-y-6">
+              <h3 className="text-xl font-semibold text-center md:text-right text-pink-300">
+                معلومات التواصل
+              </h3>
               <Button
                 onClick={handlePhoneCall}
                 className="w-full justify-start gap-4 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 border-0 text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 text-lg py-6 group"
@@ -103,22 +101,35 @@ const Footer = () => {
                   📞
                 </div>
               </Button>
+            </div>
 
+            {/* Working Hours */}
+            <div className="space-y-6">
+              <h3 className="text-xl font-semibold text-center md:text-right text-pink-300">
+                ساعات العمل
+              </h3>
               <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20">
-                <h4 className="font-semibold mb-3 text-pink-300">ساعات العمل</h4>
-                <div className="space-y-2 text-gray-300 text-sm">
-                  <p>السبت - الخميس: 9:00 ص - 9:00 م</p>
-                  <p>الجمعة: 2:00 م - 9:00 م</p>
+                <div className="space-y-3 text-gray-300">
+                  <div className="flex justify-between items-center">
+                    <span className="font-medium">السبت - الخميس:</span>
+                    <span className="text-green-300">10:00 ص - 12:00 م</span>
+                  </div>
+                  <div className="border-t border-white/20 pt-3">
+                    <div className="flex justify-between items-center">
+                      <span className="font-medium">الجمعة:</span>
+                      <span className="text-green-300">4:00 م - 12:00 م</span>
+                    </div>
+                  </div>
                 </div>
               </div>
-
-              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20">
-                <h4 className="font-semibold mb-3 text-pink-300">خدمة العملاء</h4>
-                <p className="text-gray-300 text-sm">
-                  نحن هنا لخدمتكم على مدار الساعة عبر وسائل التواصل المختلفة
-                </p>
-              </div>
             </div>
+          </div>
+
+          <div className="mt-12 bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20 text-center">
+            <h4 className="font-semibold mb-3 text-pink-300">خدمة العملاء</h4>
+            <p className="text-gray-300">
+              نحن هنا لخدمتكم على مدار الساعة عبر وسائل التواصل المختلفة
+            </p>
           </div>
         </div>
 

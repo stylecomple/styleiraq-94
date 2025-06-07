@@ -5,7 +5,6 @@ import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
 import Hero from '@/components/Hero';
 import FeaturesSection from '@/components/FeaturesSection';
-import SocialMediaPosts from '@/components/SocialMediaPosts';
 import Footer from '@/components/Footer';
 
 const Index = () => {
@@ -40,8 +39,6 @@ const Index = () => {
           </div>
         </div>
       )}
-
-      <SocialMediaPosts />
       
       <Footer />
     </div>
