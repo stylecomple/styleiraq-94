@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { Truck, Shield, Gift, Headphones, Star, Heart } from 'lucide-react';
+import AnimatedStats from './AnimatedStats';
 
 const FeaturesSection = () => {
   const features = [
@@ -52,33 +53,34 @@ const FeaturesSection = () => {
     <section className="py-20 bg-white relative overflow-hidden">
       {/* Background Pattern */}
       <div className="absolute inset-0 opacity-5">
-        <div className="absolute top-10 left-10 w-32 h-32 bg-pink-300 rounded-full"></div>
-        <div className="absolute top-20 right-20 w-24 h-24 bg-purple-300 rounded-full"></div>
-        <div className="absolute bottom-10 left-1/4 w-40 h-40 bg-indigo-300 rounded-full"></div>
+        <div className="absolute top-10 left-10 w-32 h-32 bg-pink-300 rounded-full animate-pulse"></div>
+        <div className="absolute top-20 right-20 w-24 h-24 bg-purple-300 rounded-full animate-bounce"></div>
+        <div className="absolute bottom-10 left-1/4 w-40 h-40 bg-indigo-300 rounded-full animate-ping"></div>
       </div>
 
       <div className="container mx-auto px-4 relative z-10">
         <div className="text-center mb-16">
-          <h2 className="text-4xl md:text-5xl font-bold mb-6">
+          <h2 className="text-4xl md:text-5xl font-bold mb-6 animate-fade-in">
             <span className="bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent">
               لماذا تختارنا؟
             </span>
           </h2>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+          <p className="text-xl text-gray-600 max-w-2xl mx-auto animate-fade-in" style={{ animationDelay: '0.3s' }}>
             نقدم لك أفضل تجربة تسوق للمنتجات التجميلية في العراق
           </p>
-          <div className="w-24 h-1 bg-gradient-to-r from-pink-500 to-purple-500 mx-auto mt-6 rounded-full"></div>
+          <div className="w-24 h-1 bg-gradient-to-r from-pink-500 to-purple-500 mx-auto mt-6 rounded-full animate-scale-in" style={{ animationDelay: '0.6s' }}></div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {features.map((feature, index) => (
             <div
               key={index}
-              className="group relative bg-white rounded-2xl p-8 shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 border border-gray-100"
+              className="group relative bg-white rounded-2xl p-8 shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 hover:scale-105 border border-gray-100 animate-fade-in"
+              style={{ animationDelay: `${0.9 + index * 0.1}s` }}
             >
               {/* Icon Container */}
-              <div className={`w-16 h-16 bg-gradient-to-r ${feature.gradient} rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300`}>
-                <feature.icon className="w-8 h-8 text-white" />
+              <div className={`w-16 h-16 bg-gradient-to-r ${feature.gradient} rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 group-hover:rotate-6 transition-all duration-300`}>
+                <feature.icon className="w-8 h-8 text-white group-hover:animate-pulse" />
               </div>
 
               {/* Content */}
@@ -95,27 +97,8 @@ const FeaturesSection = () => {
           ))}
         </div>
 
-        {/* Trust Indicators */}
-        <div className="mt-20 bg-gradient-to-r from-pink-50 to-purple-50 rounded-3xl p-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-            <div>
-              <div className="text-3xl font-bold text-pink-600 mb-2">1000+</div>
-              <div className="text-sm text-gray-600">منتج متنوع</div>
-            </div>
-            <div>
-              <div className="text-3xl font-bold text-purple-600 mb-2">500+</div>
-              <div className="text-sm text-gray-600">عميل راضٍ</div>
-            </div>
-            <div>
-              <div className="text-3xl font-bold text-indigo-600 mb-2">99%</div>
-              <div className="text-sm text-gray-600">رضا العملاء</div>
-            </div>
-            <div>
-              <div className="text-3xl font-bold text-rose-600 mb-2">24/7</div>
-              <div className="text-sm text-gray-600">خدمة مستمرة</div>
-            </div>
-          </div>
-        </div>
+        {/* Animated Trust Indicators */}
+        <AnimatedStats />
       </div>
     </section>
   );

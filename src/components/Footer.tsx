@@ -44,7 +44,7 @@ const Footer = () => {
       
       <div className="container mx-auto px-4 relative z-10">
         <div className="text-center mb-12">
-          <h2 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-pink-400 to-purple-400 bg-clip-text text-transparent mb-4">
+          <h2 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-pink-400 to-purple-400 bg-clip-text text-transparent mb-4 animate-pulse">
             Style
           </h2>
           <p className="text-gray-300 text-lg mb-2">متجر الجمال والأناقة</p>
@@ -112,12 +112,12 @@ const Footer = () => {
                 <div className="space-y-3 text-gray-300">
                   <div className="flex justify-between items-center">
                     <span className="font-medium">السبت - الخميس:</span>
-                    <span className="text-green-300">10:00 ص - 12:00 م</span>
+                    <span className="text-green-300">10:00 صباحاً - 12:00 مساءً</span>
                   </div>
                   <div className="border-t border-white/20 pt-3">
                     <div className="flex justify-between items-center">
                       <span className="font-medium">الجمعة:</span>
-                      <span className="text-green-300">4:00 م - 12:00 م</span>
+                      <span className="text-green-300">4:00 عصراً - 12:00 مساءً</span>
                     </div>
                   </div>
                 </div>
