@@ -13,9 +13,14 @@ const Header = () => {
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const handleAuthClick = () => {
+  const handleAuthClick = async () => {
     if (user) {
-      signOut();
+      try {
+        await signOut();
+        navigate('/');
+      } catch (error) {
+        console.error('Error signing out:', error);
+      }
     } else {
       navigate('/auth');
     }
@@ -36,6 +41,11 @@ const Header = () => {
     navigate('/');
     setMobileMenuOpen(false);
   };
+
+  // Debug logging
+  console.log('Header render - User:', user?.id, 'isAdmin:', isAdmin, 'isOwner:', isOwner);
+  
+  const showAdminPanel = user && (isAdmin || isOwner);
 
   return (
     <header className="bg-white/95 backdrop-blur-md shadow-lg sticky top-0 z-50 border-b border-pink-100">
@@ -73,7 +83,7 @@ const Header = () => {
             </Button>
             
             {/* Admin Button (for admin and owner users) */}
-            {user && (isAdmin || isOwner) && (
+            {showAdminPanel && (
               <Button
                 variant="outline"
                 size="sm"
@@ -138,7 +148,7 @@ const Header = () => {
         {mobileMenuOpen && (
           <div className="md:hidden mt-4 pb-4 border-t border-gray-100 pt-4">
             <div className="flex flex-col space-y-3">
-              {user && (isAdmin || isOwner) && (
+              {showAdminPanel && (
                 <Button
                   variant="outline"
                   onClick={handleAdminClick}
