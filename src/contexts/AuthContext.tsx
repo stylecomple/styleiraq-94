@@ -7,6 +7,7 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   isAdmin: boolean;
+  isOwner: boolean;
   loading: boolean;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
@@ -27,6 +28,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isOwner, setIsOwner] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -37,22 +39,25 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          // Check if user is admin
+          // Check if user is admin or owner
           setTimeout(async () => {
             try {
-              const { data } = await supabase
+              const { data: roles } = await supabase
                 .from('user_roles')
                 .select('role')
-                .eq('user_id', session.user.id)
-                .eq('role', 'admin')
-                .single();
-              setIsAdmin(!!data);
+                .eq('user_id', session.user.id);
+              
+              const userRoles = roles?.map(r => r.role) || [];
+              setIsAdmin(userRoles.includes('admin'));
+              setIsOwner(userRoles.includes('owner'));
             } catch (error) {
               setIsAdmin(false);
+              setIsOwner(false);
             }
           }, 0);
         } else {
           setIsAdmin(false);
+          setIsOwner(false);
         }
         
         setLoading(false);
@@ -101,6 +106,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     user,
     session,
     isAdmin,
+    isOwner,
     loading,
     signUp,
     signIn,

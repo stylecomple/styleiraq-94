@@ -1,6 +1,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useChangeLogger } from './useChangeLogger';
 
 interface AdminSettings {
   is_store_open: boolean;
@@ -20,6 +21,7 @@ interface AdminSettings {
 
 export const useAdminSettings = () => {
   const queryClient = useQueryClient();
+  const { logChange } = useChangeLogger();
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['admin-settings'],
@@ -56,7 +58,9 @@ export const useAdminSettings = () => {
 
   const updateMutation = useMutation({
     mutationFn: async (newSettings: Partial<AdminSettings>) => {
-      const { data, error } = await supabase
+      const previousSettings = data;
+      
+      const { data: updatedSettings, error } = await supabase
         .from('admin_settings')
         .upsert({
           ...newSettings,
@@ -66,7 +70,17 @@ export const useAdminSettings = () => {
         .single();
       
       if (error) throw error;
-      return data;
+
+      // Log store open/close changes
+      if (newSettings.is_store_open !== undefined && previousSettings) {
+        const actionType = newSettings.is_store_open ? 'store_opened' : 'store_closed';
+        await logChange(actionType, 'store', 'main_store', {
+          previous_status: previousSettings.is_store_open,
+          new_status: newSettings.is_store_open
+        });
+      }
+      
+      return updatedSettings;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-settings'] });

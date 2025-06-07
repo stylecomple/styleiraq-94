@@ -5,12 +5,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
-import { Shield, Users, Package, BarChart3, Plus, ArrowLeft, Volume2, TrendingUp, Settings } from 'lucide-react';
+import { Shield, Users, Package, BarChart3, Plus, ArrowLeft, Volume2, TrendingUp, Settings, Clock } from 'lucide-react';
 import ProductsManagement from '@/components/admin/ProductsManagement';
 import OrdersManagement from '@/components/admin/OrdersManagement';
 import AddProductForm from '@/components/admin/AddProductForm';
 import CategoryManager from '@/components/admin/CategoryManager';
 import StatisticsPanel from '@/components/admin/StatisticsPanel';
+import ChangesLogPanel from '@/components/admin/ChangesLogPanel';
 import { useOrderNotifications } from '@/hooks/useOrderNotifications';
 import { useNotificationSound } from '@/hooks/useNotificationSound';
 import AdminSettings from '@/components/admin/AdminSettings';
@@ -19,6 +20,7 @@ const AdminPanel = () => {
   const {
     user,
     isAdmin,
+    isOwner,
     loading
   } = useAuth();
   const navigate = useNavigate();
@@ -46,10 +48,10 @@ const AdminPanel = () => {
   useOrderNotifications();
 
   useEffect(() => {
-    if (!loading && (!user || !isAdmin)) {
+    if (!loading && (!user || (!isAdmin && !isOwner))) {
       navigate('/');
     }
-  }, [user, isAdmin, loading, navigate]);
+  }, [user, isAdmin, isOwner, loading, navigate]);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -116,9 +118,10 @@ const AdminPanel = () => {
     console.log('حالة المدير:', {
       user: user?.id,
       isAdmin,
+      isOwner,
       loading
     });
-  }, [user, isAdmin, loading]);
+  }, [user, isAdmin, isOwner, loading]);
 
   // تحميل الفئات من localStorage
   useEffect(() => {
@@ -144,7 +147,7 @@ const AdminPanel = () => {
       </div>;
   }
 
-  if (!user || !isAdmin) {
+  if (!user || (!isAdmin && !isOwner)) {
     return null;
   }
 
@@ -159,7 +162,9 @@ const AdminPanel = () => {
           </div>
           <div className="flex items-center gap-3 mb-2">
             <Shield className="w-8 h-8 text-pink-600" />
-            <h1 className="text-3xl font-bold text-foreground">لوحة التحكم الإدارية</h1>
+            <h1 className="text-3xl font-bold text-foreground">
+              {isOwner ? 'لوحة تحكم المالك' : 'لوحة التحكم الإدارية'}
+            </h1>
           </div>
           <p className="text-muted-foreground">إدارة متجر ستايل العامرية</p>
         </div>
@@ -207,11 +212,12 @@ const AdminPanel = () => {
         </div>
 
         <Tabs defaultValue="products" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className={`grid w-full ${isOwner ? 'grid-cols-5' : 'grid-cols-3'}`}>
             <TabsTrigger value="products">إدارة المنتجات</TabsTrigger>
             <TabsTrigger value="orders">إدارة الطلبات</TabsTrigger>
             <TabsTrigger value="statistics">الإحصائيات</TabsTrigger>
-            <TabsTrigger value="settings">الإعدادات</TabsTrigger>
+            {isOwner && <TabsTrigger value="changes-log">سجل التغييرات</TabsTrigger>}
+            {isOwner && <TabsTrigger value="settings">الإعدادات</TabsTrigger>}
           </TabsList>
 
           <TabsContent value="products" className="space-y-6">
@@ -251,10 +257,22 @@ const AdminPanel = () => {
             <StatisticsPanel />
           </TabsContent>
 
-          <TabsContent value="settings" className="space-y-6">
-            <h2 className="text-2xl font-bold">إعدادات المتجر</h2>
-            <AdminSettings />
-          </TabsContent>
+          {isOwner && (
+            <TabsContent value="changes-log" className="space-y-6">
+              <h2 className="text-2xl font-bold flex items-center gap-2">
+                <Clock className="w-6 h-6" />
+                سجل التغييرات
+              </h2>
+              <ChangesLogPanel />
+            </TabsContent>
+          )}
+
+          {isOwner && (
+            <TabsContent value="settings" className="space-y-6">
+              <h2 className="text-2xl font-bold">إعدادات المتجر</h2>
+              <AdminSettings />
+            </TabsContent>
+          )}
         </Tabs>
       </div>
     </div>;

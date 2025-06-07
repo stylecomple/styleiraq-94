@@ -14,11 +14,13 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Trash2, Edit, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useChangeLogger } from '@/hooks/useChangeLogger';
 import EditProductForm from './EditProductForm';
 
 const ProductsManagement = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { logChange } = useChangeLogger();
   const [editingProduct, setEditingProduct] = useState<any>(null);
 
   const { data: products, isLoading } = useQuery({
@@ -35,22 +37,40 @@ const ProductsManagement = () => {
   });
 
   const deleteProductMutation = useMutation({
-    mutationFn: async (productId: string) => {
+    mutationFn: async (product: any) => {
+      // First, delete related order_items
+      const { error: orderItemsError } = await supabase
+        .from('order_items')
+        .delete()
+        .eq('product_id', product.id);
+      
+      if (orderItemsError) throw orderItemsError;
+
+      // Then delete the product
       const { error } = await supabase
         .from('products')
         .delete()
-        .eq('id', productId);
+        .eq('id', product.id);
       
       if (error) throw error;
+
+      // Log the change
+      await logChange('product_deleted', 'product', product.id, {
+        product_name: product.name,
+        product_price: product.price
+      });
+
+      return product;
     },
-    onSuccess: () => {
+    onSuccess: (deletedProduct) => {
       queryClient.invalidateQueries({ queryKey: ['admin-products'] });
       toast({
         title: 'تم حذف المنتج',
-        description: 'تم حذف المنتج بنجاح',
+        description: `تم حذف ${deletedProduct.name} بنجاح`,
       });
     },
-    onError: () => {
+    onError: (error: any) => {
+      console.error('Error deleting product:', error);
       toast({
         title: 'خطأ',
         description: 'فشل في حذف المنتج',
@@ -60,13 +80,24 @@ const ProductsManagement = () => {
   });
 
   const toggleProductStatus = useMutation({
-    mutationFn: async ({ id, is_active }: { id: string; is_active: boolean }) => {
+    mutationFn: async ({ id, is_active, name }: { id: string; is_active: boolean; name: string }) => {
+      const newStatus = !is_active;
       const { error } = await supabase
         .from('products')
-        .update({ is_active: !is_active })
+        .update({ is_active: newStatus })
         .eq('id', id);
       
       if (error) throw error;
+
+      // Log the change
+      await logChange(
+        newStatus ? 'product_activated' : 'product_deactivated',
+        'product',
+        id,
+        { product_name: name, new_status: newStatus }
+      );
+
+      return { id, newStatus };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-products'] });
@@ -142,7 +173,11 @@ const ProductsManagement = () => {
                   <Badge 
                     variant={product.is_active ? "default" : "secondary"}
                     className="cursor-pointer"
-                    onClick={() => toggleProductStatus.mutate({ id: product.id, is_active: product.is_active })}
+                    onClick={() => toggleProductStatus.mutate({ 
+                      id: product.id, 
+                      is_active: product.is_active,
+                      name: product.name 
+                    })}
                   >
                     {product.is_active ? 'نشط' : 'غير نشط'}
                   </Badge>
@@ -159,7 +194,7 @@ const ProductsManagement = () => {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => deleteProductMutation.mutate(product.id)}
+                      onClick={() => deleteProductMutation.mutate(product)}
                       disabled={deleteProductMutation.isPending}
                     >
                       <Trash2 className="w-4 h-4 text-red-500" />
