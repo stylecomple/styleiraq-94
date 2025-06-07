@@ -40,52 +40,65 @@ const ProductsManagement = () => {
     mutationFn: async (product: any) => {
       console.log('Starting product deletion process for:', product.id);
       
-      // First, check if product exists in any orders
-      const { data: orderItems, error: checkError } = await supabase
-        .from('order_items')
-        .select('id')
-        .eq('product_id', product.id);
-      
-      if (checkError) {
-        console.error('Error checking order items:', checkError);
-        throw checkError;
-      }
+      try {
+        // First, check if product exists in any orders
+        const { data: orderItems, error: checkError } = await supabase
+          .from('order_items')
+          .select('id')
+          .eq('product_id', product.id);
+        
+        if (checkError) {
+          console.error('Error checking order items:', checkError);
+          throw new Error('فشل في التحقق من الطلبات المرتبطة بالمنتج');
+        }
 
-      // If product has order items, we can't delete it physically
-      if (orderItems && orderItems.length > 0) {
-        // Instead of deleting, we'll deactivate the product
-        const { error: deactivateError } = await supabase
+        // If product has order items, we can't delete it physically
+        if (orderItems && orderItems.length > 0) {
+          console.log('Product has existing orders, deactivating instead of deleting');
+          // Instead of deleting, we'll deactivate the product
+          const { error: deactivateError } = await supabase
+            .from('products')
+            .update({ is_active: false })
+            .eq('id', product.id);
+          
+          if (deactivateError) {
+            console.error('Error deactivating product:', deactivateError);
+            throw new Error('فشل في إلغاء تفعيل المنتج');
+          }
+
+          // Log the change as deactivation instead of deletion
+          await logChange('product_deactivated', 'product', product.id, {
+            product_name: product.name,
+            product_price: product.price,
+            reason: 'Product has existing orders, deactivated instead of deleted'
+          });
+
+          return { ...product, deleted: false, deactivated: true };
+        }
+
+        // If no order items exist, we can safely delete the product
+        console.log('No orders found, proceeding with deletion');
+        const { error: deleteError } = await supabase
           .from('products')
-          .update({ is_active: false })
+          .delete()
           .eq('id', product.id);
         
-        if (deactivateError) throw deactivateError;
+        if (deleteError) {
+          console.error('Error deleting product:', deleteError);
+          throw new Error('فشل في حذف المنتج من قاعدة البيانات');
+        }
 
-        // Log the change as deactivation instead of deletion
-        await logChange('product_deactivated', 'product', product.id, {
+        // Log the change
+        await logChange('product_deleted', 'product', product.id, {
           product_name: product.name,
-          product_price: product.price,
-          reason: 'Product has existing orders, deactivated instead of deleted'
+          product_price: product.price
         });
 
-        return { ...product, deleted: false, deactivated: true };
+        return { ...product, deleted: true, deactivated: false };
+      } catch (error) {
+        console.error('Error in deleteProductMutation:', error);
+        throw error;
       }
-
-      // If no order items exist, we can safely delete the product
-      const { error } = await supabase
-        .from('products')
-        .delete()
-        .eq('id', product.id);
-      
-      if (error) throw error;
-
-      // Log the change
-      await logChange('product_deleted', 'product', product.id, {
-        product_name: product.name,
-        product_price: product.price
-      });
-
-      return { ...product, deleted: true, deactivated: false };
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['admin-products'] });
@@ -102,10 +115,11 @@ const ProductsManagement = () => {
       }
     },
     onError: (error: any) => {
-      console.error('Error deleting product:', error);
+      console.error('Error in deleteProductMutation onError:', error);
+      const errorMessage = error.message || 'فشل في حذف المنتج';
       toast({
         title: 'خطأ',
-        description: 'فشل في حذف المنتج',
+        description: errorMessage,
         variant: 'destructive',
       });
     }
@@ -137,6 +151,14 @@ const ProductsManagement = () => {
         title: 'تم تحديث حالة المنتج',
         description: 'تم تحديث حالة المنتج بنجاح',
       });
+    },
+    onError: (error: any) => {
+      console.error('Error toggling product status:', error);
+      toast({
+        title: 'خطأ',
+        description: 'فشل في تحديث حالة المنتج',
+        variant: 'destructive',
+      });
     }
   });
 
@@ -151,6 +173,11 @@ const ProductsManagement = () => {
 
   const formatPrice = (price: number) => {
     return `${price.toLocaleString('ar-IQ')} د.ع`;
+  };
+
+  const handleDeleteProduct = (product: any) => {
+    console.log('Delete button clicked for product:', product.id);
+    deleteProductMutation.mutate(product);
   };
 
   if (isLoading) {
@@ -226,7 +253,7 @@ const ProductsManagement = () => {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => deleteProductMutation.mutate(product)}
+                      onClick={() => handleDeleteProduct(product)}
                       disabled={deleteProductMutation.isPending}
                     >
                       <Trash2 className="w-4 h-4 text-red-500" />

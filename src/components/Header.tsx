@@ -8,7 +8,7 @@ import { useCart } from '@/contexts/CartContext';
 import { useNavigate } from 'react-router-dom';
 
 const Header = () => {
-  const { user, isAdmin, signOut } = useAuth();
+  const { user, isAdmin, isOwner, signOut } = useAuth();
   const { getTotalItems } = useCart();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -72,8 +72,8 @@ const Header = () => {
               )}
             </Button>
             
-            {/* Admin Button (for admin users) */}
-            {user && isAdmin && (
+            {/* Admin Button (for admin and owner users) */}
+            {user && (isAdmin || isOwner) && (
               <Button
                 variant="outline"
                 size="sm"
@@ -138,7 +138,7 @@ const Header = () => {
         {mobileMenuOpen && (
           <div className="md:hidden mt-4 pb-4 border-t border-gray-100 pt-4">
             <div className="flex flex-col space-y-3">
-              {user && isAdmin && (
+              {user && (isAdmin || isOwner) && (
                 <Button
                   variant="outline"
                   onClick={handleAdminClick}
