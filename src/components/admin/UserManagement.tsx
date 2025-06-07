@@ -24,22 +24,33 @@ const UserManagement = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Fetch all user roles
+  // Fetch all user roles with profile information
   const { data: userRoles, isLoading } = useQuery({
     queryKey: ['user-roles'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('user_roles')
-        .select(`
-          *,
-          profiles!user_roles_user_id_fkey (
-            full_name,
-            email
-          )
-        `);
+        .select('*');
       
       if (error) throw error;
-      return data;
+
+      // Get profile information for each user
+      const userRolesWithProfiles = await Promise.all(
+        data.map(async (role) => {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('full_name, email')
+            .eq('id', role.user_id)
+            .single();
+          
+          return {
+            ...role,
+            profile
+          };
+        })
+      );
+
+      return userRolesWithProfiles;
     }
   });
 
@@ -211,8 +222,8 @@ const UserManagement = () => {
             <TableBody>
               {ownerUsers.map((user) => (
                 <TableRow key={user.id}>
-                  <TableCell>{user.profiles?.full_name || 'غير محدد'}</TableCell>
-                  <TableCell>{user.profiles?.email}</TableCell>
+                  <TableCell>{user.profile?.full_name || 'غير محدد'}</TableCell>
+                  <TableCell>{user.profile?.email}</TableCell>
                   <TableCell>
                     <Badge variant="destructive" className="bg-red-600">
                       <Shield className="w-3 h-3 mr-1" />
@@ -226,8 +237,8 @@ const UserManagement = () => {
               ))}
               {adminUsers.map((user) => (
                 <TableRow key={user.id}>
-                  <TableCell>{user.profiles?.full_name || 'غير محدد'}</TableCell>
-                  <TableCell>{user.profiles?.email}</TableCell>
+                  <TableCell>{user.profile?.full_name || 'غير محدد'}</TableCell>
+                  <TableCell>{user.profile?.email}</TableCell>
                   <TableCell>
                     <Badge variant="secondary" className="bg-blue-100 text-blue-800">
                       <Shield className="w-3 h-3 mr-1" />
