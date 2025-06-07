@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Instagram, Facebook, Phone } from 'lucide-react';
+import { Instagram, Facebook, Phone, Mail, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const Footer = () => {
@@ -34,6 +34,14 @@ const Footer = () => {
 
   const handlePhoneCall = () => {
     window.open('tel:0782 376 3929', '_self');
+  };
+
+  const handleEmailClick = () => {
+    window.open('mailto:stylecomplex2021@gmail.com', '_self');
+  };
+
+  const handleLocationClick = () => {
+    window.open('https://maps.google.com/?q=شارع العمل الشعبي, Baghdad, Iraq', '_blank');
   };
 
   return (
@@ -88,6 +96,8 @@ const Footer = () => {
               <h3 className="text-xl font-semibold text-center md:text-right text-pink-300">
                 معلومات التواصل
               </h3>
+              
+              {/* Phone */}
               <Button
                 onClick={handlePhoneCall}
                 className="w-full justify-start gap-4 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 border-0 text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 text-lg py-6 group"
@@ -99,6 +109,36 @@ const Footer = () => {
                 </div>
                 <div className="mr-auto opacity-60 group-hover:opacity-100 transition-opacity">
                   📞
+                </div>
+              </Button>
+
+              {/* Email */}
+              <Button
+                onClick={handleEmailClick}
+                className="w-full justify-start gap-4 bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 border-0 text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 text-lg py-6 group"
+              >
+                <Mail className="group-hover:animate-pulse" />
+                <div className="text-right">
+                  <div>راسلنا</div>
+                  <div className="text-sm opacity-90">stylecomplex2021@gmail.com</div>
+                </div>
+                <div className="mr-auto opacity-60 group-hover:opacity-100 transition-opacity">
+                  ✉️
+                </div>
+              </Button>
+
+              {/* Location */}
+              <Button
+                onClick={handleLocationClick}
+                className="w-full justify-start gap-4 bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 border-0 text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 text-lg py-6 group"
+              >
+                <MapPin className="group-hover:animate-pulse" />
+                <div className="text-right">
+                  <div>موقعنا</div>
+                  <div className="text-sm opacity-90">شارع العمل الشعبي، Baghdad, Iraq</div>
+                </div>
+                <div className="mr-auto opacity-60 group-hover:opacity-100 transition-opacity">
+                  📍
                 </div>
               </Button>
             </div>
