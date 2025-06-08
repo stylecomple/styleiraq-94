@@ -30,6 +30,15 @@ interface Category {
 const AddProductForm = ({ onClose }: AddProductFormProps) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  
+  // Clean options data before saving
+  const cleanOptionsData = (options: ProductOption[]): ProductOption[] => {
+    return options.map(option => ({
+      name: option.name || '',
+      price: typeof option.price === 'number' && !isNaN(option.price) ? option.price : undefined
+    })).filter(option => option.name.trim() !== ''); // Remove empty options
+  };
+
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -76,6 +85,9 @@ const AddProductForm = ({ onClose }: AddProductFormProps) => {
     mutationFn: async (productData: any) => {
       console.log('Adding product with data:', productData);
 
+      // Clean the options data before sending to database
+      const cleanedOptions = cleanOptionsData(productData.options);
+
       const productToInsert = {
         name: productData.name,
         description: productData.description || null,
@@ -84,7 +96,7 @@ const AddProductForm = ({ onClose }: AddProductFormProps) => {
         subcategories: productData.subcategories,
         cover_image: productData.cover_image || null,
         images: productData.images,
-        options: productData.options,
+        options: cleanedOptions,
         stock_quantity: productData.ignore_stock ? null : (parseInt(productData.stock_quantity) || 0)
       };
 

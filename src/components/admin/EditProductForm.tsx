@@ -38,10 +38,21 @@ const EditProductForm = ({ product, onClose }: EditProductFormProps) => {
       if (options.length > 0 && typeof options[0] === 'string') {
         return convertColorsToOptions(options);
       }
-      // New format (array of objects)
-      return options;
+      // New format (array of objects) - clean up any malformed price values
+      return options.map(option => ({
+        name: option.name || '',
+        price: typeof option.price === 'number' ? option.price : undefined
+      }));
     }
     return [];
+  };
+
+  // Clean options data before saving
+  const cleanOptionsData = (options: ProductOption[]): ProductOption[] => {
+    return options.map(option => ({
+      name: option.name || '',
+      price: typeof option.price === 'number' && !isNaN(option.price) ? option.price : undefined
+    })).filter(option => option.name.trim() !== ''); // Remove empty options
   };
 
   const [formData, setFormData] = useState({
@@ -77,6 +88,9 @@ const EditProductForm = ({ product, onClose }: EditProductFormProps) => {
         ? productData.images.split('\n').filter((url: string) => url.trim()) 
         : [];
 
+      // Clean the options data before sending to database
+      const cleanedOptions = cleanOptionsData(productData.options);
+
       const productToUpdate = {
         name: productData.name,
         description: productData.description || null,
@@ -85,7 +99,7 @@ const EditProductForm = ({ product, onClose }: EditProductFormProps) => {
         subcategories: productData.subcategories,
         cover_image: productData.cover_image || null,
         images: images,
-        options: productData.options,
+        options: cleanedOptions,
         stock_quantity: parseInt(productData.stock_quantity) || 0,
         discount_percentage: parseInt(productData.discount_percentage) || 0
       };
