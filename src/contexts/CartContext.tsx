@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -7,14 +8,14 @@ interface CartItem {
   price: number;
   quantity: number;
   image: string;
-  selectedColor?: string;
+  selectedOption?: string;
 }
 
 interface CartContextType {
   items: CartItem[];
-  addToCart: (product: any, selectedColor?: string) => void;
-  removeFromCart: (productId: string, selectedColor?: string) => void;
-  updateQuantity: (productId: string, quantity: number, selectedColor?: string) => void;
+  addToCart: (product: any, selectedOption?: string, optionPrice?: number) => void;
+  removeFromCart: (productId: string, selectedOption?: string) => void;
+  updateQuantity: (productId: string, quantity: number, selectedOption?: string) => void;
   clearCart: () => void;
   getTotalItems: () => number;
   getTotalPrice: () => number;
@@ -46,59 +47,69 @@ export const CartProvider = ({ children }: CartProviderProps) => {
   const [pendingOrder, setPendingOrder] = useState<any>(null);
   const { toast } = useToast();
 
-  const addToCart = (product: any, selectedColor?: string) => {
+  const addToCart = (product: any, selectedOption?: string, optionPrice?: number) => {
     setItems(prevItems => {
-      const itemKey = selectedColor ? `${product.id}-${selectedColor}` : product.id;
       const existingItem = prevItems.find(item => 
-        selectedColor 
-          ? item.id === product.id && item.selectedColor === selectedColor
-          : item.id === product.id && !item.selectedColor
+        selectedOption 
+          ? item.id === product.id && item.selectedOption === selectedOption
+          : item.id === product.id && !item.selectedOption
       );
+      
+      // Determine the correct price to use
+      let finalPrice = product.price;
+      if (selectedOption && optionPrice !== undefined) {
+        finalPrice = optionPrice;
+      } else if (selectedOption && product.options) {
+        const selectedOptionData = product.options.find((opt: any) => opt.name === selectedOption);
+        if (selectedOptionData && selectedOptionData.price !== undefined) {
+          finalPrice = selectedOptionData.price;
+        }
+      }
       
       if (existingItem) {
         toast({
           title: "تم تحديث السلة",
-          description: `تم زيادة كمية ${product.name} ${selectedColor ? `(${selectedColor})` : ''} في السلة`,
+          description: `تم زيادة كمية ${product.name} ${selectedOption ? `(${selectedOption})` : ''} في السلة`,
         });
         return prevItems.map(item =>
-          (selectedColor ? (item.id === product.id && item.selectedColor === selectedColor) : (item.id === product.id && !item.selectedColor))
+          (selectedOption ? (item.id === product.id && item.selectedOption === selectedOption) : (item.id === product.id && !item.selectedOption))
             ? { ...item, quantity: item.quantity + 1 }
             : item
         );
       } else {
         toast({
           title: "تم إضافة المنتج",
-          description: `تم إضافة ${product.name} ${selectedColor ? `(${selectedColor})` : ''} إلى السلة`,
+          description: `تم إضافة ${product.name} ${selectedOption ? `(${selectedOption})` : ''} إلى السلة`,
         });
         return [...prevItems, {
           id: product.id,
           name: product.name,
-          price: Math.round(product.price),
+          price: Math.round(finalPrice),
           quantity: 1,
           image: product.cover_image || '/placeholder.svg',
-          selectedColor: selectedColor
+          selectedOption: selectedOption
         }];
       }
     });
   };
 
-  const removeFromCart = (productId: string, selectedColor?: string) => {
+  const removeFromCart = (productId: string, selectedOption?: string) => {
     setItems(prevItems => prevItems.filter(item => 
-      selectedColor 
-        ? !(item.id === productId && item.selectedColor === selectedColor)
-        : !(item.id === productId && !item.selectedColor)
+      selectedOption 
+        ? !(item.id === productId && item.selectedOption === selectedOption)
+        : !(item.id === productId && !item.selectedOption)
     ));
   };
 
-  const updateQuantity = (productId: string, quantity: number, selectedColor?: string) => {
+  const updateQuantity = (productId: string, quantity: number, selectedOption?: string) => {
     if (quantity <= 0) {
-      removeFromCart(productId, selectedColor);
+      removeFromCart(productId, selectedOption);
       return;
     }
     
     setItems(prevItems =>
       prevItems.map(item =>
-        (selectedColor ? (item.id === productId && item.selectedColor === selectedColor) : (item.id === productId && !item.selectedColor))
+        (selectedOption ? (item.id === productId && item.selectedOption === selectedOption) : (item.id === productId && !item.selectedOption))
           ? { ...item, quantity }
           : item
       )

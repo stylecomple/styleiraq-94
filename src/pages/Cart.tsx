@@ -147,13 +147,13 @@ const Cart = () => {
 
       if (orderError) throw orderError;
 
-      // Create order items
+      // Create order items with selected options
       const orderItems = items.map(item => ({
         order_id: order.id,
         product_id: item.id,
         quantity: item.quantity,
         price: item.price,
-        selected_color: item.selectedColor || null
+        selected_color: item.selectedOption || null
       }));
 
       const { error: itemsError } = await supabase
@@ -286,7 +286,7 @@ const Cart = () => {
                 ) : (
                   <div className="space-y-4">
                     {items.map((item) => (
-                      <div key={`${item.id}-${item.selectedColor || 'default'}`} className="flex items-center justify-between border-b pb-4">
+                      <div key={`${item.id}-${item.selectedOption || 'default'}`} className="flex items-center justify-between border-b pb-4">
                         <div className="flex items-center space-x-4">
                           <img
                             src={item.image || '/placeholder.svg'}
@@ -295,9 +295,9 @@ const Cart = () => {
                           />
                           <div>
                             <h3 className="font-semibold">{item.name}</h3>
-                            {item.selectedColor && (
+                            {item.selectedOption && (
                               <Badge variant="outline" className="mt-1">
-                                {item.selectedColor}
+                                {item.selectedOption}
                               </Badge>
                             )}
                             <p className="text-gray-600">{formatPrice(item.price)}</p>
@@ -308,7 +308,7 @@ const Cart = () => {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => updateQuantity(item.id, item.quantity - 1, item.selectedColor)}
+                              onClick={() => updateQuantity(item.id, item.quantity - 1, item.selectedOption)}
                             >
                               <Minus className="w-4 h-4" />
                             </Button>
@@ -316,7 +316,7 @@ const Cart = () => {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => updateQuantity(item.id, item.quantity + 1, item.selectedColor)}
+                              onClick={() => updateQuantity(item.id, item.quantity + 1, item.selectedOption)}
                             >
                               <Plus className="w-4 h-4" />
                             </Button>
@@ -324,7 +324,7 @@ const Cart = () => {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => removeFromCart(item.id, item.selectedColor)}
+                            onClick={() => removeFromCart(item.id, item.selectedOption)}
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>

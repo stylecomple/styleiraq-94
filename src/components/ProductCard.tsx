@@ -57,13 +57,16 @@ const ProductCard = ({ product }: ProductCardProps) => {
       return;
     }
 
-    // Find the selected option details
+    // Find the selected option details and get the correct price
     const selectedOptionData = hasOptions && selectedOption 
       ? product.options!.find(opt => opt.name === selectedOption)
       : null;
 
-    // Fix: Only pass the product and option name (not the price as third argument)
-    addToCart(product, selectedOption || undefined);
+    // Determine the option price (use option price if available, otherwise use main product price)
+    const optionPrice = selectedOptionData?.price || product.price;
+
+    // Add to cart with the correct price
+    addToCart(product, selectedOption || undefined, optionPrice);
     
     toast({
       title: "تم إضافة المنتج",
@@ -198,7 +201,7 @@ const ProductCard = ({ product }: ProductCardProps) => {
                         <SelectContent>
                           {product.options!.map((option) => (
                             <SelectItem key={option.name} value={option.name}>
-                              {option.name} {option.price && `- ${formatPrice(option.price)}`}
+                              {option.name} {option.price && option.price !== product.price && `- ${formatPrice(option.price)}`}
                             </SelectItem>
                           ))}
                         </SelectContent>
