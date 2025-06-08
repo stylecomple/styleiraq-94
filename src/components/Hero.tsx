@@ -1,15 +1,23 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Sparkles, Star, Heart } from 'lucide-react';
+import { ArrowLeft, Sparkles, Star, Heart, Truck } from 'lucide-react';
 import CountUpAnimation from './CountUpAnimation';
 
 interface HeroProps {
   onStartShopping: () => void;
   onBrowseCollections: () => void;
+  onCategoryClick: (categoryId: string) => void;
 }
 
-const Hero = ({ onStartShopping, onBrowseCollections }: HeroProps) => {
+const Hero = ({ onStartShopping, onBrowseCollections, onCategoryClick }: HeroProps) => {
+  const categories = [
+    { id: 'makeup', icon: '💄', name: 'مكياج', color: 'pink' },
+    { id: 'perfumes', icon: '🧴', name: 'عطور', color: 'purple' },
+    { id: 'flowers', icon: '🌹', name: 'ورد', color: 'rose' },
+    { id: 'home', icon: '🏠', name: 'منزلية', color: 'indigo' }
+  ];
+
   return (
     <section className="relative min-h-screen flex items-center bg-gradient-to-br from-pink-50 via-purple-50 to-indigo-100 overflow-hidden">
       {/* Animated Background Elements */}
@@ -25,10 +33,10 @@ const Hero = ({ onStartShopping, onBrowseCollections }: HeroProps) => {
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           {/* Left Side - Text Content */}
           <div className="text-center lg:text-right space-y-8">
-            {/* Badge */}
+            {/* Badge with delivery info */}
             <div className="inline-flex items-center gap-2 bg-white/80 backdrop-blur-sm rounded-full px-4 py-2 shadow-lg animate-fade-in">
-              <Sparkles className="w-4 h-4 text-pink-500 animate-pulse" />
-              <span className="text-sm font-medium text-gray-700">متجر الجمال والأناقة الأول في العراق</span>
+              <Truck className="w-4 h-4 text-green-500 animate-pulse" />
+              <span className="text-sm font-medium text-gray-700">توصيل سريع لجميع أنحاء العراق</span>
             </div>
 
             {/* Main Heading */}
@@ -120,7 +128,7 @@ const Hero = ({ onStartShopping, onBrowseCollections }: HeroProps) => {
                       <div className="absolute -top-4 left-1/4 w-1 h-1 bg-yellow-300 rounded-full animate-ping" style={{ animationDelay: '0.5s' }}></div>
                       <div className="absolute -bottom-4 right-1/4 w-1 h-1 bg-blue-300 rounded-full animate-pulse" style={{ animationDelay: '1s' }}></div>
                     </div>
-                    <div className="text-xl font-semibold animate-pulse">جمالك يبدأ هنا</div>
+                    <div className="text-xl font-semibold animate-pulse">انضم إلى عالمنا</div>
                   </div>
                 </div>
               </div>
@@ -151,18 +159,14 @@ const Hero = ({ onStartShopping, onBrowseCollections }: HeroProps) => {
           </div>
         </div>
 
-        {/* Enhanced Categories Preview */}
+        {/* Enhanced Categories Preview with Navigation */}
         <div className="mt-20 grid grid-cols-2 md:grid-cols-4 gap-6">
-          {[
-            { icon: '💄', name: 'مكياج', color: 'pink' },
-            { icon: '🧴', name: 'عطور', color: 'purple' },
-            { icon: '🌹', name: 'ورد', color: 'rose' },
-            { icon: '🏠', name: 'منزلية', color: 'indigo' }
-          ].map((category, index) => (
+          {categories.map((category, index) => (
             <div 
               key={index} 
               className="group cursor-pointer animate-fade-in" 
               style={{ animationDelay: `${1.2 + index * 0.2}s` }}
+              onClick={() => onCategoryClick(category.id)}
             >
               <div className={`bg-white/80 backdrop-blur-sm rounded-2xl p-6 text-center shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 hover:scale-105 border border-${category.color}-100`}>
                 <div className="text-4xl mb-3 group-hover:animate-bounce">{category.icon}</div>

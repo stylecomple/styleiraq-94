@@ -2,10 +2,8 @@
 import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import Header from '@/components/Header';
 import Hero from '@/components/Hero';
 import FeaturesSection from '@/components/FeaturesSection';
-import Footer from '@/components/Footer';
 
 const Index = () => {
   const { user } = useAuth();
@@ -19,11 +17,17 @@ const Index = () => {
     navigate('/products');
   };
 
+  const handleCategoryClick = (categoryId: string) => {
+    navigate(`/products?category=${categoryId}`);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
-      <Header />
-      
-      <Hero onStartShopping={handleStartShopping} onBrowseCollections={handleBrowseCollections} />
+      <Hero 
+        onStartShopping={handleStartShopping} 
+        onBrowseCollections={handleBrowseCollections} 
+        onCategoryClick={handleCategoryClick}
+      />
       
       <FeaturesSection />
 
@@ -39,8 +43,6 @@ const Index = () => {
           </div>
         </div>
       )}
-      
-      <Footer />
     </div>
   );
 };
