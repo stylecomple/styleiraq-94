@@ -87,7 +87,7 @@ const DiscountManagement = () => {
     try {
       console.log('Starting to apply discounts to products...');
       
-      // First, get all products to reset their discounts
+      // First, reset all product discounts to 0
       const { data: allProducts, error: productsError } = await supabase
         .from('products')
         .select('id');
@@ -97,19 +97,14 @@ const DiscountManagement = () => {
         throw productsError;
       }
 
-      // Reset all product discounts to 0 by updating each product individually
-      if (allProducts && allProducts.length > 0) {
-        for (const product of allProducts) {
-          const { error: resetError } = await supabase
-            .from('products')
-            .update({ discount_percentage: 0 })
-            .eq('id', product.id);
-          
-          if (resetError) {
-            console.error(`Error resetting discount for product ${product.id}:`, resetError);
-            throw resetError;
-          }
-        }
+      console.log('Resetting discounts for all products...');
+      
+      // Reset all products to 0 discount using RPC call
+      const { error: resetError } = await supabase.rpc('reset_all_product_discounts');
+      
+      if (resetError) {
+        console.error('Error resetting discounts:', resetError);
+        throw resetError;
       }
 
       console.log('Reset all product discounts to 0');
@@ -128,54 +123,12 @@ const DiscountManagement = () => {
       console.log('Active discounts:', activeDiscounts);
 
       if (activeDiscounts && activeDiscounts.length > 0) {
-        // Get all products with their categories and subcategories
-        const { data: productsWithCategories, error: productsWithCategoriesError } = await supabase
-          .from('products')
-          .select('id, categories, subcategories, discount_percentage');
-
-        if (productsWithCategoriesError) {
-          console.error('Error fetching products with categories:', productsWithCategoriesError);
-          throw productsWithCategoriesError;
-        }
-
-        // Calculate the maximum discount for each product
-        const productDiscounts: { [key: string]: number } = {};
-
-        productsWithCategories?.forEach(product => {
-          let maxDiscount = 0;
-
-          activeDiscounts.forEach(discount => {
-            let applies = false;
-
-            if (discount.discount_type === 'all_products') {
-              applies = true;
-            } else if (discount.discount_type === 'category' && product.categories) {
-              applies = product.categories.includes(discount.target_value);
-            } else if (discount.discount_type === 'subcategory' && product.subcategories) {
-              applies = product.subcategories.includes(discount.target_value);
-            }
-
-            if (applies && discount.discount_percentage > maxDiscount) {
-              maxDiscount = discount.discount_percentage;
-            }
-          });
-
-          if (maxDiscount > 0) {
-            productDiscounts[product.id] = maxDiscount;
-          }
-        });
-
-        // Apply the calculated discounts
-        for (const [productId, discountPercentage] of Object.entries(productDiscounts)) {
-          const { error: updateError } = await supabase
-            .from('products')
-            .update({ discount_percentage: discountPercentage })
-            .eq('id', productId);
-
-          if (updateError) {
-            console.error(`Error updating product ${productId}:`, updateError);
-            throw updateError;
-          }
+        // Apply discounts using RPC call
+        const { error: applyError } = await supabase.rpc('apply_active_discounts');
+        
+        if (applyError) {
+          console.error('Error applying discounts:', applyError);
+          throw applyError;
         }
 
         console.log('Successfully applied all discounts');

@@ -4,7 +4,6 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import Hero from '@/components/Hero';
 import FeaturesSection from '@/components/FeaturesSection';
-import Footer from '@/components/Footer';
 import DiscountBanner from '@/components/DiscountBanner';
 import { useNavigate } from 'react-router-dom';
 
@@ -79,7 +78,6 @@ const Index = () => {
         productCount={productCount}
       />
       <FeaturesSection />
-      <Footer />
     </div>
   );
 };
