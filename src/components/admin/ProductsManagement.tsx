@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -16,7 +15,7 @@ import { Trash2, Edit, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useChangeLogger } from '@/hooks/useChangeLogger';
 import EditProductForm from './EditProductForm';
-import { ProductOption } from '@/types';
+import { ProductOption, Product } from '@/types';
 
 const ProductsManagement = () => {
   const { toast } = useToast();
@@ -34,14 +33,21 @@ const ProductsManagement = () => {
       
       if (error) throw error;
       
-      // Handle legacy data and ensure proper typing
-      return data.map(product => ({
-        ...product,
-        // Convert old colors field to options format if needed
-        options: product.options || (product.colors ? product.colors.map((color: string) => ({ name: color, price: undefined })) : []),
+      // Transform raw database data to match Product interface
+      return data.map(rawProduct => {
+        // Handle legacy colors field - convert to options format
+        const options = (rawProduct as any).options || 
+          ((rawProduct as any).colors ? (rawProduct as any).colors.map((color: string) => ({ name: color, price: undefined })) : []);
+        
         // Ensure subcategories field exists
-        subcategories: product.subcategories || []
-      }));
+        const subcategories = (rawProduct as any).subcategories || [];
+
+        return {
+          ...rawProduct,
+          options,
+          subcategories
+        } as Product;
+      });
     }
   });
 

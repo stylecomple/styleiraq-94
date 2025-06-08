@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -63,7 +62,8 @@ const ProductCard = ({ product }: ProductCardProps) => {
       ? product.options!.find(opt => opt.name === selectedOption)
       : null;
 
-    addToCart(product, selectedOption || undefined, selectedOptionData?.price);
+    // Fix: Only pass the product and option name (not the price as third argument)
+    addToCart(product, selectedOption || undefined);
     
     toast({
       title: "تم إضافة المنتج",

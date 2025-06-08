@@ -52,13 +52,21 @@ const Products = () => {
         throw new Error(error.message);
       }
 
-      let filteredProducts = (data || []).map(product => ({
-        ...product,
+      // Transform raw database data to match Product interface
+      let filteredProducts = (data || []).map(rawProduct => {
         // Handle legacy colors field - convert to options format
-        options: product.options || (product.colors ? product.colors.map((color: string) => ({ name: color, price: undefined })) : []),
+        const options = (rawProduct as any).options || 
+          ((rawProduct as any).colors ? (rawProduct as any).colors.map((color: string) => ({ name: color, price: undefined })) : []);
+        
         // Ensure subcategories field exists
-        subcategories: product.subcategories || []
-      }));
+        const subcategories = (rawProduct as any).subcategories || [];
+
+        return {
+          ...rawProduct,
+          options,
+          subcategories
+        } as Product;
+      });
 
       // Filter by subcategory if selected
       if (selectedSubcategory && filteredProducts.length > 0) {
