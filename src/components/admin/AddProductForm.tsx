@@ -328,10 +328,10 @@ const AddProductForm = ({ onClose }: AddProductFormProps) => {
             </div>
 
             <div className="space-y-4">
+              <Label>الصورة الرئيسية *</Label>
               <ImageUploadCrop
                 currentImage={formData.cover_image}
                 onImageUploaded={(url) => setFormData(prev => ({ ...prev, cover_image: url }))}
-                label="الصورة الرئيسية *"
               />
             </div>
 
