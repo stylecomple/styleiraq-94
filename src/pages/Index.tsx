@@ -37,7 +37,12 @@ const Index = () => {
         .eq('is_active', true);
       
       if (error) throw error;
-      return data;
+      
+      // Type cast the data to ensure proper TypeScript types
+      return data?.map(discount => ({
+        ...discount,
+        discount_type: discount.discount_type as 'all_products' | 'category' | 'subcategory'
+      })) || [];
     },
     refetchInterval: 60000, // Refetch every minute
   });
