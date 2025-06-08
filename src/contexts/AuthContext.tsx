@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -75,6 +74,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setIsOwner(false);
     }
     
+    // Always set loading to false after processing
     setLoading(false);
   };
 
@@ -83,6 +83,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     const initializeAuth = async () => {
       try {
+        console.log('Initializing auth...');
+        setLoading(true);
+        
         // Get initial session
         const { data: { session: initialSession } } = await supabase.auth.getSession();
         console.log('Initial session check:', initialSession?.user?.id);
@@ -105,6 +108,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         
         if (!mounted) return;
 
+        // Don't set loading here, let updateAuthState handle it
         await updateAuthState(session);
       }
     );
