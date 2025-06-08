@@ -48,7 +48,7 @@ const Header = () => {
   // Debug logging
   console.log('Header render - User:', user?.id, 'isAdmin:', isAdmin, 'isOwner:', isOwner, 'loading:', loading);
   
-  // Don't show admin panel button while loading
+  // Show admin panel button only when not loading and user has admin/owner role
   const showAdminPanel = !loading && user && (isAdmin || isOwner);
 
   return (
@@ -86,7 +86,7 @@ const Header = () => {
               )}
             </Button>
             
-            {/* Admin Button (for admin and owner users) */}
+            {/* Admin Button - Only show when not loading and user has proper role */}
             {showAdminPanel && (
               <Button
                 variant="outline"
@@ -99,8 +99,13 @@ const Header = () => {
               </Button>
             )}
             
-            {/* Auth Button - Only show if not loading */}
-            {!loading && (
+            {/* Auth Button - Show loading state or auth button */}
+            {loading ? (
+              <div className="flex items-center gap-2 px-4 py-2">
+                <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin"></div>
+                <span className="text-sm text-gray-500">جاري التحميل...</span>
+              </div>
+            ) : (
               <Button
                 variant="outline"
                 size="sm"
@@ -139,7 +144,10 @@ const Header = () => {
               )}
             </Button>
             
-            {!loading && (
+            {/* Mobile Menu Toggle - Show loading or menu button */}
+            {loading ? (
+              <div className="w-8 h-8 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin"></div>
+            ) : (
               <Button
                 variant="outline"
                 size="sm"
@@ -152,7 +160,7 @@ const Header = () => {
           </div>
         </div>
 
-        {/* Mobile Menu */}
+        {/* Mobile Menu - Only show when not loading */}
         {mobileMenuOpen && !loading && (
           <div className="md:hidden mt-4 pb-4 border-t border-gray-100 pt-4">
             <div className="flex flex-col space-y-3">
