@@ -1,38 +1,47 @@
 
 import React, { useState, useRef, useCallback } from 'react';
 import ReactCrop, { Crop, PixelCrop } from 'react-image-crop';
+import 'react-image-crop/dist/ReactCrop.css';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { useToast } from '@/hooks/use-toast';
+import { Upload, Crop as CropIcon, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { Upload, X, Crop as CropIcon } from 'lucide-react';
-import 'react-image-crop/dist/ReactCrop.css';
+import { useToast } from '@/hooks/use-toast';
 
 interface ImageUploadCropProps {
   onImageUploaded: (url: string) => void;
-  onRemove?: () => void;
   currentImage?: string;
-  label: string;
+  aspectRatio?: number;
 }
 
-const ImageUploadCrop = ({ onImageUploaded, onRemove, currentImage, label }: ImageUploadCropProps) => {
-  const { toast } = useToast();
-  const [crop, setCrop] = useState<Crop>();
+const ImageUploadCrop = ({ onImageUploaded, currentImage, aspectRatio = 1 }: ImageUploadCropProps) => {
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [imageSrc, setImageSrc] = useState<string>('');
+  const [crop, setCrop] = useState<Crop>({
+    unit: '%',
+    width: 90,
+    height: 90,
+    x: 5,
+    y: 5,
+  });
   const [completedCrop, setCompletedCrop] = useState<PixelCrop>();
-  const [imgSrc, setImgSrc] = useState('');
-  const [showCropDialog, setShowCropDialog] = useState(false);
-  const [uploading, setUploading] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
 
   const onSelectFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
+      const file = e.target.files[0];
+      setSelectedFile(file);
+      
       const reader = new FileReader();
       reader.addEventListener('load', () => {
-        setImgSrc(reader.result?.toString() || '');
-        setShowCropDialog(true);
+        setImageSrc(reader.result?.toString() || '');
+        setIsDialogOpen(true);
       });
-      reader.readAsDataURL(e.target.files[0]);
+      reader.readAsDataURL(file);
     }
   };
 
@@ -65,147 +74,150 @@ const ImageUploadCrop = ({ onImageUploaded, onRemove, currentImage, label }: Ima
 
       return new Promise((resolve) => {
         canvas.toBlob((blob) => {
-          if (!blob) {
-            throw new Error('Canvas is empty');
+          if (blob) {
+            resolve(blob);
           }
-          resolve(blob);
         }, 'image/jpeg', 0.9);
       });
     },
     []
   );
 
-  const uploadCroppedImage = async () => {
-    if (!completedCrop || !imgRef.current) {
-      toast({
-        title: 'خطأ',
-        description: 'يرجى اختيار منطقة للقص',
-        variant: 'destructive',
-      });
-      return;
-    }
+  const handleCropComplete = async () => {
+    if (!completedCrop || !imgRef.current || !selectedFile) return;
 
-    setUploading(true);
+    setIsUploading(true);
+
     try {
       const croppedImageBlob = await getCroppedImg(imgRef.current, completedCrop);
       
-      const fileName = `product-${Date.now()}.jpg`;
-      
+      // Create a new file from the cropped blob
+      const croppedFile = new File([croppedImageBlob], selectedFile.name, {
+        type: 'image/jpeg',
+      });
+
+      // Upload to Supabase Storage
+      const fileExt = selectedFile.name.split('.').pop();
+      const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`;
+      const filePath = `products/${fileName}`;
+
+      console.log('Uploading to bucket: product-images, path:', filePath);
+
       const { data, error } = await supabase.storage
         .from('product-images')
-        .upload(fileName, croppedImageBlob, {
-          contentType: 'image/jpeg',
+        .upload(filePath, croppedFile, {
+          cacheControl: '3600',
+          upsert: false
         });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Upload error:', error);
+        throw error;
+      }
 
-      const { data: { publicUrl } } = supabase.storage
+      console.log('Upload successful:', data);
+
+      // Get public URL
+      const { data: urlData } = supabase.storage
         .from('product-images')
-        .getPublicUrl(fileName);
+        .getPublicUrl(filePath);
 
-      onImageUploaded(publicUrl);
-      setShowCropDialog(false);
-      setImgSrc('');
+      console.log('Public URL:', urlData.publicUrl);
+
+      onImageUploaded(urlData.publicUrl);
+      setIsDialogOpen(false);
+      setSelectedFile(null);
+      setImageSrc('');
       
       toast({
-        title: 'تم رفع الصورة',
-        description: 'تم رفع الصورة بنجاح',
+        title: "تم رفع الصورة",
+        description: "تم رفع الصورة بنجاح",
       });
-    } catch (error) {
+
+    } catch (error: any) {
       console.error('Error uploading image:', error);
       toast({
-        title: 'خطأ',
-        description: 'فشل في رفع الصورة',
-        variant: 'destructive',
+        title: "خطأ في رفع الصورة",
+        description: error.message || "حدث خطأ أثناء رفع الصورة",
+        variant: "destructive",
       });
     } finally {
-      setUploading(false);
+      setIsUploading(false);
     }
   };
 
   return (
-    <div className="space-y-2">
-      <label className="text-sm font-medium">{label}</label>
-      
-      {currentImage ? (
-        <div className="relative">
-          <img 
-            src={currentImage} 
-            alt="Product" 
-            className="w-32 h-32 object-cover rounded-lg border"
-          />
-          <Button
-            type="button"
-            variant="destructive"
-            size="sm"
-            className="absolute -top-2 -right-2 w-6 h-6 p-0"
-            onClick={onRemove}
-          >
-            <X className="w-3 h-3" />
-          </Button>
-        </div>
-      ) : (
-        <div className="flex flex-col gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => inputRef.current?.click()}
-            className="w-32 h-32 border-dashed border-2 flex flex-col items-center justify-center gap-2"
-          >
-            <Upload className="w-6 h-6" />
-            <span className="text-xs">اختر صورة</span>
-          </Button>
-          <input
-            ref={inputRef}
-            type="file"
-            accept="image/*"
-            onChange={onSelectFile}
-            className="hidden"
-          />
-        </div>
-      )}
+    <div className="space-y-4">
+      <div className="flex items-center gap-4">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => fileInputRef.current?.click()}
+          className="flex items-center gap-2"
+        >
+          <Upload className="w-4 h-4" />
+          اختر صورة
+        </Button>
+        
+        {currentImage && (
+          <div className="flex items-center gap-2">
+            <img
+              src={currentImage}
+              alt="Current"
+              className="w-10 h-10 rounded-lg object-cover"
+            />
+            <span className="text-sm text-gray-600">الصورة الحالية</span>
+          </div>
+        )}
+      </div>
 
-      <Dialog open={showCropDialog} onOpenChange={setShowCropDialog}>
-        <DialogContent className="max-w-2xl">
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={onSelectFile}
+        className="hidden"
+      />
+
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-w-4xl">
           <DialogHeader>
             <DialogTitle>قص الصورة</DialogTitle>
           </DialogHeader>
           
           <div className="space-y-4">
-            {imgSrc && (
+            {imageSrc && (
               <ReactCrop
                 crop={crop}
                 onChange={(_, percentCrop) => setCrop(percentCrop)}
                 onComplete={(c) => setCompletedCrop(c)}
-                aspect={1}
-                minWidth={100}
-                minHeight={100}
+                aspect={aspectRatio}
+                className="max-h-96"
               >
                 <img
                   ref={imgRef}
                   alt="Crop me"
-                  src={imgSrc}
-                  style={{ maxHeight: '400px', maxWidth: '100%' }}
+                  src={imageSrc}
+                  className="max-h-96 w-auto"
                 />
               </ReactCrop>
             )}
             
-            <div className="flex gap-2 justify-end">
+            <div className="flex justify-end gap-2">
               <Button
-                type="button"
                 variant="outline"
-                onClick={() => setShowCropDialog(false)}
+                onClick={() => setIsDialogOpen(false)}
+                disabled={isUploading}
               >
+                <X className="w-4 h-4 mr-2" />
                 إلغاء
               </Button>
               <Button
-                type="button"
-                onClick={uploadCroppedImage}
-                disabled={uploading}
-                className="bg-pink-600 hover:bg-pink-700"
+                onClick={handleCropComplete}
+                disabled={!completedCrop || isUploading}
               >
                 <CropIcon className="w-4 h-4 mr-2" />
-                {uploading ? 'جاري الرفع...' : 'قص ورفع'}
+                {isUploading ? 'جاري الرفع...' : 'رفع الصورة'}
               </Button>
             </div>
           </div>
