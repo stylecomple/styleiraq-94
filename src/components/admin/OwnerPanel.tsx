@@ -3,13 +3,13 @@ import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Crown, ArrowLeft, Clock, UserCog, Trash2, Ban } from 'lucide-react';
+import { Crown, ArrowLeft, Clock, UserCog, Trash2, Ban, Percent } from 'lucide-react';
 import ChangesLogPanel from './ChangesLogPanel';
 import UserManagement from './UserManagement';
 import OwnerOrdersManagement from './OwnerOrdersManagement';
 import UserBanManagement from './UserBanManagement';
+import DiscountManagement from './DiscountManagement';
 
 const OwnerPanel = () => {
   const { user, isOwner, loading } = useAuth();
@@ -51,13 +51,22 @@ const OwnerPanel = () => {
           <p className="text-muted-foreground">إدارة متقدمة للنظام والمستخدمين</p>
         </div>
 
-        <Tabs defaultValue="changes-log" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+        <Tabs defaultValue="discounts" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-5">
+            <TabsTrigger value="discounts">إدارة الخصومات</TabsTrigger>
             <TabsTrigger value="changes-log">سجل التغييرات</TabsTrigger>
             <TabsTrigger value="user-management">إدارة المستخدمين</TabsTrigger>
             <TabsTrigger value="orders-management">إدارة الطلبات</TabsTrigger>
             <TabsTrigger value="user-ban">حظر المستخدمين</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="discounts" className="space-y-6">
+            <h2 className="text-2xl font-bold flex items-center gap-2">
+              <Percent className="w-6 h-6" />
+              إدارة الخصومات
+            </h2>
+            <DiscountManagement />
+          </TabsContent>
 
           <TabsContent value="changes-log" className="space-y-6">
             <h2 className="text-2xl font-bold flex items-center gap-2">

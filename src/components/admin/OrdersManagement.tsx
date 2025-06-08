@@ -12,47 +12,58 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Eye, Clock, CheckCircle, Truck, Package } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { Eye } from 'lucide-react';
-import OrderDetailsDialog from './OrderDetailsDialog';
+import { useChangeLogger } from '@/hooks/useChangeLogger';
+import EnhancedOrderDetailsDialog from './EnhancedOrderDetailsDialog';
+
+interface Order {
+  id: string;
+  user_id: string;
+  total_amount: number;
+  status: string;
+  shipping_address: string;
+  phone: string;
+  payment_method: string;
+  governorate: string;
+  created_at: string;
+}
 
 const OrdersManagement = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [selectedOrder, setSelectedOrder] = useState<any>(null);
-  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const { logChange } = useChangeLogger();
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [showDetailsDialog, setShowDetailsDialog] = useState(false);
 
   const { data: orders, isLoading } = useQuery({
     queryKey: ['admin-orders'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('orders')
-        .select(`
-          *,
-          order_items (
-            id,
-            quantity,
-            price,
-            selected_color,
-            products (name, cover_image)
-          )
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
       
       if (error) throw error;
-      return data;
+      return data as Order[];
     }
   });
 
-  const updateOrderStatus = useMutation({
-    mutationFn: async ({ orderId, status }: { orderId: string; status: string }) => {
+  const updateOrderStatusMutation = useMutation({
+    mutationFn: async ({ orderId, newStatus }: { orderId: string; newStatus: string }) => {
       const { error } = await supabase
         .from('orders')
-        .update({ status })
+        .update({ status: newStatus })
         .eq('id', orderId);
       
       if (error) throw error;
+
+      // Log the change
+      await logChange('order_status_updated', 'order', orderId, {
+        new_status: newStatus
+      });
+
+      return { orderId, newStatus };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
@@ -60,128 +71,144 @@ const OrdersManagement = () => {
         title: 'تم تحديث حالة الطلب',
         description: 'تم تحديث حالة الطلب بنجاح',
       });
+    },
+    onError: (error: any) => {
+      console.error('Error updating order status:', error);
+      toast({
+        title: 'خطأ',
+        description: 'فشل في تحديث حالة الطلب',
+        variant: 'destructive',
+      });
     }
   });
 
-  const statusLabels = {
-    pending: 'قيد الانتظار',
-    processing: 'قيد المعالجة',
-    shipped: 'تم الشحن',
-    delivered: 'تم التسليم',
-    cancelled: 'ملغي'
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'pending': return 'bg-yellow-100 text-yellow-800';
+      case 'confirmed': return 'bg-blue-100 text-blue-800';
+      case 'shipped': return 'bg-purple-100 text-purple-800';
+      case 'delivered': return 'bg-green-100 text-green-800';
+      case 'cancelled': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
   };
 
-  const statusColors = {
-    pending: 'bg-yellow-100 text-yellow-800',
-    processing: 'bg-blue-100 text-blue-800',
-    shipped: 'bg-purple-100 text-purple-800',
-    delivered: 'bg-green-100 text-green-800',
-    cancelled: 'bg-red-100 text-red-800'
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'pending': return 'في الانتظار';
+      case 'confirmed': return 'مؤكد';
+      case 'shipped': return 'تم الشحن';
+      case 'delivered': return 'تم التسليم';
+      case 'cancelled': return 'ملغي';
+      default: return status;
+    }
   };
 
-  const paymentMethodLabels = {
-    cash_on_delivery: 'الدفع عند الاستلام',
-    zain_cash: 'زين كاش',
-    visa_card: 'فيزا كارد'
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'pending': return <Clock className="w-4 h-4" />;
+      case 'confirmed': return <CheckCircle className="w-4 h-4" />;
+      case 'shipped': return <Truck className="w-4 h-4" />;
+      case 'delivered': return <Package className="w-4 h-4" />;
+      default: return <Clock className="w-4 h-4" />;
+    }
   };
 
   const formatPrice = (price: number) => {
-    return `${price.toLocaleString()} دينار`;
+    return `${price.toLocaleString('ar-IQ')} د.ع`;
   };
 
-  const handleViewOrder = (order: any) => {
+  const handleViewDetails = (order: Order) => {
     setSelectedOrder(order);
-    setIsDetailsOpen(true);
+    setShowDetailsDialog(true);
+  };
+
+  const handleStatusUpdate = (orderId: string, newStatus: string) => {
+    updateOrderStatusMutation.mutate({ orderId, newStatus });
   };
 
   if (isLoading) {
-    return <div className="text-center py-8">جاري التحميل...</div>;
+    return <div className="text-center">جاري التحميل...</div>;
   }
 
   return (
     <div className="space-y-4">
-      {/* Desktop Table View */}
-      <div className="hidden lg:block border rounded-lg overflow-x-auto">
+      <div className="border rounded-lg">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="text-right min-w-[120px]">رقم الطلب</TableHead>
-              <TableHead className="text-right min-w-[100px]">المبلغ الإجمالي</TableHead>
-              <TableHead className="text-right min-w-[100px]">الحالة</TableHead>
-              <TableHead className="text-right min-w-[120px]">رقم الهاتف</TableHead>
-              <TableHead className="text-right min-w-[100px]">المحافظة</TableHead>
-              <TableHead className="text-right min-w-[120px]">طريقة الدفع</TableHead>
-              <TableHead className="text-right min-w-[100px]">تاريخ الطلب</TableHead>
-              <TableHead className="text-right min-w-[150px]">الإجراءات</TableHead>
+              <TableHead className="text-right">رقم الطلب</TableHead>
+              <TableHead className="text-right">الهاتف</TableHead>
+              <TableHead className="text-right">المحافظة</TableHead>
+              <TableHead className="text-right">المبلغ الإجمالي</TableHead>
+              <TableHead className="text-right">طريقة الدفع</TableHead>
+              <TableHead className="text-right">الحالة</TableHead>
+              <TableHead className="text-right">تاريخ الطلب</TableHead>
+              <TableHead className="text-right">الإجراءات</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {orders?.map((order) => (
-              <TableRow key={order.id} className="cursor-pointer hover:bg-gray-50">
-                <TableCell className="font-mono text-sm">
-                  {order.id.slice(0, 8)}...
-                </TableCell>
+              <TableRow key={order.id}>
                 <TableCell className="font-medium">
-                  {formatPrice(order.total_amount)}
+                  #{order.id.slice(-8)}
                 </TableCell>
+                <TableCell>{order.phone}</TableCell>
+                <TableCell>{order.governorate}</TableCell>
+                <TableCell>{formatPrice(order.total_amount)}</TableCell>
+                <TableCell>{order.payment_method}</TableCell>
                 <TableCell>
-                  <Badge 
-                    className={statusColors[order.status as keyof typeof statusColors]}
-                  >
-                    {statusLabels[order.status as keyof typeof statusLabels]}
+                  <Badge className={getStatusColor(order.status)}>
+                    <div className="flex items-center gap-1">
+                      {getStatusIcon(order.status)}
+                      {getStatusText(order.status)}
+                    </div>
                   </Badge>
                 </TableCell>
-                <TableCell>{order.phone || 'غير محدد'}</TableCell>
-                <TableCell>{order.governorate || 'غير محدد'}</TableCell>
                 <TableCell>
-                  {order.payment_method ? paymentMethodLabels[order.payment_method as keyof typeof paymentMethodLabels] || order.payment_method : 'غير محدد'}
+                  {new Date(order.created_at).toLocaleDateString('ar')}
                 </TableCell>
                 <TableCell>
-                  {new Date(order.created_at).toLocaleDateString('ar-SA')}
-                </TableCell>
-                <TableCell>
-                  <div className="flex gap-1">
+                  <div className="flex gap-2">
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleViewOrder(order)}
-                      className="flex items-center gap-1"
+                      onClick={() => handleViewDetails(order)}
                     >
                       <Eye className="w-4 h-4" />
-                      عرض
                     </Button>
+                    
                     {order.status === 'pending' && (
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => updateOrderStatus.mutate({ 
-                          orderId: order.id, 
-                          status: 'processing' 
-                        })}
+                        onClick={() => handleStatusUpdate(order.id, 'confirmed')}
+                        disabled={updateOrderStatusMutation.isPending}
+                        className="text-blue-600 hover:text-blue-700"
                       >
-                        معالجة
+                        تأكيد
                       </Button>
                     )}
-                    {order.status === 'processing' && (
+                    
+                    {order.status === 'confirmed' && (
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => updateOrderStatus.mutate({ 
-                          orderId: order.id, 
-                          status: 'shipped' 
-                        })}
+                        onClick={() => handleStatusUpdate(order.id, 'shipped')}
+                        disabled={updateOrderStatusMutation.isPending}
+                        className="text-purple-600 hover:text-purple-700"
                       >
                         شحن
                       </Button>
                     )}
+                    
                     {order.status === 'shipped' && (
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => updateOrderStatus.mutate({ 
-                          orderId: order.id, 
-                          status: 'delivered' 
-                        })}
+                        onClick={() => handleStatusUpdate(order.id, 'delivered')}
+                        disabled={updateOrderStatusMutation.isPending}
+                        className="text-green-600 hover:text-green-700"
                       >
                         تسليم
                       </Button>
@@ -194,154 +221,13 @@ const OrdersManagement = () => {
         </Table>
       </div>
 
-      {/* Mobile Card View */}
-      <div className="lg:hidden space-y-4">
-        {orders?.map((order) => (
-          <Card key={order.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => handleViewOrder(order)}>
-            <CardHeader className="pb-3">
-              <div className="flex justify-between items-start">
-                <div>
-                  <CardTitle className="text-lg">
-                    طلب رقم: {order.id.slice(0, 8)}...
-                  </CardTitle>
-                  <p className="text-sm text-gray-600">
-                    {new Date(order.created_at).toLocaleDateString('ar-SA')}
-                  </p>
-                </div>
-                <Badge 
-                  className={statusColors[order.status as keyof typeof statusColors]}
-                >
-                  {statusLabels[order.status as keyof typeof statusLabels]}
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="grid grid-cols-1 gap-2 text-sm">
-                <div>
-                  <span className="font-medium">المبلغ الإجمالي: </span>
-                  <span className="text-pink-600 font-bold">{formatPrice(order.total_amount)}</span>
-                </div>
-                {order.phone && (
-                  <div>
-                    <span className="font-medium">رقم الهاتف: </span>
-                    <span>{order.phone}</span>
-                  </div>
-                )}
-                {order.governorate && (
-                  <div>
-                    <span className="font-medium">المحافظة: </span>
-                    <span>{order.governorate}</span>
-                  </div>
-                )}
-                {order.payment_method && (
-                  <div>
-                    <span className="font-medium">طريقة الدفع: </span>
-                    <span>{paymentMethodLabels[order.payment_method as keyof typeof paymentMethodLabels] || order.payment_method}</span>
-                  </div>
-                )}
-              </div>
-              
-              {order.order_items && order.order_items.length > 0 && (
-                <div>
-                  <h4 className="font-medium mb-2">المنتجات:</h4>
-                  <div className="space-y-2">
-                    {order.order_items.map((item: any) => (
-                      <div key={item.id} className="flex items-center gap-3 p-2 bg-gray-50 rounded">
-                        <img
-                          src={item.products?.cover_image || '/placeholder.svg'}
-                          alt={item.products?.name || 'منتج'}
-                          className="w-10 h-10 object-cover rounded"
-                        />
-                        <div className="flex-1">
-                          <p className="font-medium text-sm">{item.products?.name || 'منتج غير معروف'}</p>
-                          <p className="text-xs text-gray-600">
-                            الكمية: {item.quantity} × {formatPrice(item.price)}
-                            {item.selected_color && ` - ${item.selected_color}`}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div className="flex gap-2 pt-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleViewOrder(order);
-                  }}
-                  className="flex items-center gap-1"
-                >
-                  <Eye className="w-4 h-4" />
-                  عرض التفاصيل
-                </Button>
-                {order.status === 'pending' && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      updateOrderStatus.mutate({ 
-                        orderId: order.id, 
-                        status: 'processing' 
-                      });
-                    }}
-                    className="flex-1"
-                  >
-                    معالجة
-                  </Button>
-                )}
-                {order.status === 'processing' && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      updateOrderStatus.mutate({ 
-                        orderId: order.id, 
-                        status: 'shipped' 
-                      });
-                    }}
-                    className="flex-1"
-                  >
-                    شحن
-                  </Button>
-                )}
-                {order.status === 'shipped' && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      updateOrderStatus.mutate({ 
-                        orderId: order.id, 
-                        status: 'delivered' 
-                      });
-                    }}
-                    className="flex-1"
-                  >
-                    تسليم
-                  </Button>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {(!orders || orders.length === 0) && (
-        <div className="text-center py-8">
-          <p className="text-muted-foreground">لا توجد طلبات حالياً</p>
-        </div>
-      )}
-
-      <OrderDetailsDialog 
+      <EnhancedOrderDetailsDialog
         order={selectedOrder}
-        isOpen={isDetailsOpen}
-        onClose={() => setIsDetailsOpen(false)}
+        isOpen={showDetailsDialog}
+        onClose={() => {
+          setShowDetailsDialog(false);
+          setSelectedOrder(null);
+        }}
       />
     </div>
   );
