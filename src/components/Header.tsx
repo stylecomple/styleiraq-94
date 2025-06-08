@@ -8,7 +8,7 @@ import { useCart } from '@/contexts/CartContext';
 import { useNavigate } from 'react-router-dom';
 
 const Header = () => {
-  const { user, isAdmin, isOwner, signOut } = useAuth();
+  const { user, isAdmin, isOwner, loading, signOut } = useAuth();
   const { getTotalItems } = useCart();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -43,9 +43,10 @@ const Header = () => {
   };
 
   // Debug logging
-  console.log('Header render - User:', user?.id, 'isAdmin:', isAdmin, 'isOwner:', isOwner);
+  console.log('Header render - User:', user?.id, 'isAdmin:', isAdmin, 'isOwner:', isOwner, 'loading:', loading);
   
-  const showAdminPanel = user && (isAdmin || isOwner);
+  // Don't show admin panel button while loading
+  const showAdminPanel = !loading && user && (isAdmin || isOwner);
 
   return (
     <header className="bg-white/95 backdrop-blur-md shadow-lg sticky top-0 z-50 border-b border-pink-100">
@@ -95,25 +96,27 @@ const Header = () => {
               </Button>
             )}
             
-            {/* Auth Button */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleAuthClick}
-              className="flex items-center gap-2 border-gray-200 hover:bg-gray-50 rounded-full px-4 py-2 transition-all duration-300"
-            >
-              {user ? (
-                <>
-                  <LogOut className="w-4 h-4" />
-                  <span>تسجيل الخروج</span>
-                </>
-              ) : (
-                <>
-                  <User className="w-4 h-4" />
-                  <span>تسجيل الدخول</span>
-                </>
-              )}
-            </Button>
+            {/* Auth Button - Only show if not loading */}
+            {!loading && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleAuthClick}
+                className="flex items-center gap-2 border-gray-200 hover:bg-gray-50 rounded-full px-4 py-2 transition-all duration-300"
+              >
+                {user ? (
+                  <>
+                    <LogOut className="w-4 h-4" />
+                    <span>تسجيل الخروج</span>
+                  </>
+                ) : (
+                  <>
+                    <User className="w-4 h-4" />
+                    <span>تسجيل الدخول</span>
+                  </>
+                )}
+              </Button>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -133,19 +136,21 @@ const Header = () => {
               )}
             </Button>
             
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="border-gray-200 rounded-full p-2"
-            >
-              {mobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
-            </Button>
+            {!loading && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="border-gray-200 rounded-full p-2"
+              >
+                {mobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+              </Button>
+            )}
           </div>
         </div>
 
         {/* Mobile Menu */}
-        {mobileMenuOpen && (
+        {mobileMenuOpen && !loading && (
           <div className="md:hidden mt-4 pb-4 border-t border-gray-100 pt-4">
             <div className="flex flex-col space-y-3">
               {showAdminPanel && (

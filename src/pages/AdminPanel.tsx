@@ -50,6 +50,7 @@ const AdminPanel = () => {
   useOrderNotifications();
 
   useEffect(() => {
+    // Only redirect if we're not loading and user is not authorized
     if (!loading && (!user || (!isAdmin && !isOwner))) {
       navigate('/');
     }
@@ -149,6 +150,7 @@ const AdminPanel = () => {
       </div>;
   }
 
+  // Don't render if user is not authorized
   if (!user || (!isAdmin && !isOwner)) {
     return null;
   }
