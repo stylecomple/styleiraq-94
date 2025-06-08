@@ -54,9 +54,13 @@ const CategorySection = ({ selectedCategory, onCategorySelect, onSubcategoriesCh
     console.log('Selected category data:', selectedCategoryData);
     
     if (onSubcategoriesChange) {
+      // Convert subcategory objects to strings if needed
       const subcategories = selectedCategoryData?.subcategories || [];
-      console.log('Passing subcategories:', subcategories);
-      onSubcategoriesChange(subcategories);
+      const subcategoryNames = subcategories.map(sub => 
+        typeof sub === 'string' ? sub : (sub as any).name
+      );
+      console.log('Passing subcategories:', subcategoryNames);
+      onSubcategoriesChange(subcategoryNames);
     }
   };
 
