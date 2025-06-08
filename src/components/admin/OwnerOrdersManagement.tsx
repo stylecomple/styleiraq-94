@@ -34,6 +34,7 @@ const OwnerOrdersManagement = () => {
   const { data: orders, isLoading } = useQuery({
     queryKey: ['owner-orders'],
     queryFn: async () => {
+      console.log('Fetching orders...');
       const { data, error } = await supabase
         .from('orders')
         .select(`
@@ -48,7 +49,11 @@ const OwnerOrdersManagement = () => {
         `)
         .order('created_at', { ascending: false });
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching orders:', error);
+        throw error;
+      }
+      console.log('Fetched orders:', data?.length);
       return data;
     }
   });
@@ -79,7 +84,7 @@ const OwnerOrdersManagement = () => {
         throw error;
       }
 
-      console.log('Order deleted successfully');
+      console.log('Order deleted successfully from database');
 
       // Log the change
       await logChange('order_deleted_by_owner', 'order', order.id, {
@@ -91,29 +96,42 @@ const OwnerOrdersManagement = () => {
       return order;
     },
     onSuccess: (deletedOrder) => {
-      console.log('Order deletion mutation successful, invalidating queries');
+      console.log('Order deletion mutation successful, updating cache');
       
-      // Remove the deleted order from cache immediately
+      // Update cache immediately to remove the deleted order
       queryClient.setQueryData(['owner-orders'], (oldData: any) => {
+        if (!oldData) return oldData;
+        const filteredData = oldData.filter((order: any) => order.id !== deletedOrder.id);
+        console.log('Updated cache, orders count:', filteredData.length);
+        return filteredData;
+      });
+      
+      // Also update other related caches
+      queryClient.setQueryData(['admin-orders'], (oldData: any) => {
         if (!oldData) return oldData;
         return oldData.filter((order: any) => order.id !== deletedOrder.id);
       });
       
-      // Invalidate and refetch all related queries
-      queryClient.invalidateQueries({ queryKey: ['owner-orders'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
-      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      queryClient.setQueryData(['orders'], (oldData: any) => {
+        if (!oldData) return oldData;
+        return oldData.filter((order: any) => order.id !== deletedOrder.id);
+      });
+      
+      // Force invalidate to ensure fresh data on next fetch
+      queryClient.invalidateQueries({ queryKey: ['owner-orders'], exact: true });
+      queryClient.invalidateQueries({ queryKey: ['admin-orders'], exact: true });
+      queryClient.invalidateQueries({ queryKey: ['orders'], exact: true });
       
       toast({
         title: 'تم حذف الطلب',
-        description: `تم حذف الطلب #${deletedOrder.id.substring(0, 8)} بنجاح`,
+        description: `تم حذف الطلب #${deletedOrder.id.substring(0, 8)} بنجاح من قاعدة البيانات`,
       });
     },
     onError: (error) => {
       console.error('Error deleting order:', error);
       toast({
-        title: 'خطأ',
-        description: 'فشل في حذف الطلب. يرجى المحاولة مرة أخرى.',
+        title: 'خطأ في الحذف',
+        description: 'فشل في حذف الطلب من قاعدة البيانات. يرجى المحاولة مرة أخرى.',
         variant: 'destructive',
       });
     }
@@ -206,7 +224,7 @@ const OwnerOrdersManagement = () => {
                       <AlertDialogHeader>
                         <AlertDialogTitle>تأكيد حذف الطلب</AlertDialogTitle>
                         <AlertDialogDescription>
-                          هل أنت متأكد من حذف هذا الطلب؟ هذا الإجراء لا يمكن التراجع عنه وسيتم حذف جميع البيانات المرتبطة بالطلب.
+                          هل أنت متأكد من حذف هذا الطلب؟ هذا الإجراء لا يمكن التراجع عنه وسيتم حذف جميع البيانات المرتبطة بالطلب نهائياً من قاعدة البيانات.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
@@ -216,7 +234,7 @@ const OwnerOrdersManagement = () => {
                           className="bg-red-600 hover:bg-red-700"
                           disabled={deleteOrderMutation.isPending}
                         >
-                          {deleteOrderMutation.isPending ? 'جاري الحذف...' : 'حذف الطلب'}
+                          {deleteOrderMutation.isPending ? 'جاري الحذف...' : 'حذف نهائياً'}
                         </AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>
