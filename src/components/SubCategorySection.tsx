@@ -9,7 +9,10 @@ interface SubCategorySectionProps {
 }
 
 const SubCategorySection = ({ subcategories, selectedSubcategory, onSubcategorySelect }: SubCategorySectionProps) => {
+  console.log('SubCategorySection received subcategories:', subcategories);
+  
   if (!subcategories || subcategories.length === 0) {
+    console.log('No subcategories to display');
     return null;
   }
 
@@ -32,9 +35,9 @@ const SubCategorySection = ({ subcategories, selectedSubcategory, onSubcategoryS
           جميع الفئات الفرعية
         </Button>
         
-        {subcategories.map((subcategory) => (
+        {subcategories.map((subcategory, index) => (
           <Button
-            key={subcategory}
+            key={`${subcategory}-${index}`}
             variant={selectedSubcategory === subcategory ? "default" : "outline"}
             className={`transition-all duration-200 ${
               selectedSubcategory === subcategory 

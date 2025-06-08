@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -12,6 +13,8 @@ import { X } from 'lucide-react';
 import ImageUploadCrop from './ImageUploadCrop';
 import MultiImageUpload from './MultiImageUpload';
 import CategoryManager from './CategoryManager';
+import ProductOptionsManager from './ProductOptionsManager';
+import { ProductOption } from '@/types';
 
 interface AddProductFormProps {
   onClose: () => void;
@@ -21,6 +24,7 @@ interface Category {
   id: string;
   name: string;
   icon: string;
+  subcategories?: any[];
 }
 
 const AddProductForm = ({ onClose }: AddProductFormProps) => {
@@ -31,9 +35,10 @@ const AddProductForm = ({ onClose }: AddProductFormProps) => {
     description: '',
     price: '',
     categories: [] as string[],
+    subcategories: [] as string[],
     cover_image: '',
     images: [] as string[],
-    colors: '',
+    options: [] as ProductOption[],
     stock_quantity: '',
     ignore_stock: false
   });
@@ -71,18 +76,15 @@ const AddProductForm = ({ onClose }: AddProductFormProps) => {
     mutationFn: async (productData: any) => {
       console.log('Adding product with data:', productData);
 
-      const colors = productData.colors 
-        ? productData.colors.split('\n').filter((color: string) => color.trim()) 
-        : [];
-
       const productToInsert = {
         name: productData.name,
         description: productData.description || null,
         price: parseInt(productData.price),
         categories: productData.categories,
+        subcategories: productData.subcategories,
         cover_image: productData.cover_image || null,
         images: productData.images,
-        colors: colors,
+        options: productData.options,
         stock_quantity: productData.ignore_stock ? null : (parseInt(productData.stock_quantity) || 0)
       };
 
@@ -167,6 +169,20 @@ const AddProductForm = ({ onClose }: AddProductFormProps) => {
     }));
   };
 
+  const handleSubcategoryChange = (subcategoryId: string, checked: boolean) => {
+    setFormData(prev => ({
+      ...prev,
+      subcategories: checked 
+        ? [...prev.subcategories, subcategoryId]
+        : prev.subcategories.filter(id => id !== subcategoryId)
+    }));
+  };
+
+  // Get all available subcategories based on selected categories
+  const availableSubcategories = availableCategories
+    .filter(cat => formData.categories.includes(cat.id))
+    .flatMap(cat => cat.subcategories || []);
+
   return (
     <div className="space-y-6">
       {showCategoryManager && (
@@ -240,6 +256,27 @@ const AddProductForm = ({ onClose }: AddProductFormProps) => {
               </div>
             </div>
 
+            {availableSubcategories.length > 0 && (
+              <div className="space-y-2">
+                <Label>الفئات الفرعية</Label>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {availableSubcategories.map((subcategory) => (
+                    <div key={subcategory.id} className="flex items-center space-x-2 space-x-reverse">
+                      <Checkbox
+                        id={subcategory.id}
+                        checked={formData.subcategories.includes(subcategory.id)}
+                        onCheckedChange={(checked) => handleSubcategoryChange(subcategory.id, !!checked)}
+                      />
+                      <Label htmlFor={subcategory.id} className="text-sm flex items-center gap-2">
+                        <span>{subcategory.icon}</span>
+                        {subcategory.name}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="space-y-2">
               <div className="flex items-center space-x-2 space-x-reverse">
                 <Checkbox
@@ -296,16 +333,11 @@ const AddProductForm = ({ onClose }: AddProductFormProps) => {
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="colors">الألوان المتوفرة (سطر واحد لكل لون)</Label>
-              <Textarea
-                id="colors"
-                value={formData.colors}
-                onChange={(e) => handleInputChange('colors', e.target.value)}
-                placeholder="أحمر&#10;أزرق&#10;أخضر"
-                rows={3}
-              />
-            </div>
+            <ProductOptionsManager
+              options={formData.options}
+              onChange={(options) => setFormData(prev => ({ ...prev, options }))}
+              mainProductPrice={parseInt(formData.price) || 0}
+            />
 
             <div className="flex gap-4">
               <Button 

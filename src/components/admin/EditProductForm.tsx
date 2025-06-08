@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -10,6 +11,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { X } from 'lucide-react';
+import ProductOptionsManager from './ProductOptionsManager';
+import { ProductOption } from '@/types';
 
 interface EditProductFormProps {
   product: any;
@@ -20,6 +23,27 @@ const EditProductForm = ({ product, onClose }: EditProductFormProps) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [categories, setCategories] = useState<any[]>([]);
+  
+  // Convert old colors format to new options format
+  const convertColorsToOptions = (colors: string[] | null): ProductOption[] => {
+    if (!colors || !Array.isArray(colors)) return [];
+    return colors.map(color => ({ name: color, price: undefined }));
+  };
+  
+  // Convert old options format if needed
+  const convertLegacyOptions = (options: any): ProductOption[] => {
+    if (!options) return [];
+    if (Array.isArray(options)) {
+      // Check if it's the old colors format (array of strings)
+      if (options.length > 0 && typeof options[0] === 'string') {
+        return convertColorsToOptions(options);
+      }
+      // New format (array of objects)
+      return options;
+    }
+    return [];
+  };
+
   const [formData, setFormData] = useState({
     name: product.name || '',
     description: product.description || '',
@@ -28,7 +52,7 @@ const EditProductForm = ({ product, onClose }: EditProductFormProps) => {
     subcategories: product.subcategories || [],
     cover_image: product.cover_image || '',
     images: product.images?.join('\n') || '',
-    colors: product.colors?.join('\n') || '',
+    options: convertLegacyOptions(product.options || product.colors),
     stock_quantity: product.stock_quantity?.toString() || '',
     discount_percentage: product.discount_percentage?.toString() || '0'
   });
@@ -53,10 +77,6 @@ const EditProductForm = ({ product, onClose }: EditProductFormProps) => {
         ? productData.images.split('\n').filter((url: string) => url.trim()) 
         : [];
 
-      const colors = productData.colors 
-        ? productData.colors.split('\n').filter((color: string) => color.trim()) 
-        : [];
-
       const productToUpdate = {
         name: productData.name,
         description: productData.description || null,
@@ -65,7 +85,7 @@ const EditProductForm = ({ product, onClose }: EditProductFormProps) => {
         subcategories: productData.subcategories,
         cover_image: productData.cover_image || null,
         images: images,
-        colors: colors,
+        options: productData.options,
         stock_quantity: parseInt(productData.stock_quantity) || 0,
         discount_percentage: parseInt(productData.discount_percentage) || 0
       };
@@ -286,16 +306,11 @@ const EditProductForm = ({ product, onClose }: EditProductFormProps) => {
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="colors">الألوان المتوفرة (سطر واحد لكل لون)</Label>
-            <Textarea
-              id="colors"
-              value={formData.colors}
-              onChange={(e) => handleInputChange('colors', e.target.value)}
-              placeholder="أحمر&#10;أزرق&#10;أخضر"
-              rows={3}
-            />
-          </div>
+          <ProductOptionsManager
+            options={formData.options}
+            onChange={(options) => setFormData(prev => ({ ...prev, options }))}
+            mainProductPrice={parseInt(formData.price) || 0}
+          />
 
           <div className="flex gap-4">
             <Button 

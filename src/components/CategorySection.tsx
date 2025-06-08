@@ -46,14 +46,17 @@ const CategorySection = ({ selectedCategory, onCategorySelect, onSubcategoriesCh
   }, []);
 
   const handleCategorySelect = (categoryId: CategoryType) => {
+    console.log('Category selected:', categoryId);
     onCategorySelect(categoryId);
     
     // Find selected category and pass its subcategories
     const selectedCategoryData = categories.find(cat => cat.id === categoryId);
-    if (onSubcategoriesChange && selectedCategoryData?.subcategories) {
-      onSubcategoriesChange(selectedCategoryData.subcategories);
-    } else if (onSubcategoriesChange) {
-      onSubcategoriesChange([]);
+    console.log('Selected category data:', selectedCategoryData);
+    
+    if (onSubcategoriesChange) {
+      const subcategories = selectedCategoryData?.subcategories || [];
+      console.log('Passing subcategories:', subcategories);
+      onSubcategoriesChange(subcategories);
     }
   };
 

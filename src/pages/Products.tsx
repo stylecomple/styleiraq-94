@@ -56,9 +56,14 @@ const Products = () => {
 
       // Filter by subcategory if selected
       if (selectedSubcategory && filteredProducts.length > 0) {
-        filteredProducts = filteredProducts.filter(product => 
-          product.categories && product.categories.includes(selectedSubcategory)
-        );
+        console.log('Filtering by subcategory:', selectedSubcategory);
+        filteredProducts = filteredProducts.filter(product => {
+          const hasSubcategory = product.subcategories && 
+            Array.isArray(product.subcategories) && 
+            product.subcategories.includes(selectedSubcategory);
+          console.log(`Product ${product.name} has subcategory ${selectedSubcategory}:`, hasSubcategory);
+          return hasSubcategory;
+        });
       }
 
       return {
@@ -70,16 +75,19 @@ const Products = () => {
   });
 
   const handleCategorySelect = (categoryId: CategoryType) => {
+    console.log('Category selected:', categoryId);
     setSelectedCategory(categoryId);
     setSelectedSubcategory(null); // Reset subcategory when changing main category
   };
 
   const handleSubcategoriesChange = (subcategories: string[]) => {
+    console.log('Subcategories changed:', subcategories);
     setAvailableSubcategories(subcategories);
     setSelectedSubcategory(null); // Reset selected subcategory
   };
 
   const handleSubcategorySelect = (subcategory: string | null) => {
+    console.log('Subcategory selected:', subcategory);
     setSelectedSubcategory(subcategory);
   };
 

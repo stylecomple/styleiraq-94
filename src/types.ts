@@ -1,13 +1,20 @@
 
+export interface ProductOption {
+  id?: string;
+  name: string;
+  price?: number; // If null/undefined, use main product price
+}
+
 export interface Product {
   id: string;
   name: string;
   description: string | null;
   price: number;
   categories: string[] | null;
+  subcategories?: string[] | null;
   cover_image: string | null;
   images: string[] | null;
-  colors: string[] | null;
+  options: ProductOption[] | null; // Changed from colors to options
   stock_quantity: number | null;
   discount_percentage: number | null;
   is_active: boolean | null;

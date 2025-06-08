@@ -16,6 +16,7 @@ import { Trash2, Edit, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useChangeLogger } from '@/hooks/useChangeLogger';
 import EditProductForm from './EditProductForm';
+import { ProductOption } from '@/types';
 
 const ProductsManagement = () => {
   const { toast } = useToast();
@@ -178,6 +179,23 @@ const ProductsManagement = () => {
     return `${price.toLocaleString('ar-IQ')} د.ع`;
   };
 
+  const formatOptions = (options: ProductOption[] | string[] | null, mainPrice: number) => {
+    if (!options || !Array.isArray(options)) return 'لا توجد خيارات';
+    
+    // Handle old colors format (array of strings)
+    if (options.length > 0 && typeof options[0] === 'string') {
+      return (options as string[]).slice(0, 3).join(', ') + (options.length > 3 ? '...' : '');
+    }
+    
+    // Handle new options format (array of objects)
+    const optionStrings = (options as ProductOption[]).slice(0, 3).map(option => {
+      const price = option.price || mainPrice;
+      return `${option.name} (${formatPrice(price)})`;
+    });
+    
+    return optionStrings.join(', ') + (options.length > 3 ? '...' : '');
+  };
+
   const handleDeleteProduct = (product: any) => {
     console.log('Delete button clicked for product:', product.id);
     deleteProductMutation.mutate(product);
@@ -204,6 +222,7 @@ const ProductsManagement = () => {
               <TableHead className="text-right">اسم المنتج</TableHead>
               <TableHead className="text-right">الفئات</TableHead>
               <TableHead className="text-right">السعر</TableHead>
+              <TableHead className="text-right">الخيارات المتاحة</TableHead>
               <TableHead className="text-right">المخزون</TableHead>
               <TableHead className="text-right">الحالة</TableHead>
               <TableHead className="text-right">الإجراءات</TableHead>
@@ -230,6 +249,9 @@ const ProductsManagement = () => {
                   </div>
                 </TableCell>
                 <TableCell>{formatPrice(product.price)}</TableCell>
+                <TableCell className="max-w-[200px] truncate" title={formatOptions(product.options || product.colors, product.price)}>
+                  {formatOptions(product.options || product.colors, product.price)}
+                </TableCell>
                 <TableCell>{product.stock_quantity}</TableCell>
                 <TableCell>
                   <Badge 
