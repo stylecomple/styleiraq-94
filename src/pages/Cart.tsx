@@ -62,12 +62,14 @@ const Cart = () => {
 
   const governorates = [
     "بغداد", "البصرة", "نينوى", "ذي قار", "الأنبار", "ديالى", "صلاح الدين", "كركوك", "بابل", "القادسية",
-    "النجف", "كربلاء", "ميسان", "المثنى", "واسط", "أربيل", "دهوك", "السليمانية", "حلبجة"
+    "النجف", "كربلاء", "ميسان", "المثنى", "واسط", "أربيل", "دهوك", "السليمانية", "حلبجة", "العامريه"
   ];
 
   const getShippingCost = () => {
     if (!governorate) return 0;
-    return governorate === 'بغداد' ? 5000 : 6000;
+    if (governorate === 'بغداد') return 5000;
+    if (governorate === 'العامريه') return 2000;
+    return 6000;
   };
 
   const getTotalWithShipping = () => {
@@ -381,7 +383,10 @@ const Cart = () => {
                             {gov === 'بغداد' && (
                               <span className="text-sm text-green-600 mr-2">(5,000 د.ع)</span>
                             )}
-                            {gov !== 'بغداد' && (
+                            {gov === 'العامريه' && (
+                              <span className="text-sm text-blue-600 mr-2">(2,000 د.ع)</span>
+                            )}
+                            {gov !== 'بغداد' && gov !== 'العامريه' && (
                               <span className="text-sm text-orange-600 mr-2">(6,000 د.ع)</span>
                             )}
                           </SelectItem>

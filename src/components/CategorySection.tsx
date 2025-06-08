@@ -8,14 +8,16 @@ interface Category {
   id: CategoryType;
   name: string;
   icon: string;
+  subcategories?: string[];
 }
 
 interface CategorySectionProps {
   selectedCategory: CategoryType;
   onCategorySelect: (categoryId: CategoryType) => void;
+  onSubcategoriesChange?: (subcategories: string[]) => void;
 }
 
-const CategorySection = ({ selectedCategory, onCategorySelect }: CategorySectionProps) => {
+const CategorySection = ({ selectedCategory, onCategorySelect, onSubcategoriesChange }: CategorySectionProps) => {
   const [categories, setCategories] = useState<Category[]>([
     { id: 'all', name: 'جميع المنتجات', icon: '🛍️' },
     { id: 'makeup', name: 'مكياج', icon: '💄' },
@@ -43,6 +45,18 @@ const CategorySection = ({ selectedCategory, onCategorySelect }: CategorySection
     }
   }, []);
 
+  const handleCategorySelect = (categoryId: CategoryType) => {
+    onCategorySelect(categoryId);
+    
+    // Find selected category and pass its subcategories
+    const selectedCategoryData = categories.find(cat => cat.id === categoryId);
+    if (onSubcategoriesChange && selectedCategoryData?.subcategories) {
+      onSubcategoriesChange(selectedCategoryData.subcategories);
+    } else if (onSubcategoriesChange) {
+      onSubcategoriesChange([]);
+    }
+  };
+
   return (
     <div className="mb-16">
       <div className="text-center mb-12">
@@ -63,7 +77,7 @@ const CategorySection = ({ selectedCategory, onCategorySelect }: CategorySection
                 ? 'bg-gradient-to-r from-pink-500 to-purple-600 text-white shadow-lg border-0' 
                 : 'bg-white hover:bg-gradient-to-r hover:from-pink-50 hover:to-purple-50 border-gray-200 hover:border-pink-300 text-gray-700 hover:text-purple-700 shadow-md hover:shadow-lg'
             }`}
-            onClick={() => onCategorySelect(category.id)}
+            onClick={() => handleCategorySelect(category.id)}
           >
             <div className="flex flex-col items-center gap-3">
               <span className="text-3xl group-hover:scale-110 transition-transform duration-200">

@@ -6,6 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Product, CategoryType } from '@/types';
 import ProductCard from '@/components/ProductCard';
 import CategorySection from '@/components/CategorySection';
+import SubCategorySection from '@/components/SubCategorySection';
 import SearchBar from '@/components/SearchBar';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -16,6 +17,8 @@ interface ProductsData {
 
 const Products = () => {
   const [selectedCategory, setSelectedCategory] = useState<CategoryType>('all');
+  const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(null);
+  const [availableSubcategories, setAvailableSubcategories] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const { user, loading: authLoading } = useAuth();
 
@@ -29,7 +32,7 @@ const Products = () => {
   }, [categoryParam]);
 
   const { data: productsData, isLoading: productsLoading, isError, error } = useQuery<ProductsData>({
-    queryKey: ['products', selectedCategory, searchQuery],
+    queryKey: ['products', selectedCategory, selectedSubcategory, searchQuery],
     queryFn: async () => {
       let query = supabase
         .from('products')
@@ -49,9 +52,18 @@ const Products = () => {
         throw new Error(error.message);
       }
 
+      let filteredProducts = data || [];
+
+      // Filter by subcategory if selected
+      if (selectedSubcategory && filteredProducts.length > 0) {
+        filteredProducts = filteredProducts.filter(product => 
+          product.categories && product.categories.includes(selectedSubcategory)
+        );
+      }
+
       return {
-        products: data || [],
-        totalCount: count || 0,
+        products: filteredProducts,
+        totalCount: filteredProducts.length,
       };
     },
     enabled: !authLoading, // Only run query when auth is not loading
@@ -59,6 +71,16 @@ const Products = () => {
 
   const handleCategorySelect = (categoryId: CategoryType) => {
     setSelectedCategory(categoryId);
+    setSelectedSubcategory(null); // Reset subcategory when changing main category
+  };
+
+  const handleSubcategoriesChange = (subcategories: string[]) => {
+    setAvailableSubcategories(subcategories);
+    setSelectedSubcategory(null); // Reset selected subcategory
+  };
+
+  const handleSubcategorySelect = (subcategory: string | null) => {
+    setSelectedSubcategory(subcategory);
   };
 
   const filteredProducts = productsData?.products || [];
@@ -74,6 +96,13 @@ const Products = () => {
         <CategorySection 
           selectedCategory={selectedCategory} 
           onCategorySelect={handleCategorySelect}
+          onSubcategoriesChange={handleSubcategoriesChange}
+        />
+
+        <SubCategorySection
+          subcategories={availableSubcategories}
+          selectedSubcategory={selectedSubcategory}
+          onSubcategorySelect={handleSubcategorySelect}
         />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
