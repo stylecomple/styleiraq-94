@@ -87,15 +87,29 @@ const DiscountManagement = () => {
     try {
       console.log('Starting to apply discounts to products...');
       
-      // First, reset all product discounts to 0
-      const { error: resetError } = await supabase
+      // First, get all products to reset their discounts
+      const { data: allProducts, error: productsError } = await supabase
         .from('products')
-        .update({ discount_percentage: 0 })
-        .neq('id', '00000000-0000-0000-0000-000000000000');
-      
-      if (resetError) {
-        console.error('Error resetting discounts:', resetError);
-        throw resetError;
+        .select('id');
+
+      if (productsError) {
+        console.error('Error fetching products:', productsError);
+        throw productsError;
+      }
+
+      // Reset all product discounts to 0 by updating each product individually
+      if (allProducts && allProducts.length > 0) {
+        for (const product of allProducts) {
+          const { error: resetError } = await supabase
+            .from('products')
+            .update({ discount_percentage: 0 })
+            .eq('id', product.id);
+          
+          if (resetError) {
+            console.error(`Error resetting discount for product ${product.id}:`, resetError);
+            throw resetError;
+          }
+        }
       }
 
       console.log('Reset all product discounts to 0');
@@ -114,20 +128,20 @@ const DiscountManagement = () => {
       console.log('Active discounts:', activeDiscounts);
 
       if (activeDiscounts && activeDiscounts.length > 0) {
-        // Get all products to apply discounts
-        const { data: allProducts, error: productsError } = await supabase
+        // Get all products with their categories and subcategories
+        const { data: productsWithCategories, error: productsWithCategoriesError } = await supabase
           .from('products')
           .select('id, categories, subcategories, discount_percentage');
 
-        if (productsError) {
-          console.error('Error fetching products:', productsError);
-          throw productsError;
+        if (productsWithCategoriesError) {
+          console.error('Error fetching products with categories:', productsWithCategoriesError);
+          throw productsWithCategoriesError;
         }
 
         // Calculate the maximum discount for each product
         const productDiscounts: { [key: string]: number } = {};
 
-        allProducts?.forEach(product => {
+        productsWithCategories?.forEach(product => {
           let maxDiscount = 0;
 
           activeDiscounts.forEach(discount => {
@@ -221,6 +235,7 @@ const DiscountManagement = () => {
       queryClient.invalidateQueries({ queryKey: ['active-discounts'] });
       queryClient.invalidateQueries({ queryKey: ['products'] });
       queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+      queryClient.invalidateQueries({ queryKey: ['featured-products'] });
       
       // Reset form
       setDiscountType('all_products');
@@ -259,6 +274,7 @@ const DiscountManagement = () => {
       queryClient.invalidateQueries({ queryKey: ['active-discounts'] });
       queryClient.invalidateQueries({ queryKey: ['products'] });
       queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+      queryClient.invalidateQueries({ queryKey: ['featured-products'] });
       
       toast({
         title: 'تم حذف الخصم',
