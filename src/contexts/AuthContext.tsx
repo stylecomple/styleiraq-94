@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -61,30 +62,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  const updateAuthState = async (newSession: Session | null) => {
-    console.log('Updating auth state:', newSession?.user?.id);
-    
-    setSession(newSession);
-    setUser(newSession?.user ?? null);
-    
-    if (newSession?.user) {
-      await checkUserRoles(newSession.user.id);
-    } else {
-      setIsAdmin(false);
-      setIsOwner(false);
-    }
-    
-    // Always set loading to false after processing
-    setLoading(false);
-  };
-
   useEffect(() => {
     let mounted = true;
 
     const initializeAuth = async () => {
       try {
         console.log('Initializing auth...');
-        setLoading(true);
         
         // Get initial session
         const { data: { session: initialSession } } = await supabase.auth.getSession();
@@ -92,7 +75,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         
         if (!mounted) return;
 
-        await updateAuthState(initialSession);
+        // Set user and session immediately
+        setSession(initialSession);
+        setUser(initialSession?.user ?? null);
+        
+        // Set loading to false first to show the UI
+        setLoading(false);
+        
+        // Then check roles in background if user exists
+        if (initialSession?.user) {
+          checkUserRoles(initialSession.user.id);
+        } else {
+          setIsAdmin(false);
+          setIsOwner(false);
+        }
       } catch (error) {
         console.error('Error initializing auth:', error);
         if (mounted) {
@@ -108,8 +104,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         
         if (!mounted) return;
 
-        // Don't set loading here, let updateAuthState handle it
-        await updateAuthState(session);
+        // Update session and user immediately
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        // Set loading to false immediately
+        setLoading(false);
+        
+        // Check roles in background if user exists
+        if (session?.user) {
+          checkUserRoles(session.user.id);
+        } else {
+          setIsAdmin(false);
+          setIsOwner(false);
+        }
       }
     );
 
