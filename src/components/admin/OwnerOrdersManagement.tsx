@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -82,13 +81,21 @@ const OwnerOrdersManagement = () => {
       return order;
     },
     onSuccess: (deletedOrder) => {
+      // Invalidate multiple query keys to ensure fresh data
       queryClient.invalidateQueries({ queryKey: ['owner-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      
+      // Force refetch to ensure UI is updated
+      queryClient.refetchQueries({ queryKey: ['owner-orders'] });
+      
       toast({
         title: 'تم حذف الطلب',
         description: `تم حذف الطلب #${deletedOrder.id.substring(0, 8)} بنجاح`,
       });
     },
-    onError: () => {
+    onError: (error) => {
+      console.error('Error deleting order:', error);
       toast({
         title: 'خطأ',
         description: 'فشل في حذف الطلب',

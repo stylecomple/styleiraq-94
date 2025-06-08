@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,8 +33,10 @@ const CategoryManager = ({ categories, onCategoriesChange, onClose }: CategoryMa
   const { toast } = useToast();
   const [newCategory, setNewCategory] = useState({ name: '', icon: '' });
   const [newSubcategory, setNewSubcategory] = useState({ name: '', icon: '', parentId: '' });
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editingCategory, setEditingCategory] = useState({ name: '', icon: '' });
+  const [editingCategory, setEditingCategory] = useState<string | null>(null);
+  const [editingSubcategory, setEditingSubcategory] = useState<string | null>(null);
+  const [editCategoryData, setEditCategoryData] = useState({ name: '', icon: '' });
+  const [editSubcategoryData, setEditSubcategoryData] = useState({ name: '', icon: '' });
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
 
   const addCategory = () => {
@@ -125,13 +128,13 @@ const CategoryManager = ({ categories, onCategoriesChange, onClose }: CategoryMa
     });
   };
 
-  const startEditing = (category: Category) => {
-    setEditingId(category.id);
-    setEditingCategory({ name: category.name, icon: category.icon });
+  const startEditingCategory = (category: Category) => {
+    setEditingCategory(category.id);
+    setEditCategoryData({ name: category.name, icon: category.icon });
   };
 
-  const saveEdit = () => {
-    if (!editingCategory.name.trim() || !editingCategory.icon) {
+  const saveEditCategory = () => {
+    if (!editCategoryData.name.trim() || !editCategoryData.icon) {
       toast({
         title: 'خطأ',
         description: 'يرجى إدخال اسم الفئة واختيار إيموجي',
@@ -141,18 +144,57 @@ const CategoryManager = ({ categories, onCategoriesChange, onClose }: CategoryMa
     }
 
     const updatedCategories = categories.map(cat => 
-      cat.id === editingId 
-        ? { ...cat, name: editingCategory.name.trim(), icon: editingCategory.icon }
+      cat.id === editingCategory 
+        ? { ...cat, name: editCategoryData.name.trim(), icon: editCategoryData.icon }
         : cat
     );
 
     onCategoriesChange(updatedCategories);
-    setEditingId(null);
-    setEditingCategory({ name: '', icon: '' });
+    setEditingCategory(null);
+    setEditCategoryData({ name: '', icon: '' });
     
     toast({
       title: 'تم تحديث الفئة',
       description: 'تم تحديث الفئة بنجاح',
+    });
+  };
+
+  const startEditingSubcategory = (subcategory: Subcategory) => {
+    setEditingSubcategory(subcategory.id);
+    setEditSubcategoryData({ name: subcategory.name, icon: subcategory.icon });
+  };
+
+  const saveEditSubcategory = (categoryId: string) => {
+    if (!editSubcategoryData.name.trim() || !editSubcategoryData.icon) {
+      toast({
+        title: 'خطأ',
+        description: 'يرجى إدخال اسم الفئة الفرعية واختيار إيموجي',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const updatedCategories = categories.map(cat => {
+      if (cat.id === categoryId) {
+        return {
+          ...cat,
+          subcategories: cat.subcategories?.map(sub => 
+            sub.id === editingSubcategory
+              ? { ...sub, name: editSubcategoryData.name.trim(), icon: editSubcategoryData.icon }
+              : sub
+          ) || []
+        };
+      }
+      return cat;
+    });
+
+    onCategoriesChange(updatedCategories);
+    setEditingSubcategory(null);
+    setEditSubcategoryData({ name: '', icon: '' });
+    
+    toast({
+      title: 'تم تحديث الفئة الفرعية',
+      description: 'تم تحديث الفئة الفرعية بنجاح',
     });
   };
 
@@ -301,22 +343,57 @@ const CategoryManager = ({ categories, onCategoriesChange, onClose }: CategoryMa
                         <ChevronRight className="w-4 h-4" />
                       }
                     </Button>
-                    <span className="text-2xl">{category.icon}</span>
-                    <span className="font-medium">{category.name}</span>
-                    <span className="text-sm text-muted-foreground">({category.id})</span>
-                    {category.subcategories && category.subcategories.length > 0 && (
-                      <Badge variant="outline" className="text-xs">
-                        {category.subcategories.length} فئة فرعية
-                      </Badge>
+                    
+                    {editingCategory === category.id ? (
+                      <div className="flex items-center gap-2">
+                        <EmojiPicker
+                          selectedEmoji={editCategoryData.icon}
+                          onEmojiSelect={(emoji) => setEditCategoryData(prev => ({ ...prev, icon: emoji }))}
+                        />
+                        <Input
+                          value={editCategoryData.name}
+                          onChange={(e) => setEditCategoryData(prev => ({ ...prev, name: e.target.value }))}
+                          className="w-40"
+                        />
+                        <Button size="sm" onClick={saveEditCategory}>
+                          <Check className="w-4 h-4" />
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => setEditingCategory(null)}>
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <>
+                        <span className="text-2xl">{category.icon}</span>
+                        <span className="font-medium">{category.name}</span>
+                        <span className="text-sm text-muted-foreground">({category.id})</span>
+                        {category.subcategories && category.subcategories.length > 0 && (
+                          <Badge variant="outline" className="text-xs">
+                            {category.subcategories.length} فئة فرعية
+                          </Badge>
+                        )}
+                      </>
                     )}
                   </div>
-                  <Button 
-                    size="sm" 
-                    variant="destructive" 
-                    onClick={() => deleteCategory(category.id)}
-                  >
-                    <X className="w-4 h-4" />
-                  </Button>
+                  
+                  {editingCategory !== category.id && (
+                    <div className="flex gap-2">
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        onClick={() => startEditingCategory(category)}
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="destructive" 
+                        onClick={() => deleteCategory(category.id)}
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Subcategories */}
@@ -324,18 +401,49 @@ const CategoryManager = ({ categories, onCategoriesChange, onClose }: CategoryMa
                   <div className="mt-3 ml-8 space-y-2">
                     {category.subcategories.map((subcategory) => (
                       <div key={subcategory.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                        <div className="flex items-center gap-3">
-                          <span className="text-lg">{subcategory.icon}</span>
-                          <span className="font-medium">{subcategory.name}</span>
-                          <span className="text-sm text-muted-foreground">({subcategory.id})</span>
-                        </div>
-                        <Button 
-                          size="sm" 
-                          variant="destructive" 
-                          onClick={() => deleteSubcategory(category.id, subcategory.id)}
-                        >
-                          <X className="w-3 h-3" />
-                        </Button>
+                        {editingSubcategory === subcategory.id ? (
+                          <div className="flex items-center gap-2 flex-1">
+                            <EmojiPicker
+                              selectedEmoji={editSubcategoryData.icon}
+                              onEmojiSelect={(emoji) => setEditSubcategoryData(prev => ({ ...prev, icon: emoji }))}
+                            />
+                            <Input
+                              value={editSubcategoryData.name}
+                              onChange={(e) => setEditSubcategoryData(prev => ({ ...prev, name: e.target.value }))}
+                              className="w-40"
+                            />
+                            <Button size="sm" onClick={() => saveEditSubcategory(category.id)}>
+                              <Check className="w-4 h-4" />
+                            </Button>
+                            <Button size="sm" variant="outline" onClick={() => setEditingSubcategory(null)}>
+                              <X className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="flex items-center gap-3">
+                              <span className="text-lg">{subcategory.icon}</span>
+                              <span className="font-medium">{subcategory.name}</span>
+                              <span className="text-sm text-muted-foreground">({subcategory.id})</span>
+                            </div>
+                            <div className="flex gap-2">
+                              <Button 
+                                size="sm" 
+                                variant="outline" 
+                                onClick={() => startEditingSubcategory(subcategory)}
+                              >
+                                <Edit2 className="w-3 h-3" />
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant="destructive" 
+                                onClick={() => deleteSubcategory(category.id, subcategory.id)}
+                              >
+                                <X className="w-3 h-3" />
+                              </Button>
+                            </div>
+                          </>
+                        )}
                       </div>
                     ))}
                   </div>

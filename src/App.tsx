@@ -6,10 +6,12 @@ import { AuthProvider } from '@/contexts/AuthContext';
 import { CartProvider } from '@/contexts/CartContext';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import FeedbackForm from '@/components/FeedbackForm';
 import Index from '@/pages/Index';
 import Products from '@/pages/Products';
 import Auth from '@/pages/Auth';
 import Cart from '@/pages/Cart';
+import Orders from '@/pages/Orders';
 import NotFound from '@/pages/NotFound';
 import AdminPanel from '@/pages/AdminPanel';
 import OwnerPanelPage from '@/pages/OwnerPanel';
@@ -31,11 +33,13 @@ function App() {
                 <Route path="/products/:category" element={<Products />} />
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/cart" element={<Cart />} />
+                <Route path="/orders" element={<Orders />} />
                 <Route path="/admin" element={<AdminPanel />} />
                 <Route path="/owner-panel" element={<OwnerPanelPage />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
               <Footer />
+              <FeedbackForm />
               <Toaster />
             </div>
           </CartProvider>
