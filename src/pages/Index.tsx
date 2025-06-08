@@ -1,33 +1,18 @@
 
 import React from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import Hero from '@/components/Hero';
 import FeaturesSection from '@/components/FeaturesSection';
+import CategorySection from '@/components/CategorySection';
+import ProductCard from '@/components/ProductCard';
+import Newsletter from '@/components/Newsletter';
+import Footer from '@/components/Footer';
 import DiscountBanner from '@/components/DiscountBanner';
+import { Product } from '@/types';
 
 const Index = () => {
-  const { user } = useAuth();
-  const navigate = useNavigate();
-
-  // Fetch real-time product count
-  const { data: productCount } = useQuery({
-    queryKey: ['product-count'],
-    queryFn: async () => {
-      const { count, error } = await supabase
-        .from('products')
-        .select('*', { count: 'exact', head: true })
-        .eq('is_active', true);
-      
-      if (error) throw error;
-      return count || 0;
-    },
-    refetchInterval: 30000, // Refetch every 30 seconds
-  });
-
-  // Fetch active discounts for banner display
+  // Fetch active discounts for banner
   const { data: activeDiscounts } = useQuery({
     queryKey: ['active-discounts-banner'],
     queryFn: async () => {
@@ -37,56 +22,64 @@ const Index = () => {
         .eq('is_active', true);
       
       if (error) throw error;
-      
-      // Type cast the data to ensure proper TypeScript types
-      return data?.map(discount => ({
-        ...discount,
-        discount_type: discount.discount_type as 'all_products' | 'category' | 'subcategory'
-      })) || [];
-    },
-    refetchInterval: 60000, // Refetch every minute
+      return data;
+    }
   });
 
-  const handleStartShopping = () => {
-    navigate('/products');
-  };
-
-  const handleBrowseCollections = () => {
-    navigate('/products');
-  };
-
-  const handleCategoryClick = (categoryId: string) => {
-    navigate(`/products?category=${categoryId}`);
-  };
+  // Fetch featured products
+  const { data: featuredProducts } = useQuery({
+    queryKey: ['featured-products'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('is_active', true)
+        .limit(8);
+      
+      if (error) throw error;
+      
+      return (data || []).map(rawProduct => {
+        const options = (rawProduct as any).options || 
+          ((rawProduct as any).colors ? (rawProduct as any).colors.map((color: string) => ({ name: color, price: undefined })) : []);
+        
+        return {
+          ...rawProduct,
+          options,
+          subcategories: (rawProduct as any).subcategories || []
+        } as Product;
+      });
+    }
+  });
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
-      {/* Discount Banners */}
+    <div className="min-h-screen">
+      {/* Discount Banner */}
       {activeDiscounts && activeDiscounts.length > 0 && (
         <DiscountBanner discounts={activeDiscounts} />
       )}
-
-      <Hero 
-        onStartShopping={handleStartShopping} 
-        onBrowseCollections={handleBrowseCollections} 
-        onCategoryClick={handleCategoryClick}
-        productCount={productCount}
-      />
       
+      <Hero />
       <FeaturesSection />
-
-      {user && (
-        <div className="container mx-auto px-4 py-16">
-          <div className="text-center mb-12">
-            <div className="inline-flex items-center gap-2 bg-gradient-to-r from-pink-100 to-purple-100 rounded-full px-6 py-3">
-              <span className="text-lg text-gray-700">
-                مرحباً <span className="font-semibold text-purple-700">{user.user_metadata?.full_name || user.email}</span>
-              </span>
-              <span className="text-2xl">👋</span>
+      <CategorySection selectedCategory="all" onCategorySelect={() => {}} />
+      
+      {/* Featured Products Section */}
+      {featuredProducts && featuredProducts.length > 0 && (
+        <section className="py-16 bg-gray-50">
+          <div className="container mx-auto px-4">
+            <h2 className="text-3xl font-bold text-center mb-12 text-gray-800">
+              المنتجات المميزة
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              {featuredProducts.map((product) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
             </div>
           </div>
-        </div>
+        </section>
       )}
+      
+      <Newsletter />
+      <Footer />
     </div>
   );
 };

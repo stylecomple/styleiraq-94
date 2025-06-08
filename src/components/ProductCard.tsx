@@ -27,16 +27,19 @@ const ProductCard = ({ product }: ProductCardProps) => {
     addToCart({
       id: product.id,
       name: product.name,
-      price: product.price,
+      price: getEffectivePrice(),
       image: product.cover_image || '/placeholder.svg',
       quantity: 1,
       selectedColor: product.options?.[0]?.name || null
     });
   };
 
-  const discountedPrice = product.discount_percentage && product.discount_percentage > 0
-    ? product.price * (1 - product.discount_percentage / 100)
-    : null;
+  const getEffectivePrice = () => {
+    if (product.discount_percentage && product.discount_percentage > 0) {
+      return product.price * (1 - product.discount_percentage / 100);
+    }
+    return product.price;
+  };
 
   const hasValidDiscount = product.discount_percentage && product.discount_percentage > 0;
 
@@ -80,19 +83,19 @@ const ProductCard = ({ product }: ProductCardProps) => {
 
         <div className="flex items-center justify-between mb-4">
           <div className="flex flex-col">
-            {/* Only show discounted price if there's a valid discount */}
+            {/* Show discounted price if there's a valid discount */}
             {hasValidDiscount ? (
               <>
                 <span className="text-2xl font-bold text-pink-600">
-                  {discountedPrice?.toFixed(0)} د.ع
+                  {Math.round(getEffectivePrice()).toLocaleString()} د.ع
                 </span>
                 <span className="text-sm text-gray-500 line-through">
-                  {product.price} د.ع
+                  {product.price.toLocaleString()} د.ع
                 </span>
               </>
             ) : (
               <span className="text-2xl font-bold text-pink-600">
-                {product.price} د.ع
+                {product.price.toLocaleString()} د.ع
               </span>
             )}
           </div>

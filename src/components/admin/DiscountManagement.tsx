@@ -91,7 +91,7 @@ const DiscountManagement = () => {
       const { error: resetError } = await supabase
         .from('products')
         .update({ discount_percentage: 0 })
-        .neq('id', '00000000-0000-0000-0000-000000000000'); // Update all products
+        .neq('id', '00000000-0000-0000-0000-000000000000');
       
       if (resetError) {
         console.error('Error resetting discounts:', resetError);
@@ -114,35 +114,60 @@ const DiscountManagement = () => {
       console.log('Active discounts:', activeDiscounts);
 
       if (activeDiscounts && activeDiscounts.length > 0) {
-        // Apply each discount
-        for (const discount of activeDiscounts) {
-          let updateQuery = supabase.from('products').update({
-            discount_percentage: discount.discount_percentage
+        // Get all products to apply discounts
+        const { data: allProducts, error: productsError } = await supabase
+          .from('products')
+          .select('id, categories, subcategories, discount_percentage');
+
+        if (productsError) {
+          console.error('Error fetching products:', productsError);
+          throw productsError;
+        }
+
+        // Calculate the maximum discount for each product
+        const productDiscounts: { [key: string]: number } = {};
+
+        allProducts?.forEach(product => {
+          let maxDiscount = 0;
+
+          activeDiscounts.forEach(discount => {
+            let applies = false;
+
+            if (discount.discount_type === 'all_products') {
+              applies = true;
+            } else if (discount.discount_type === 'category' && product.categories) {
+              applies = product.categories.includes(discount.target_value);
+            } else if (discount.discount_type === 'subcategory' && product.subcategories) {
+              applies = product.subcategories.includes(discount.target_value);
+            }
+
+            if (applies && discount.discount_percentage > maxDiscount) {
+              maxDiscount = discount.discount_percentage;
+            }
           });
 
-          if (discount.discount_type === 'all_products') {
-            // Apply to all products
-            updateQuery = updateQuery.neq('id', '00000000-0000-0000-0000-000000000000');
-          } else if (discount.discount_type === 'category') {
-            // Apply to products in specific category
-            updateQuery = updateQuery.contains('categories', [discount.target_value]);
-          } else if (discount.discount_type === 'subcategory') {
-            // Apply to products in specific subcategory
-            updateQuery = updateQuery.contains('subcategories', [discount.target_value]);
+          if (maxDiscount > 0) {
+            productDiscounts[product.id] = maxDiscount;
           }
+        });
 
-          const { error: applyError } = await updateQuery;
-          
-          if (applyError) {
-            console.error(`Error applying discount ${discount.id}:`, applyError);
-            throw applyError;
+        // Apply the calculated discounts
+        for (const [productId, discountPercentage] of Object.entries(productDiscounts)) {
+          const { error: updateError } = await supabase
+            .from('products')
+            .update({ discount_percentage: discountPercentage })
+            .eq('id', productId);
+
+          if (updateError) {
+            console.error(`Error updating product ${productId}:`, updateError);
+            throw updateError;
           }
-
-          console.log(`Applied discount ${discount.discount_percentage}% for ${discount.discount_type}`);
         }
+
+        console.log('Successfully applied all discounts');
       }
 
-      console.log('Successfully applied all discounts');
+      console.log('Discount application completed');
     } catch (error) {
       console.error('Error in applyDiscountsToProducts:', error);
       throw error;
@@ -159,12 +184,7 @@ const DiscountManagement = () => {
       });
 
       const { data: userData, error: userError } = await supabase.auth.getUser();
-      if (userError) {
-        console.error('Auth error:', userError);
-        throw new Error('فشل في التحقق من المستخدم');
-      }
-
-      if (!userData.user) {
+      if (userError || !userData.user) {
         throw new Error('المستخدم غير مسجل الدخول');
       }
 
@@ -201,7 +221,6 @@ const DiscountManagement = () => {
       queryClient.invalidateQueries({ queryKey: ['active-discounts'] });
       queryClient.invalidateQueries({ queryKey: ['products'] });
       queryClient.invalidateQueries({ queryKey: ['admin-products'] });
-      queryClient.invalidateQueries({ queryKey: ['active-discounts-banner'] });
       
       // Reset form
       setDiscountType('all_products');
@@ -240,7 +259,6 @@ const DiscountManagement = () => {
       queryClient.invalidateQueries({ queryKey: ['active-discounts'] });
       queryClient.invalidateQueries({ queryKey: ['products'] });
       queryClient.invalidateQueries({ queryKey: ['admin-products'] });
-      queryClient.invalidateQueries({ queryKey: ['active-discounts-banner'] });
       
       toast({
         title: 'تم حذف الخصم',

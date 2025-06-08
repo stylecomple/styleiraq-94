@@ -1,141 +1,153 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
-import { useToast } from '@/hooks/use-toast';
 
-interface CartItem {
+import React, { createContext, useContext, useReducer, useEffect, ReactNode, useState } from 'react';
+
+export interface CartItem {
   id: string;
   name: string;
   price: number;
-  quantity: number;
   image: string;
-  selectedOption?: string;
+  quantity: number;
+  selectedColor?: string | null;
+  selectedOption?: string | null;
 }
 
-interface CartContextType {
+interface CartState {
   items: CartItem[];
-  addToCart: (product: any, selectedOption?: string, optionPrice?: number) => void;
-  removeFromCart: (productId: string, selectedOption?: string) => void;
-  updateQuantity: (productId: string, quantity: number, selectedOption?: string) => void;
+}
+
+interface CartContextType extends CartState {
+  addToCart: (item: Omit<CartItem, 'quantity'> & { quantity?: number }) => void;
+  removeFromCart: (id: string, selectedOption?: string | null) => void;
+  updateQuantity: (id: string, quantity: number, selectedOption?: string | null) => void;
   clearCart: () => void;
-  getTotalItems: () => number;
   getTotalPrice: () => number;
+  getTotalItems: () => number;
   isPaymentDialogOpen: boolean;
   selectedPaymentMethod: 'visa_card' | 'zain_cash' | null;
-  pendingOrder: any;
-  openPaymentDialog: (paymentMethod: 'visa_card' | 'zain_cash', orderData: any) => void;
+  pendingOrder: { orderId: string; totalAmount: number; items: CartItem[] } | null;
+  openPaymentDialog: (method: 'visa_card' | 'zain_cash', orderData: { orderId: string; totalAmount: number; items: CartItem[] }) => void;
   closePaymentDialog: () => void;
 }
 
-const CartContext = createContext<CartContextType | undefined>(undefined);
+type CartAction =
+  | { type: 'ADD_TO_CART'; payload: CartItem }
+  | { type: 'REMOVE_FROM_CART'; payload: { id: string; selectedOption?: string | null } }
+  | { type: 'UPDATE_QUANTITY'; payload: { id: string; quantity: number; selectedOption?: string | null } }
+  | { type: 'CLEAR_CART' }
+  | { type: 'LOAD_CART'; payload: CartItem[] };
 
-export const useCart = () => {
-  const context = useContext(CartContext);
-  if (!context) {
-    throw new Error('useCart must be used within a CartProvider');
+const cartReducer = (state: CartState, action: CartAction): CartState => {
+  switch (action.type) {
+    case 'ADD_TO_CART': {
+      const existingItemIndex = state.items.findIndex(
+        item => item.id === action.payload.id && 
+        (item.selectedOption || item.selectedColor) === (action.payload.selectedOption || action.payload.selectedColor)
+      );
+
+      if (existingItemIndex > -1) {
+        const updatedItems = [...state.items];
+        updatedItems[existingItemIndex].quantity += action.payload.quantity;
+        return { ...state, items: updatedItems };
+      }
+
+      return { ...state, items: [...state.items, action.payload] };
+    }
+    case 'REMOVE_FROM_CART': {
+      return {
+        ...state,
+        items: state.items.filter(
+          item => !(item.id === action.payload.id && 
+          (item.selectedOption || item.selectedColor) === action.payload.selectedOption)
+        ),
+      };
+    }
+    case 'UPDATE_QUANTITY': {
+      if (action.payload.quantity <= 0) {
+        return {
+          ...state,
+          items: state.items.filter(
+            item => !(item.id === action.payload.id && 
+            (item.selectedOption || item.selectedColor) === action.payload.selectedOption)
+          ),
+        };
+      }
+
+      return {
+        ...state,
+        items: state.items.map(item =>
+          item.id === action.payload.id && 
+          (item.selectedOption || item.selectedColor) === action.payload.selectedOption
+            ? { ...item, quantity: action.payload.quantity }
+            : item
+        ),
+      };
+    }
+    case 'CLEAR_CART':
+      return { ...state, items: [] };
+    case 'LOAD_CART':
+      return { ...state, items: action.payload };
+    default:
+      return state;
   }
-  return context;
 };
 
-interface CartProviderProps {
-  children: ReactNode;
-}
+const CartContext = createContext<CartContextType | undefined>(undefined);
 
-export const CartProvider = ({ children }: CartProviderProps) => {
-  const [items, setItems] = useState<CartItem[]>([]);
+export const CartProvider = ({ children }: { children: ReactNode }) => {
+  const [state, dispatch] = useReducer(cartReducer, { items: [] });
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'visa_card' | 'zain_cash' | null>(null);
-  const [pendingOrder, setPendingOrder] = useState<any>(null);
-  const { toast } = useToast();
+  const [pendingOrder, setPendingOrder] = useState<{ orderId: string; totalAmount: number; items: CartItem[] } | null>(null);
 
-  const addToCart = (product: any, selectedOption?: string, optionPrice?: number) => {
-    setItems(prevItems => {
-      const existingItem = prevItems.find(item => 
-        selectedOption 
-          ? item.id === product.id && item.selectedOption === selectedOption
-          : item.id === product.id && !item.selectedOption
-      );
-      
-      // Use the provided optionPrice (which should already include discount) or calculate discounted price
-      let finalPrice = product.price;
-      if (optionPrice !== undefined) {
-        finalPrice = optionPrice;
-      } else if (selectedOption && product.options) {
-        const selectedOptionData = product.options.find((opt: any) => opt.name === selectedOption);
-        if (selectedOptionData && selectedOptionData.price !== undefined) {
-          finalPrice = selectedOptionData.price;
-          // Apply discount if product has one
-          if (product.discount_percentage && product.discount_percentage > 0) {
-            finalPrice = Math.round(finalPrice * (1 - product.discount_percentage / 100));
-          }
-        }
-      } else if (product.discount_percentage && product.discount_percentage > 0) {
-        // Apply discount to main price
-        finalPrice = Math.round(product.price * (1 - product.discount_percentage / 100));
+  // Load cart from localStorage on mount
+  useEffect(() => {
+    const savedCart = localStorage.getItem('cart');
+    if (savedCart) {
+      try {
+        const cartItems = JSON.parse(savedCart);
+        dispatch({ type: 'LOAD_CART', payload: cartItems });
+      } catch (error) {
+        console.error('Error loading cart from localStorage:', error);
       }
-      
-      if (existingItem) {
-        toast({
-          title: "تم تحديث السلة",
-          description: `تم زيادة كمية ${product.name} ${selectedOption ? `(${selectedOption})` : ''} في السلة`,
-        });
-        return prevItems.map(item =>
-          (selectedOption ? (item.id === product.id && item.selectedOption === selectedOption) : (item.id === product.id && !item.selectedOption))
-            ? { ...item, quantity: item.quantity + 1 }
-            : item
-        );
-      } else {
-        toast({
-          title: "تم إضافة المنتج",
-          description: `تم إضافة ${product.name} ${selectedOption ? `(${selectedOption})` : ''} إلى السلة`,
-        });
-        return [...prevItems, {
-          id: product.id,
-          name: product.name,
-          price: Math.round(finalPrice),
-          quantity: 1,
-          image: product.cover_image || '/placeholder.svg',
-          selectedOption: selectedOption
-        }];
-      }
-    });
-  };
-
-  const removeFromCart = (productId: string, selectedOption?: string) => {
-    setItems(prevItems => prevItems.filter(item => 
-      selectedOption 
-        ? !(item.id === productId && item.selectedOption === selectedOption)
-        : !(item.id === productId && !item.selectedOption)
-    ));
-  };
-
-  const updateQuantity = (productId: string, quantity: number, selectedOption?: string) => {
-    if (quantity <= 0) {
-      removeFromCart(productId, selectedOption);
-      return;
     }
-    
-    setItems(prevItems =>
-      prevItems.map(item =>
-        (selectedOption ? (item.id === productId && item.selectedOption === selectedOption) : (item.id === productId && !item.selectedOption))
-          ? { ...item, quantity }
-          : item
-      )
-    );
+  }, []);
+
+  // Save cart to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('cart', JSON.stringify(state.items));
+  }, [state.items]);
+
+  const addToCart = (item: Omit<CartItem, 'quantity'> & { quantity?: number }) => {
+    const cartItem: CartItem = {
+      ...item,
+      quantity: item.quantity || 1,
+      selectedOption: item.selectedColor || item.selectedOption || null,
+    };
+    dispatch({ type: 'ADD_TO_CART', payload: cartItem });
+  };
+
+  const removeFromCart = (id: string, selectedOption?: string | null) => {
+    dispatch({ type: 'REMOVE_FROM_CART', payload: { id, selectedOption } });
+  };
+
+  const updateQuantity = (id: string, quantity: number, selectedOption?: string | null) => {
+    dispatch({ type: 'UPDATE_QUANTITY', payload: { id, quantity, selectedOption } });
   };
 
   const clearCart = () => {
-    setItems([]);
-  };
-
-  const getTotalItems = () => {
-    return items.reduce((total, item) => total + item.quantity, 0);
+    dispatch({ type: 'CLEAR_CART' });
   };
 
   const getTotalPrice = () => {
-    return Math.round(items.reduce((total, item) => total + (item.price * item.quantity), 0));
+    return state.items.reduce((total, item) => total + item.price * item.quantity, 0);
   };
 
-  const openPaymentDialog = (paymentMethod: 'visa_card' | 'zain_cash', orderData: any) => {
-    setSelectedPaymentMethod(paymentMethod);
+  const getTotalItems = () => {
+    return state.items.reduce((total, item) => total + item.quantity, 0);
+  };
+
+  const openPaymentDialog = (method: 'visa_card' | 'zain_cash', orderData: { orderId: string; totalAmount: number; items: CartItem[] }) => {
+    setSelectedPaymentMethod(method);
     setPendingOrder(orderData);
     setIsPaymentDialogOpen(true);
   };
@@ -147,21 +159,31 @@ export const CartProvider = ({ children }: CartProviderProps) => {
   };
 
   return (
-    <CartContext.Provider value={{
-      items,
-      addToCart,
-      removeFromCart,
-      updateQuantity,
-      clearCart,
-      getTotalItems,
-      getTotalPrice,
-      isPaymentDialogOpen,
-      selectedPaymentMethod,
-      pendingOrder,
-      openPaymentDialog,
-      closePaymentDialog
-    }}>
+    <CartContext.Provider
+      value={{
+        ...state,
+        addToCart,
+        removeFromCart,
+        updateQuantity,
+        clearCart,
+        getTotalPrice,
+        getTotalItems,
+        isPaymentDialogOpen,
+        selectedPaymentMethod,
+        pendingOrder,
+        openPaymentDialog,
+        closePaymentDialog,
+      }}
+    >
       {children}
     </CartContext.Provider>
   );
+};
+
+export const useCart = () => {
+  const context = useContext(CartContext);
+  if (context === undefined) {
+    throw new Error('useCart must be used within a CartProvider');
+  }
+  return context;
 };
