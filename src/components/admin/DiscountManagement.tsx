@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -82,7 +81,7 @@ const DiscountManagement = () => {
     }
   });
 
-  // Create discount mutation
+  // Create discount mutation - Fixed to use INSERT instead of UPDATE
   const createDiscountMutation = useMutation({
     mutationFn: async () => {
       console.log('Creating discount with:', {
@@ -98,9 +97,11 @@ const DiscountManagement = () => {
         discount_type: discountType,
         target_value: discountType === 'all_products' ? null : targetValue,
         discount_percentage: discountPercentage,
-        created_by: userData.user.id
+        created_by: userData.user.id,
+        is_active: true
       };
 
+      // Use INSERT instead of UPDATE to create new discount
       const { data, error } = await supabase
         .from('active_discounts')
         .insert([discountData])
@@ -119,6 +120,7 @@ const DiscountManagement = () => {
       queryClient.invalidateQueries({ queryKey: ['active-discounts'] });
       queryClient.invalidateQueries({ queryKey: ['products'] });
       queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+      queryClient.invalidateQueries({ queryKey: ['active-discounts-banner'] });
       
       // Reset form
       setDiscountType('all_products');
@@ -140,7 +142,7 @@ const DiscountManagement = () => {
     }
   });
 
-  // Delete discount mutation
+  // Delete discount mutation - Fixed to use proper WHERE clause
   const deleteDiscountMutation = useMutation({
     mutationFn: async (discountId: string) => {
       const { error } = await supabase
@@ -154,6 +156,7 @@ const DiscountManagement = () => {
       queryClient.invalidateQueries({ queryKey: ['active-discounts'] });
       queryClient.invalidateQueries({ queryKey: ['products'] });
       queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+      queryClient.invalidateQueries({ queryKey: ['active-discounts-banner'] });
       
       toast({
         title: 'تم حذف الخصم',

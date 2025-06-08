@@ -28,7 +28,7 @@ const FeaturesSection = () => {
     {
       icon: Headphones,
       title: 'دعم 24/7',
-      description: 'فريق خدمة العملاء متاح دائماً لمساعدتك',
+      description: 'فريق خدمة العملاء متاح دائماً لمساعدتكم',
       color: 'emerald',
       gradient: 'from-emerald-500 to-teal-500'
     },
@@ -42,7 +42,7 @@ const FeaturesSection = () => {
     {
       icon: Heart,
       title: 'صُنع بحب',
-      description: 'نختار كل منتج بعناية فائقة من أجلك',
+      description: 'نختار كل منتج بعناية فائقة من أجلكم',
       color: 'rose',
       gradient: 'from-rose-500 to-pink-500'
     }
@@ -61,11 +61,11 @@ const FeaturesSection = () => {
         <div className="text-center mb-16">
           <h2 className="text-4xl md:text-5xl font-bold mb-6 animate-fade-in">
             <span className="bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent">
-              لماذا تختارنا؟
+              لماذا تختارونا؟
             </span>
           </h2>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto animate-fade-in" style={{ animationDelay: '0.3s' }}>
-            نقدم لك أفضل تجربة تسوق للمنتجات التجميلية في العراق
+            نقدم لكم أفضل تجربة تسوق للمنتجات التجميلية في العراق
           </p>
           <div className="w-24 h-1 bg-gradient-to-r from-pink-500 to-purple-500 mx-auto mt-6 rounded-full animate-scale-in" style={{ animationDelay: '0.6s' }}></div>
         </div>

@@ -32,7 +32,7 @@ const Hero = ({ onStartShopping, onBrowseCollections, onCategoryClick, productCo
         <div className="text-center mb-16">
           <div className="inline-flex items-center gap-2 bg-gradient-to-r from-pink-100 to-purple-100 rounded-full px-6 py-3 mb-8">
             <Sparkles className="w-5 h-5 text-pink-600" />
-            <span className="text-pink-800 font-medium">أجمل المنتجات النسائية</span>
+            <span className="text-pink-800 font-medium">أجمل المنتجات للعائلة</span>
             <Sparkles className="w-5 h-5 text-pink-600" />
           </div>
 
@@ -43,7 +43,7 @@ const Hero = ({ onStartShopping, onBrowseCollections, onCategoryClick, productCo
           </h1>
           
           <p className="text-xl md:text-2xl text-gray-600 mb-8 max-w-3xl mx-auto leading-relaxed">
-            اكتشفي عالماً من الجمال والأناقة مع مجموعتنا المتميزة من المكياج والعطور وكل ما تحتاجينه لإطلالة مثالية
+            اكتشفوا عالماً من الجمال والأناقة مع مجموعتنا المتميزة من المكياج والعطور وكل ما تحتاجونه لإطلالة مثالية
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
@@ -53,7 +53,7 @@ const Hero = ({ onStartShopping, onBrowseCollections, onCategoryClick, productCo
               className="bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-700 hover:to-purple-700 text-white px-8 py-4 text-lg rounded-full shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
             >
               <ShoppingBag className="w-5 h-5 mr-2" />
-              ابدئي التسوق الآن
+              ابدأوا التسوق الآن
             </Button>
             
             <Button 
@@ -63,7 +63,7 @@ const Hero = ({ onStartShopping, onBrowseCollections, onCategoryClick, productCo
               className="border-2 border-pink-300 text-pink-700 hover:bg-pink-50 px-8 py-4 text-lg rounded-full transition-all duration-300 transform hover:-translate-y-1"
             >
               <Heart className="w-5 h-5 mr-2" />
-              تصفحي المجموعات
+              تصفحوا المجموعات
             </Button>
           </div>
 
@@ -90,10 +90,10 @@ const Hero = ({ onStartShopping, onBrowseCollections, onCategoryClick, productCo
         {/* Categories Section */}
         <div className="text-center mb-16">
           <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-4">
-            تسوقي حسب الفئة
+            تسوقوا حسب الفئة
           </h2>
           <p className="text-gray-600 mb-8 text-lg">
-            اختاري من مجموعتنا المتنوعة من المنتجات عالية الجودة
+            اختاروا من مجموعتنا المتنوعة من المنتجات عالية الجودة
           </p>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">

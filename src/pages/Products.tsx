@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -26,10 +25,47 @@ const Products = () => {
   const categoryParam = searchParams.get('category');
 
   useEffect(() => {
-    if (categoryParam) {
+    if (categoryParam && categoryParam !== selectedCategory) {
+      console.log('URL category param changed:', categoryParam);
       setSelectedCategory(categoryParam);
+      setSelectedSubcategory(null); // Reset subcategory when category changes
     }
-  }, [categoryParam]);
+  }, [categoryParam, selectedCategory]);
+
+  // Fetch categories and subcategories to auto-load subcategories when category changes
+  const { data: categoryData } = useQuery({
+    queryKey: ['category-with-subcategories', selectedCategory],
+    queryFn: async () => {
+      if (selectedCategory === 'all') return null;
+      
+      const { data, error } = await supabase
+        .from('categories')
+        .select(`
+          *,
+          subcategories (*)
+        `)
+        .eq('id', selectedCategory)
+        .single();
+      
+      if (error) {
+        console.error('Error fetching category:', error);
+        return null;
+      }
+      
+      return data;
+    },
+    enabled: selectedCategory !== 'all'
+  });
+
+  // Update subcategories when category data loads
+  useEffect(() => {
+    if (categoryData?.subcategories) {
+      console.log('Auto-loading subcategories for category:', selectedCategory, categoryData.subcategories);
+      setAvailableSubcategories(categoryData.subcategories);
+    } else if (selectedCategory === 'all') {
+      setAvailableSubcategories([]);
+    }
+  }, [categoryData, selectedCategory]);
 
   const { data: productsData, isLoading: productsLoading, isError, error } = useQuery<ProductsData>({
     queryKey: ['products', selectedCategory, selectedSubcategory, searchQuery],
