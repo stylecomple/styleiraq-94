@@ -161,6 +161,16 @@ const AdminPanel = () => {
               <ArrowLeft className="w-4 h-4" />
               العودة للرئيسية
             </Button>
+            {/* Owner Panel Button - Only visible to owners */}
+            {isOwner && (
+              <Button 
+                onClick={() => navigate('/owner-panel')} 
+                className="flex items-center gap-2 bg-yellow-600 hover:bg-yellow-700"
+              >
+                <Shield className="w-4 h-4" />
+                لوحة تحكم المالك
+              </Button>
+            )}
           </div>
           <div className="flex items-center gap-3 mb-2">
             <Shield className="w-8 h-8 text-pink-600" />
@@ -214,13 +224,11 @@ const AdminPanel = () => {
         </div>
 
         <Tabs defaultValue="products" className="space-y-6">
-          <TabsList className={`grid w-full ${isOwner ? 'grid-cols-7' : 'grid-cols-4'}`}>
+          <TabsList className={`grid w-full ${isOwner ? 'grid-cols-5' : 'grid-cols-4'}`}>
             <TabsTrigger value="products">إدارة المنتجات</TabsTrigger>
             <TabsTrigger value="orders">إدارة الطلبات</TabsTrigger>
             <TabsTrigger value="feedback">التعليقات</TabsTrigger>
             <TabsTrigger value="statistics">الإحصائيات</TabsTrigger>
-            {isOwner && <TabsTrigger value="user-management">إدارة المستخدمين</TabsTrigger>}
-            {isOwner && <TabsTrigger value="changes-log">سجل التغييرات</TabsTrigger>}
             {isOwner && <TabsTrigger value="settings">الإعدادات</TabsTrigger>}
           </TabsList>
 
@@ -268,26 +276,6 @@ const AdminPanel = () => {
           <TabsContent value="statistics" className="space-y-6">
             <StatisticsPanel />
           </TabsContent>
-
-          {isOwner && (
-            <TabsContent value="user-management" className="space-y-6">
-              <h2 className="text-2xl font-bold flex items-center gap-2">
-                <UserCog className="w-6 h-6" />
-                إدارة المستخدمين
-              </h2>
-              <UserManagement />
-            </TabsContent>
-          )}
-
-          {isOwner && (
-            <TabsContent value="changes-log" className="space-y-6">
-              <h2 className="text-2xl font-bold flex items-center gap-2">
-                <Clock className="w-6 h-6" />
-                سجل التغييرات
-              </h2>
-              <ChangesLogPanel />
-            </TabsContent>
-          )}
 
           {isOwner && (
             <TabsContent value="settings" className="space-y-6">

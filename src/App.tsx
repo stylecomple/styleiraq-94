@@ -1,55 +1,54 @@
+import React from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { AuthProvider } from '@/contexts/AuthContext';
+import { CartProvider } from '@/contexts/CartContext';
+import Header from '@/components/Header';
+import Footer from '@/components/Footer';
+import Home from '@/pages/Home';
+import Products from '@/pages/Products';
+import ProductDetails from '@/pages/ProductDetails';
+import Cart from '@/pages/Cart';
+import Checkout from '@/pages/Checkout';
+import Auth from '@/pages/Auth';
+import Profile from '@/pages/Profile';
+import NotFound from '@/pages/NotFound';
+import AdminPanel from '@/pages/AdminPanel';
+import OwnerPanel from '@/pages/OwnerPanel';
+import OwnerPanelPage from '@/pages/OwnerPanel';
+import { Toaster } from '@/components/ui/toaster';
 
-import React from "react";
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { AuthProvider } from "./contexts/AuthContext";
-import { CartProvider } from "./contexts/CartContext";
-import FeedbackForm from "./components/FeedbackForm";
-import Index from "./pages/Index";
-import Products from "./pages/Products";
-import Auth from "./pages/Auth";
-import Cart from "./pages/Cart";
-import Orders from "./pages/Orders";
-import AdminPanel from "./pages/AdminPanel";
-import NotFound from "./pages/NotFound";
+const queryClient = new QueryClient();
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 1000 * 60 * 5, // 5 minutes
-      refetchOnWindowFocus: false,
-    },
-  },
-});
-
-const App = () => {
+function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <CartProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
+    <BrowserRouter>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <CartProvider>
+            <div className="min-h-screen bg-gradient-to-br from-pink-50 via-white to-purple-50">
+              <Header />
               <Routes>
-                <Route path="/" element={<Index />} />
+                <Route path="/" element={<Home />} />
                 <Route path="/products" element={<Products />} />
-                <Route path="/auth" element={<Auth />} />
+                <Route path="/products/:category" element={<Products />} />
+                <Route path="/product/:id" element={<ProductDetails />} />
                 <Route path="/cart" element={<Cart />} />
-                <Route path="/orders" element={<Orders />} />
+                <Route path="/checkout" element={<Checkout />} />
+                <Route path="/auth" element={<Auth />} />
+                <Route path="/profile" element={<Profile />} />
                 <Route path="/admin" element={<AdminPanel />} />
+                <Route path="/owner-panel" element={<OwnerPanelPage />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
-              <FeedbackForm />
-            </BrowserRouter>
-          </TooltipProvider>
-        </CartProvider>
-      </AuthProvider>
-    </QueryClientProvider>
+              <Footer />
+              <Toaster />
+            </div>
+          </CartProvider>
+        </AuthProvider>
+      </QueryClientProvider>
+    </BrowserRouter>
   );
-};
+}
 
 export default App;
