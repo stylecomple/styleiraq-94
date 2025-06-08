@@ -101,7 +101,10 @@ const ProductsManagement = () => {
       }
     },
     onSuccess: (result) => {
+      // Force refresh the products list
       queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+      queryClient.refetchQueries({ queryKey: ['admin-products'] });
+      
       if (result.deactivated) {
         toast({
           title: 'تم إلغاء تفعيل المنتج',

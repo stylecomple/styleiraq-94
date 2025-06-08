@@ -16,15 +16,18 @@ const Header = () => {
   const handleAuthClick = async () => {
     if (user) {
       try {
+        console.log('Attempting to sign out...');
         await signOut();
+        console.log('Sign out successful');
         navigate('/');
+        setMobileMenuOpen(false);
       } catch (error) {
         console.error('Error signing out:', error);
       }
     } else {
       navigate('/auth');
+      setMobileMenuOpen(false);
     }
-    setMobileMenuOpen(false);
   };
 
   const handleAdminClick = () => {

@@ -9,6 +9,7 @@ import Footer from '@/components/Footer';
 import Index from '@/pages/Index';
 import Products from '@/pages/Products';
 import Auth from '@/pages/Auth';
+import Cart from '@/pages/Cart';
 import NotFound from '@/pages/NotFound';
 import AdminPanel from '@/pages/AdminPanel';
 import OwnerPanelPage from '@/pages/OwnerPanel';
@@ -29,6 +30,7 @@ function App() {
                 <Route path="/products" element={<Products />} />
                 <Route path="/products/:category" element={<Products />} />
                 <Route path="/auth" element={<Auth />} />
+                <Route path="/cart" element={<Cart />} />
                 <Route path="/admin" element={<AdminPanel />} />
                 <Route path="/owner-panel" element={<OwnerPanelPage />} />
                 <Route path="*" element={<NotFound />} />

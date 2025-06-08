@@ -30,7 +30,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isOwner, setIsOwner] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [initialized, setInitialized] = useState(false);
 
   const checkUserRoles = async (userId: string) => {
     try {
@@ -76,10 +75,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setIsOwner(false);
     }
     
-    if (!initialized) {
-      setInitialized(true);
-      setLoading(false);
-    }
+    setLoading(false);
   };
 
   useEffect(() => {
@@ -98,7 +94,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         console.error('Error initializing auth:', error);
         if (mounted) {
           setLoading(false);
-          setInitialized(true);
         }
       }
     };
@@ -110,10 +105,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         
         if (!mounted) return;
 
-        // Only update if we're already initialized to prevent conflicts
-        if (initialized) {
-          await updateAuthState(session);
-        }
+        await updateAuthState(session);
       }
     );
 
@@ -124,7 +116,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, [initialized]);
+  }, []);
 
   const signUp = async (email: string, password: string, fullName: string) => {
     const redirectUrl = `${window.location.origin}/`;
@@ -151,11 +143,25 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    setSession(null);
-    setIsAdmin(false);
-    setIsOwner(false);
+    console.log('SignOut called in AuthContext');
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error('Supabase signOut error:', error);
+        throw error;
+      }
+      
+      // Clear local state immediately
+      setUser(null);
+      setSession(null);
+      setIsAdmin(false);
+      setIsOwner(false);
+      
+      console.log('SignOut completed successfully');
+    } catch (error) {
+      console.error('Error in signOut:', error);
+      throw error;
+    }
   };
 
   const value = {
