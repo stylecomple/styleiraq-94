@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -81,7 +82,74 @@ const DiscountManagement = () => {
     }
   });
 
-  // Create discount mutation - Fixed to properly handle INSERT
+  // Apply discounts manually to products
+  const applyDiscountsToProducts = async () => {
+    try {
+      console.log('Starting to apply discounts to products...');
+      
+      // First, reset all product discounts to 0
+      const { error: resetError } = await supabase
+        .from('products')
+        .update({ discount_percentage: 0 })
+        .neq('id', '00000000-0000-0000-0000-000000000000'); // Update all products
+      
+      if (resetError) {
+        console.error('Error resetting discounts:', resetError);
+        throw resetError;
+      }
+
+      console.log('Reset all product discounts to 0');
+
+      // Get all active discounts
+      const { data: activeDiscounts, error: discountsError } = await supabase
+        .from('active_discounts')
+        .select('*')
+        .eq('is_active', true);
+
+      if (discountsError) {
+        console.error('Error fetching discounts:', discountsError);
+        throw discountsError;
+      }
+
+      console.log('Active discounts:', activeDiscounts);
+
+      if (activeDiscounts && activeDiscounts.length > 0) {
+        // Apply each discount
+        for (const discount of activeDiscounts) {
+          let updateQuery = supabase.from('products').update({
+            discount_percentage: discount.discount_percentage
+          });
+
+          if (discount.discount_type === 'all_products') {
+            // Apply to all products
+            updateQuery = updateQuery.neq('id', '00000000-0000-0000-0000-000000000000');
+          } else if (discount.discount_type === 'category') {
+            // Apply to products in specific category
+            updateQuery = updateQuery.contains('categories', [discount.target_value]);
+          } else if (discount.discount_type === 'subcategory') {
+            // Apply to products in specific subcategory
+            updateQuery = updateQuery.contains('subcategories', [discount.target_value]);
+          }
+
+          const { error: applyError } = await updateQuery;
+          
+          if (applyError) {
+            console.error(`Error applying discount ${discount.id}:`, applyError);
+            throw applyError;
+          }
+
+          console.log(`Applied discount ${discount.discount_percentage}% for ${discount.discount_type}`);
+        }
+      }
+
+      console.log('Successfully applied all discounts');
+    } catch (error) {
+      console.error('Error in applyDiscountsToProducts:', error);
+      throw error;
+    }
+  };
+
+  // Create discount mutation
   const createDiscountMutation = useMutation({
     mutationFn: async () => {
       console.log('Creating discount with:', {
@@ -110,7 +178,7 @@ const DiscountManagement = () => {
 
       console.log('Inserting discount data:', discountData);
 
-      // Use INSERT to create new discount
+      // Insert new discount
       const { data, error } = await supabase
         .from('active_discounts')
         .insert([discountData])
@@ -123,6 +191,10 @@ const DiscountManagement = () => {
       }
       
       console.log('Discount created successfully:', data);
+
+      // Apply discounts to products manually
+      await applyDiscountsToProducts();
+      
       return data;
     },
     onSuccess: () => {
@@ -160,6 +232,9 @@ const DiscountManagement = () => {
         .eq('id', discountId);
       
       if (error) throw error;
+
+      // Reapply remaining discounts after deletion
+      await applyDiscountsToProducts();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['active-discounts'] });
