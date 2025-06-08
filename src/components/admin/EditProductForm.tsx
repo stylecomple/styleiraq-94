@@ -99,7 +99,7 @@ const EditProductForm = ({ product, onClose }: EditProductFormProps) => {
         subcategories: productData.subcategories,
         cover_image: productData.cover_image || null,
         images: images,
-        options: cleanedOptions,
+        options: cleanedOptions as any, // Cast to Json type
         stock_quantity: parseInt(productData.stock_quantity) || 0,
         discount_percentage: parseInt(productData.discount_percentage) || 0
       };

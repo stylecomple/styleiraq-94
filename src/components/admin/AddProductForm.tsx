@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -96,7 +95,7 @@ const AddProductForm = ({ onClose }: AddProductFormProps) => {
         subcategories: productData.subcategories,
         cover_image: productData.cover_image || null,
         images: productData.images,
-        options: cleanedOptions,
+        options: cleanedOptions as any, // Cast to Json type
         stock_quantity: productData.ignore_stock ? null : (parseInt(productData.stock_quantity) || 0)
       };
 
@@ -332,7 +331,6 @@ const AddProductForm = ({ onClose }: AddProductFormProps) => {
               <ImageUploadCrop
                 currentImage={formData.cover_image}
                 onImageUploaded={(url) => setFormData(prev => ({ ...prev, cover_image: url }))}
-                onRemove={() => setFormData(prev => ({ ...prev, cover_image: '' }))}
                 label="الصورة الرئيسية *"
               />
             </div>
