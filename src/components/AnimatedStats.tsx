@@ -5,12 +5,6 @@ import CountUpAnimation from './CountUpAnimation';
 const AnimatedStats = () => {
   const stats = [
     {
-      number: 1000,
-      suffix: '+',
-      label: 'منتج متنوع',
-      color: 'text-pink-600'
-    },
-    {
       number: 500,
       suffix: '+',
       label: 'عميل راضٍ',
@@ -31,7 +25,7 @@ const AnimatedStats = () => {
   ];
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-16">
+    <>
       {stats.map((stat, index) => (
         <div
           key={index}
@@ -48,7 +42,7 @@ const AnimatedStats = () => {
           <div className="text-gray-600 font-medium">{stat.label}</div>
         </div>
       ))}
-    </div>
+    </>
   );
 };
 

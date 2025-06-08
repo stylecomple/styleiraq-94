@@ -1,7 +1,6 @@
 
 import React from 'react';
 import { Truck, Shield, Gift, Headphones, Star, Heart } from 'lucide-react';
-import AnimatedStats from './AnimatedStats';
 
 const FeaturesSection = () => {
   const features = [
@@ -96,9 +95,6 @@ const FeaturesSection = () => {
             </div>
           ))}
         </div>
-
-        {/* Animated Trust Indicators */}
-        <AnimatedStats />
       </div>
     </section>
   );

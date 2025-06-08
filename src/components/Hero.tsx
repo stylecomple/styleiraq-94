@@ -1,8 +1,8 @@
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { ShoppingBag, Sparkles, Star, Heart } from 'lucide-react';
 import AnimatedStats from './AnimatedStats';
+import CountUpAnimation from './CountUpAnimation';
 
 interface HeroProps {
   onStartShopping: () => void;
@@ -67,23 +67,23 @@ const Hero = ({ onStartShopping, onBrowseCollections, onCategoryClick, productCo
             </Button>
           </div>
 
-          {/* Updated Stats Section with real product count */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-16">
-            <AnimatedStats />
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20">
-              <div className="text-3xl font-bold text-pink-600 mb-2">
-                +{productCount || 1000}
+          {/* Responsive Stats Section with Product Count */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-16 max-w-6xl mx-auto px-4">
+            {/* Product Count Card - Responsive and prominent */}
+            <div className="bg-white/90 backdrop-blur-sm rounded-3xl p-6 md:p-8 shadow-xl border border-white/30 transform hover:scale-105 transition-all duration-300 hover:shadow-2xl">
+              <div className="text-4xl md:text-5xl font-bold text-transparent bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text mb-3">
+                <CountUpAnimation
+                  end={productCount || 1000}
+                  duration={2500}
+                  suffix="+"
+                />
               </div>
-              <div className="text-gray-600 font-medium">منتج</div>
+              <div className="text-gray-700 font-semibold text-lg md:text-xl">منتج متنوع</div>
+              <div className="mt-2 h-1 bg-gradient-to-r from-pink-500 to-purple-500 rounded-full"></div>
             </div>
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20">
-              <div className="text-3xl font-bold text-purple-600 mb-2">99%</div>
-              <div className="text-gray-600 font-medium">رضا العملاء</div>
-            </div>
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20">
-              <div className="text-3xl font-bold text-indigo-600 mb-2">24/7</div>
-              <div className="text-gray-600 font-medium">خدمة العملاء</div>
-            </div>
+            
+            {/* Other Stats Cards */}
+            <AnimatedStats />
           </div>
         </div>
 
