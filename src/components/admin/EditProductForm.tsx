@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,7 +22,22 @@ interface EditProductFormProps {
 const EditProductForm = ({ product, onClose }: EditProductFormProps) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [categories, setCategories] = useState<any[]>([]);
+  
+  // Fetch categories from database
+  const { data: availableCategories = [] } = useQuery({
+    queryKey: ['categories'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('categories')
+        .select(`
+          *,
+          subcategories (*)
+        `);
+      
+      if (error) throw error;
+      return data || [];
+    }
+  });
   
   // Convert old colors format to new options format
   const convertColorsToOptions = (colors: string[] | null): ProductOption[] => {
@@ -67,18 +82,6 @@ const EditProductForm = ({ product, onClose }: EditProductFormProps) => {
     stock_quantity: product.stock_quantity?.toString() || '',
     discount_percentage: product.discount_percentage?.toString() || '0'
   });
-
-  // Load categories from localStorage
-  useEffect(() => {
-    const savedCategories = localStorage.getItem('productCategories');
-    if (savedCategories) {
-      try {
-        setCategories(JSON.parse(savedCategories));
-      } catch (error) {
-        console.error('Error loading categories:', error);
-      }
-    }
-  }, []);
 
   const updateProductMutation = useMutation({
     mutationFn: async (productData: any) => {
@@ -178,7 +181,7 @@ const EditProductForm = ({ product, onClose }: EditProductFormProps) => {
   const isExclusiveOffer = formData.categories.includes('exclusive_offers');
 
   // Get all available subcategories based on selected categories
-  const availableSubcategories = categories
+  const availableSubcategories = availableCategories
     .filter(cat => formData.categories.includes(cat.id))
     .flatMap(cat => cat.subcategories || []);
 
@@ -247,8 +250,8 @@ const EditProductForm = ({ product, onClose }: EditProductFormProps) => {
           <div className="space-y-2">
             <Label>الفئات الرئيسية *</Label>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              {categories.map((category) => (
-                <div key={category.id} className="flex items-center space-x-2">
+              {availableCategories.map((category) => (
+                <div key={category.id} className="flex items-center space-x-2 space-x-reverse">
                   <Checkbox
                     id={category.id}
                     checked={formData.categories.includes(category.id)}
@@ -270,7 +273,7 @@ const EditProductForm = ({ product, onClose }: EditProductFormProps) => {
               <Label>الفئات الفرعية</Label>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 {availableSubcategories.map((subcategory) => (
-                  <div key={subcategory.id} className="flex items-center space-x-2">
+                  <div key={subcategory.id} className="flex items-center space-x-2 space-x-reverse">
                     <Checkbox
                       id={subcategory.id}
                       checked={formData.subcategories.includes(subcategory.id)}

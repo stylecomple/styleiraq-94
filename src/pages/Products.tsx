@@ -18,7 +18,7 @@ interface ProductsData {
 const Products = () => {
   const [selectedCategory, setSelectedCategory] = useState<CategoryType>('all');
   const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(null);
-  const [availableSubcategories, setAvailableSubcategories] = useState<string[]>([]);
+  const [availableSubcategories, setAvailableSubcategories] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const { user, loading: authLoading } = useAuth();
 
@@ -68,9 +68,9 @@ const Products = () => {
         } as Product;
       });
 
-      // Filter by subcategory if selected
+      // Filter by subcategory if selected - now using subcategory IDs
       if (selectedSubcategory && filteredProducts.length > 0) {
-        console.log('Filtering by subcategory:', selectedSubcategory);
+        console.log('Filtering by subcategory ID:', selectedSubcategory);
         filteredProducts = filteredProducts.filter(product => {
           const hasSubcategory = product.subcategories && 
             Array.isArray(product.subcategories) && 
@@ -94,7 +94,7 @@ const Products = () => {
     setSelectedSubcategory(null); // Reset subcategory when changing main category
   };
 
-  const handleSubcategoriesChange = (subcategories: string[]) => {
+  const handleSubcategoriesChange = (subcategories: any[]) => {
     console.log('Subcategories changed:', subcategories);
     setAvailableSubcategories(subcategories);
     setSelectedSubcategory(null); // Reset selected subcategory

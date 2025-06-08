@@ -9,7 +9,7 @@ interface SubCategory {
 }
 
 interface SubCategorySectionProps {
-  subcategories: SubCategory[] | string[];
+  subcategories: SubCategory[];
   selectedSubcategory: string | null;
   onSubcategorySelect: (subcategory: string | null) => void;
 }
@@ -41,26 +41,21 @@ const SubCategorySection = ({ subcategories, selectedSubcategory, onSubcategoryS
           جميع الفئات الفرعية
         </Button>
         
-        {subcategories.map((subcategory, index) => {
-          // Handle both object and string formats
-          const subcategoryName = typeof subcategory === 'string' ? subcategory : subcategory.name;
-          const subcategoryKey = typeof subcategory === 'string' ? subcategory : subcategory.id;
-          
-          return (
-            <Button
-              key={`${subcategoryKey}-${index}`}
-              variant={selectedSubcategory === subcategoryName ? "default" : "outline"}
-              className={`transition-all duration-200 ${
-                selectedSubcategory === subcategoryName 
-                  ? 'bg-gradient-to-r from-pink-500 to-purple-600 text-white' 
-                  : 'hover:bg-gradient-to-r hover:from-pink-50 hover:to-purple-50 hover:border-pink-300'
-              }`}
-              onClick={() => onSubcategorySelect(subcategoryName)}
-            >
-              {subcategoryName}
-            </Button>
-          );
-        })}
+        {subcategories.map((subcategory) => (
+          <Button
+            key={subcategory.id}
+            variant={selectedSubcategory === subcategory.id ? "default" : "outline"}
+            className={`transition-all duration-200 ${
+              selectedSubcategory === subcategory.id 
+                ? 'bg-gradient-to-r from-pink-500 to-purple-600 text-white' 
+                : 'hover:bg-gradient-to-r hover:from-pink-50 hover:to-purple-50 hover:border-pink-300'
+            }`}
+            onClick={() => onSubcategorySelect(subcategory.id)}
+          >
+            <span className="mr-2">{subcategory.icon}</span>
+            {subcategory.name}
+          </Button>
+        ))}
       </div>
     </div>
   );

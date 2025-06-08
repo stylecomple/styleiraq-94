@@ -23,7 +23,7 @@ interface Subcategory {
 interface CategorySectionProps {
   selectedCategory: CategoryType;
   onCategorySelect: (categoryId: CategoryType) => void;
-  onSubcategoriesChange?: (subcategories: string[]) => void;
+  onSubcategoriesChange?: (subcategories: Subcategory[]) => void;
 }
 
 const CategorySection = ({ selectedCategory, onCategorySelect, onSubcategoriesChange }: CategorySectionProps) => {
@@ -72,9 +72,8 @@ const CategorySection = ({ selectedCategory, onCategorySelect, onSubcategoriesCh
     
     if (onSubcategoriesChange) {
       const subcategories = selectedCategoryData?.subcategories || [];
-      const subcategoryNames = subcategories.map(sub => sub.name);
-      console.log('Passing subcategories:', subcategoryNames);
-      onSubcategoriesChange(subcategoryNames);
+      console.log('Passing subcategories:', subcategories);
+      onSubcategoriesChange(subcategories);
     }
   };
 
