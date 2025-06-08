@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { ShoppingBag, Sparkles, Star, Heart } from 'lucide-react';
@@ -30,6 +31,22 @@ const Hero = ({ onStartShopping, onBrowseCollections, onCategoryClick, productCo
 
       <div className="relative z-10 container mx-auto px-4 py-20">
         <div className="text-center mb-16">
+          {/* Animated Logo Section */}
+          <div className="mb-12 flex justify-center">
+            <div className="relative group">
+              <div className="absolute -inset-4 bg-gradient-to-r from-pink-600 via-purple-600 to-indigo-600 rounded-full blur-lg opacity-30 group-hover:opacity-50 transition-opacity duration-300 animate-pulse"></div>
+              <div className="relative bg-white/90 backdrop-blur-sm rounded-full p-6 shadow-2xl border border-white/50 transform hover:scale-110 transition-all duration-500 hover:rotate-3">
+                <img
+                  src="https://pouch.jumpshare.com/preview/V6JoOvzRJQ9neH4iUjD59vkfVG_sQ7Q53ZE_eV93Zm9i0YGn2rYPAH7qXbykEgOSg6Oz1sHpERFyxYe3i1yD5qEHsUMlARSiOAn0PrnY9HE"
+                  alt="متجر الجمال والأناقة"
+                  className="w-32 h-32 md:w-40 md:h-40 object-contain filter drop-shadow-lg animate-fade-in"
+                />
+              </div>
+              <div className="absolute -top-2 -right-2 w-6 h-6 bg-gradient-to-r from-pink-500 to-purple-500 rounded-full animate-bounce"></div>
+              <div className="absolute -bottom-2 -left-2 w-4 h-4 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full animate-ping"></div>
+            </div>
+          </div>
+
           <div className="inline-flex items-center gap-2 bg-gradient-to-r from-pink-100 to-purple-100 rounded-full px-6 py-3 mb-8">
             <Sparkles className="w-5 h-5 text-pink-600" />
             <span className="text-pink-800 font-medium">أجمل المنتجات للعائلة</span>
