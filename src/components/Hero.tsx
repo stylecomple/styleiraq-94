@@ -31,7 +31,7 @@ const Hero = ({ onStartShopping, onBrowseCollections, onCategoryClick, productCo
 
       <div className="relative z-10 container mx-auto px-4 py-20">
         <div className="text-center mb-16">
-          {/* Animated Logo Section */}
+          {/* Animated Logo Section - Made Circular */}
           <div className="mb-12 flex justify-center">
             <div className="relative group">
               <div className="absolute -inset-4 bg-gradient-to-r from-pink-600 via-purple-600 to-indigo-600 rounded-full blur-lg opacity-30 group-hover:opacity-50 transition-opacity duration-300 animate-pulse"></div>
@@ -39,7 +39,7 @@ const Hero = ({ onStartShopping, onBrowseCollections, onCategoryClick, productCo
                 <img
                   src="https://pouch.jumpshare.com/preview/V6JoOvzRJQ9neH4iUjD59vkfVG_sQ7Q53ZE_eV93Zm9i0YGn2rYPAH7qXbykEgOSg6Oz1sHpERFyxYe3i1yD5qEHsUMlARSiOAn0PrnY9HE"
                   alt="متجر الجمال والأناقة"
-                  className="w-32 h-32 md:w-40 md:h-40 object-contain filter drop-shadow-lg animate-fade-in"
+                  className="w-32 h-32 md:w-40 md:h-40 object-cover rounded-full filter drop-shadow-lg animate-fade-in"
                 />
               </div>
               <div className="absolute -top-2 -right-2 w-6 h-6 bg-gradient-to-r from-pink-500 to-purple-500 rounded-full animate-bounce"></div>

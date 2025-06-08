@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -82,7 +81,7 @@ const DiscountManagement = () => {
     }
   });
 
-  // Create discount mutation - Fixed to use INSERT
+  // Create discount mutation - Fixed to properly handle INSERT
   const createDiscountMutation = useMutation({
     mutationFn: async () => {
       console.log('Creating discount with:', {
@@ -92,7 +91,14 @@ const DiscountManagement = () => {
       });
 
       const { data: userData, error: userError } = await supabase.auth.getUser();
-      if (userError) throw userError;
+      if (userError) {
+        console.error('Auth error:', userError);
+        throw new Error('فشل في التحقق من المستخدم');
+      }
+
+      if (!userData.user) {
+        throw new Error('المستخدم غير مسجل الدخول');
+      }
 
       const discountData = {
         discount_type: discountType,
@@ -101,6 +107,8 @@ const DiscountManagement = () => {
         created_by: userData.user.id,
         is_active: true
       };
+
+      console.log('Inserting discount data:', discountData);
 
       // Use INSERT to create new discount
       const { data, error } = await supabase
@@ -111,7 +119,7 @@ const DiscountManagement = () => {
       
       if (error) {
         console.error('Discount creation error:', error);
-        throw error;
+        throw new Error(error.message || 'فشل في إنشاء الخصم');
       }
       
       console.log('Discount created successfully:', data);
@@ -192,6 +200,7 @@ const DiscountManagement = () => {
       return;
     }
 
+    console.log('Starting discount creation...');
     createDiscountMutation.mutate();
   };
 
