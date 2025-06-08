@@ -55,13 +55,18 @@ const OwnerOrdersManagement = () => {
 
   const deleteOrderMutation = useMutation({
     mutationFn: async (order: any) => {
+      console.log('Starting order deletion for order:', order.id);
+      
       // First delete order items
       const { error: orderItemsError } = await supabase
         .from('order_items')
         .delete()
         .eq('order_id', order.id);
       
-      if (orderItemsError) throw orderItemsError;
+      if (orderItemsError) {
+        console.error('Error deleting order items:', orderItemsError);
+        throw orderItemsError;
+      }
 
       // Then delete the order
       const { error } = await supabase
@@ -69,7 +74,12 @@ const OwnerOrdersManagement = () => {
         .delete()
         .eq('id', order.id);
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error deleting order:', error);
+        throw error;
+      }
+
+      console.log('Order deleted successfully');
 
       // Log the change
       await logChange('order_deleted_by_owner', 'order', order.id, {
@@ -81,13 +91,18 @@ const OwnerOrdersManagement = () => {
       return order;
     },
     onSuccess: (deletedOrder) => {
-      // Invalidate multiple query keys to ensure fresh data
+      console.log('Order deletion mutation successful, invalidating queries');
+      
+      // Remove the deleted order from cache immediately
+      queryClient.setQueryData(['owner-orders'], (oldData: any) => {
+        if (!oldData) return oldData;
+        return oldData.filter((order: any) => order.id !== deletedOrder.id);
+      });
+      
+      // Invalidate and refetch all related queries
       queryClient.invalidateQueries({ queryKey: ['owner-orders'] });
       queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
       queryClient.invalidateQueries({ queryKey: ['orders'] });
-      
-      // Force refetch to ensure UI is updated
-      queryClient.refetchQueries({ queryKey: ['owner-orders'] });
       
       toast({
         title: 'تم حذف الطلب',
@@ -98,7 +113,7 @@ const OwnerOrdersManagement = () => {
       console.error('Error deleting order:', error);
       toast({
         title: 'خطأ',
-        description: 'فشل في حذف الطلب',
+        description: 'فشل في حذف الطلب. يرجى المحاولة مرة أخرى.',
         variant: 'destructive',
       });
     }
@@ -199,8 +214,9 @@ const OwnerOrdersManagement = () => {
                         <AlertDialogAction
                           onClick={() => deleteOrderMutation.mutate(order)}
                           className="bg-red-600 hover:bg-red-700"
+                          disabled={deleteOrderMutation.isPending}
                         >
-                          حذف الطلب
+                          {deleteOrderMutation.isPending ? 'جاري الحذف...' : 'حذف الطلب'}
                         </AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>

@@ -8,7 +8,7 @@ const FeaturesSection = () => {
     {
       icon: Truck,
       title: 'توصيل سريع',
-      description: 'توصيل مجاني لجميع أنحاء العراق خلال 24-48 ساعة',
+      description: 'توصيل لجميع أنحاء العراق خلال 24-48 ساعة',
       color: 'pink',
       gradient: 'from-pink-500 to-rose-500'
     },
