@@ -7,7 +7,6 @@ import { Product, CategoryType } from '@/types';
 import ProductCard from '@/components/ProductCard';
 import CategorySection from '@/components/CategorySection';
 import SearchBar from '@/components/SearchBar';
-import Header from '@/components/Header';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface ProductsData {
@@ -18,7 +17,7 @@ interface ProductsData {
 const Products = () => {
   const [selectedCategory, setSelectedCategory] = useState<CategoryType>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
 
   const [searchParams] = useSearchParams();
   const categoryParam = searchParams.get('category');
@@ -29,7 +28,7 @@ const Products = () => {
     }
   }, [categoryParam]);
 
-  const { data: productsData, isLoading, isError, error } = useQuery<ProductsData>({
+  const { data: productsData, isLoading: productsLoading, isError, error } = useQuery<ProductsData>({
     queryKey: ['products', selectedCategory, searchQuery],
     queryFn: async () => {
       let query = supabase
@@ -55,6 +54,7 @@ const Products = () => {
         totalCount: count || 0,
       };
     },
+    enabled: !authLoading, // Only run query when auth is not loading
   });
 
   const handleCategorySelect = (categoryId: CategoryType) => {
@@ -62,11 +62,10 @@ const Products = () => {
   };
 
   const filteredProducts = productsData?.products || [];
+  const isLoading = authLoading || productsLoading;
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header />
-      
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
           <SearchBar searchQuery={searchQuery} onSearchChange={setSearchQuery} />
@@ -79,15 +78,18 @@ const Products = () => {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
           {isLoading ? (
-            <div className="col-span-1 sm:col-span-2 md:col-span-3 lg:col-span-4 text-center">
-              جاري التحميل...
+            <div className="col-span-1 sm:col-span-2 md:col-span-3 lg:col-span-4 text-center py-8">
+              <div className="flex items-center justify-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-600"></div>
+                <span className="mr-2">جاري التحميل...</span>
+              </div>
             </div>
           ) : isError ? (
-            <div className="col-span-1 sm:col-span-2 md:col-span-3 lg:col-span-4 text-center text-red-500">
-              Error: {(error as Error).message}
+            <div className="col-span-1 sm:col-span-2 md:col-span-3 lg:col-span-4 text-center text-red-500 py-8">
+              خطأ في تحميل المنتجات: {(error as Error).message}
             </div>
           ) : filteredProducts.length === 0 ? (
-            <div className="col-span-1 sm:col-span-2 md:col-span-3 lg:col-span-4 text-center">
+            <div className="col-span-1 sm:col-span-2 md:col-span-3 lg:col-span-4 text-center py-8">
               لا توجد منتجات في هذه الفئة.
             </div>
           ) : (
