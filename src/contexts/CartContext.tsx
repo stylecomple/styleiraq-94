@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -55,15 +54,22 @@ export const CartProvider = ({ children }: CartProviderProps) => {
           : item.id === product.id && !item.selectedOption
       );
       
-      // Determine the correct price to use
+      // Use the provided optionPrice (which should already include discount) or calculate discounted price
       let finalPrice = product.price;
-      if (selectedOption && optionPrice !== undefined) {
+      if (optionPrice !== undefined) {
         finalPrice = optionPrice;
       } else if (selectedOption && product.options) {
         const selectedOptionData = product.options.find((opt: any) => opt.name === selectedOption);
         if (selectedOptionData && selectedOptionData.price !== undefined) {
           finalPrice = selectedOptionData.price;
+          // Apply discount if product has one
+          if (product.discount_percentage && product.discount_percentage > 0) {
+            finalPrice = Math.round(finalPrice * (1 - product.discount_percentage / 100));
+          }
         }
+      } else if (product.discount_percentage && product.discount_percentage > 0) {
+        // Apply discount to main price
+        finalPrice = Math.round(product.price * (1 - product.discount_percentage / 100));
       }
       
       if (existingItem) {

@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -36,7 +37,7 @@ const ProductCard = ({ product }: ProductCardProps) => {
 
   const calculateDiscountedPrice = (price: number, discountPercentage: number | null) => {
     if (!discountPercentage || discountPercentage === 0) return price;
-    return price * (1 - discountPercentage / 100);
+    return Math.round(price * (1 - discountPercentage / 100));
   };
 
   const allImages = product.images && product.images.length > 0 
@@ -63,9 +64,14 @@ const ProductCard = ({ product }: ProductCardProps) => {
       : null;
 
     // Determine the option price (use option price if available, otherwise use main product price)
-    const optionPrice = selectedOptionData?.price || product.price;
+    let optionPrice = selectedOptionData?.price || product.price;
+    
+    // Apply discount to the option price
+    if (product.discount_percentage && product.discount_percentage > 0) {
+      optionPrice = calculateDiscountedPrice(optionPrice, product.discount_percentage);
+    }
 
-    // Add to cart with the correct price
+    // Add to cart with the discounted price
     addToCart(product, selectedOption || undefined, optionPrice);
     
     toast({
@@ -76,8 +82,7 @@ const ProductCard = ({ product }: ProductCardProps) => {
 
   const isOutOfStock = !product.stock_quantity || product.stock_quantity === 0;
   const hasOptions = product.options && product.options.length > 0;
-  const isExclusiveOffer = product.categories?.includes('exclusive_offers');
-  const hasDiscount = isExclusiveOffer && product.discount_percentage && product.discount_percentage > 0;
+  const hasDiscount = product.discount_percentage && product.discount_percentage > 0;
   
   // Get the price for the selected option or use main price
   const selectedOptionData = hasOptions && selectedOption 
@@ -201,7 +206,7 @@ const ProductCard = ({ product }: ProductCardProps) => {
                         <SelectContent>
                           {product.options!.map((option) => (
                             <SelectItem key={option.name} value={option.name}>
-                              {option.name} {option.price && option.price !== product.price && `- ${formatPrice(option.price)}`}
+                              {option.name} {option.price && option.price !== product.price && `- ${formatPrice(hasDiscount ? calculateDiscountedPrice(option.price, product.discount_percentage) : option.price)}`}
                             </SelectItem>
                           ))}
                         </SelectContent>

@@ -2,12 +2,45 @@
 import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import Hero from '@/components/Hero';
 import FeaturesSection from '@/components/FeaturesSection';
+import DiscountBanner from '@/components/DiscountBanner';
 
 const Index = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+
+  // Fetch real-time product count
+  const { data: productCount } = useQuery({
+    queryKey: ['product-count'],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from('products')
+        .select('*', { count: 'exact', head: true })
+        .eq('is_active', true);
+      
+      if (error) throw error;
+      return count || 0;
+    },
+    refetchInterval: 30000, // Refetch every 30 seconds
+  });
+
+  // Fetch active discounts for banner display
+  const { data: activeDiscounts } = useQuery({
+    queryKey: ['active-discounts-banner'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('active_discounts')
+        .select('*')
+        .eq('is_active', true);
+      
+      if (error) throw error;
+      return data;
+    },
+    refetchInterval: 60000, // Refetch every minute
+  });
 
   const handleStartShopping = () => {
     navigate('/products');
@@ -23,10 +56,16 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
+      {/* Discount Banners */}
+      {activeDiscounts && activeDiscounts.length > 0 && (
+        <DiscountBanner discounts={activeDiscounts} />
+      )}
+
       <Hero 
         onStartShopping={handleStartShopping} 
         onBrowseCollections={handleBrowseCollections} 
         onCategoryClick={handleCategoryClick}
+        productCount={productCount}
       />
       
       <FeaturesSection />

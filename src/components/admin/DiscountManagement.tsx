@@ -85,18 +85,35 @@ const DiscountManagement = () => {
   // Create discount mutation
   const createDiscountMutation = useMutation({
     mutationFn: async () => {
+      console.log('Creating discount with:', {
+        discount_type: discountType,
+        target_value: discountType === 'all_products' ? null : targetValue,
+        discount_percentage: discountPercentage,
+      });
+
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError) throw userError;
+
       const discountData = {
         discount_type: discountType,
         target_value: discountType === 'all_products' ? null : targetValue,
         discount_percentage: discountPercentage,
-        created_by: (await supabase.auth.getUser()).data.user?.id
+        created_by: userData.user.id
       };
 
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('active_discounts')
-        .insert([discountData]);
+        .insert([discountData])
+        .select()
+        .single();
       
-      if (error) throw error;
+      if (error) {
+        console.error('Discount creation error:', error);
+        throw error;
+      }
+      
+      console.log('Discount created successfully:', data);
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['active-discounts'] });
@@ -114,9 +131,10 @@ const DiscountManagement = () => {
       });
     },
     onError: (error: any) => {
+      console.error('Discount creation failed:', error);
       toast({
         title: 'خطأ',
-        description: 'فشل في إنشاء الخصم',
+        description: error.message || 'فشل في إنشاء الخصم',
         variant: 'destructive',
       });
     }
