@@ -33,7 +33,15 @@ const ProductsManagement = () => {
         .order('created_at', { ascending: false });
       
       if (error) throw error;
-      return data;
+      
+      // Handle legacy data and ensure proper typing
+      return data.map(product => ({
+        ...product,
+        // Convert old colors field to options format if needed
+        options: product.options || (product.colors ? product.colors.map((color: string) => ({ name: color, price: undefined })) : []),
+        // Ensure subcategories field exists
+        subcategories: product.subcategories || []
+      }));
     }
   });
 
@@ -249,8 +257,8 @@ const ProductsManagement = () => {
                   </div>
                 </TableCell>
                 <TableCell>{formatPrice(product.price)}</TableCell>
-                <TableCell className="max-w-[200px] truncate" title={formatOptions(product.options || product.colors, product.price)}>
-                  {formatOptions(product.options || product.colors, product.price)}
+                <TableCell className="max-w-[200px] truncate" title={formatOptions(product.options, product.price)}>
+                  {formatOptions(product.options, product.price)}
                 </TableCell>
                 <TableCell>{product.stock_quantity}</TableCell>
                 <TableCell>

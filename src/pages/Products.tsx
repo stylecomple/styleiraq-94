@@ -52,7 +52,13 @@ const Products = () => {
         throw new Error(error.message);
       }
 
-      let filteredProducts = data || [];
+      let filteredProducts = (data || []).map(product => ({
+        ...product,
+        // Handle legacy colors field - convert to options format
+        options: product.options || (product.colors ? product.colors.map((color: string) => ({ name: color, price: undefined })) : []),
+        // Ensure subcategories field exists
+        subcategories: product.subcategories || []
+      }));
 
       // Filter by subcategory if selected
       if (selectedSubcategory && filteredProducts.length > 0) {

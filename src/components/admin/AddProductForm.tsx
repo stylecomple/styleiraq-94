@@ -112,9 +112,10 @@ const AddProductForm = ({ onClose }: AddProductFormProps) => {
         description: '',
         price: '',
         categories: [],
+        subcategories: [],
         cover_image: '',
         images: [],
-        colors: '',
+        options: [],
         stock_quantity: '',
         ignore_stock: false
       });

@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,19 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ShoppingCart, Eye, Star, Heart } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 import { useToast } from '@/hooks/use-toast';
-
-interface Product {
-  id: string;
-  name: string;
-  description: string | null;
-  price: number;
-  categories: string[] | null;
-  cover_image: string | null;
-  images: string[] | null;
-  colors: string[] | null;
-  stock_quantity: number | null;
-  discount_percentage: number | null;
-}
+import { Product } from '@/types';
 
 interface ProductCardProps {
   product: Product;
@@ -28,7 +17,7 @@ interface ProductCardProps {
 
 const ProductCard = ({ product }: ProductCardProps) => {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
-  const [selectedColor, setSelectedColor] = useState<string>('');
+  const [selectedOption, setSelectedOption] = useState<string>('');
   const [isLiked, setIsLiked] = useState(false);
   const { addToCart } = useCart();
   const { toast } = useToast();
@@ -58,30 +47,41 @@ const ProductCard = ({ product }: ProductCardProps) => {
     : ['/placeholder.svg'];
 
   const handleAddToCart = () => {
-    const hasColors = product.colors && product.colors.length > 0;
+    const hasOptions = product.options && product.options.length > 0;
     
-    if (hasColors && !selectedColor) {
+    if (hasOptions && !selectedOption) {
       toast({
-        title: "يجب اختيار اللون",
-        description: "يرجى اختيار لون للمنتج قبل إضافته للسلة",
+        title: "يجب اختيار الخيار",
+        description: "يرجى اختيار خيار للمنتج قبل إضافته للسلة",
         variant: "destructive"
       });
       return;
     }
 
-    addToCart(product, selectedColor || undefined);
+    // Find the selected option details
+    const selectedOptionData = hasOptions && selectedOption 
+      ? product.options!.find(opt => opt.name === selectedOption)
+      : null;
+
+    addToCart(product, selectedOption || undefined, selectedOptionData?.price);
     
     toast({
       title: "تم إضافة المنتج",
-      description: `تم إضافة ${product.name} ${selectedColor ? `(${selectedColor})` : ''} إلى السلة`,
+      description: `تم إضافة ${product.name} ${selectedOption ? `(${selectedOption})` : ''} إلى السلة`,
     });
   };
 
   const isOutOfStock = !product.stock_quantity || product.stock_quantity === 0;
-  const hasColors = product.colors && product.colors.length > 0;
+  const hasOptions = product.options && product.options.length > 0;
   const isExclusiveOffer = product.categories?.includes('exclusive_offers');
   const hasDiscount = isExclusiveOffer && product.discount_percentage && product.discount_percentage > 0;
-  const finalPrice = hasDiscount ? calculateDiscountedPrice(product.price, product.discount_percentage) : product.price;
+  
+  // Get the price for the selected option or use main price
+  const selectedOptionData = hasOptions && selectedOption 
+    ? product.options!.find(opt => opt.name === selectedOption)
+    : null;
+  const currentPrice = selectedOptionData?.price || product.price;
+  const finalPrice = hasDiscount ? calculateDiscountedPrice(currentPrice, product.discount_percentage) : currentPrice;
 
   // الحصول على الفئة الأولى لعرضها كشارة
   const primaryCategory = product.categories && product.categories.length > 0 
@@ -188,17 +188,17 @@ const ProductCard = ({ product }: ProductCardProps) => {
                     {product.description || 'منتج عالي الجودة من أفضل العلامات التجارية العالمية'}
                   </p>
 
-                  {hasColors && (
+                  {hasOptions && (
                     <div className="space-y-2">
-                      <Label className="text-sm font-medium">اختر اللون: <span className="text-red-500">*</span></Label>
-                      <Select value={selectedColor} onValueChange={setSelectedColor}>
+                      <Label className="text-sm font-medium">اختر الخيار: <span className="text-red-500">*</span></Label>
+                      <Select value={selectedOption} onValueChange={setSelectedOption}>
                         <SelectTrigger className="w-full">
-                          <SelectValue placeholder="اختر لون" />
+                          <SelectValue placeholder="اختر خيار" />
                         </SelectTrigger>
                         <SelectContent>
-                          {product.colors!.map((color) => (
-                            <SelectItem key={color} value={color}>
-                              {color}
+                          {product.options!.map((option) => (
+                            <SelectItem key={option.name} value={option.name}>
+                              {option.name} {option.price && `- ${formatPrice(option.price)}`}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -211,13 +211,13 @@ const ProductCard = ({ product }: ProductCardProps) => {
                       {hasDiscount ? (
                         <div className="text-center">
                           <div className="text-lg text-gray-500 line-through">
-                            {formatPrice(product.price)}
+                            {formatPrice(currentPrice)}
                           </div>
                           <div className="text-3xl font-bold text-red-600">
                             {formatPrice(finalPrice)}
                           </div>
                           <div className="text-sm text-red-500 font-medium">
-                            وفر {formatPrice(product.price - finalPrice)}
+                            وفر {formatPrice(currentPrice - finalPrice)}
                           </div>
                         </div>
                       ) : (
@@ -274,16 +274,16 @@ const ProductCard = ({ product }: ProductCardProps) => {
             </div>
           )}
 
-          {hasColors && (
+          {hasOptions && (
             <div className="flex flex-wrap gap-1 justify-center pt-2">
-              {product.colors!.slice(0, 3).map((color, index) => (
+              {product.options!.slice(0, 3).map((option, index) => (
                 <Badge key={index} variant="outline" className="text-xs">
-                  {color}
+                  {option.name}
                 </Badge>
               ))}
-              {product.colors!.length > 3 && (
+              {product.options!.length > 3 && (
                 <Badge variant="outline" className="text-xs">
-                  +{product.colors!.length - 3}
+                  +{product.options!.length - 3}
                 </Badge>
               )}
             </div>
@@ -295,7 +295,7 @@ const ProductCard = ({ product }: ProductCardProps) => {
             {hasDiscount ? (
               <div className="text-center">
                 <div className="text-sm text-gray-500 line-through">
-                  {formatPrice(product.price)}
+                  {formatPrice(currentPrice)}
                 </div>
                 <div className="text-2xl font-bold bg-gradient-to-r from-red-600 to-red-700 bg-clip-text text-transparent">
                   {formatPrice(finalPrice)}
