@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import React, { useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,13 +19,6 @@ interface AddProductFormProps {
   onClose: () => void;
 }
 
-interface Category {
-  id: string;
-  name: string;
-  icon: string;
-  subcategories?: any[];
-}
-
 const AddProductForm = ({ onClose }: AddProductFormProps) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -35,7 +28,7 @@ const AddProductForm = ({ onClose }: AddProductFormProps) => {
     return options.map(option => ({
       name: option.name || '',
       price: typeof option.price === 'number' && !isNaN(option.price) ? option.price : undefined
-    })).filter(option => option.name.trim() !== ''); // Remove empty options
+    })).filter(option => option.name.trim() !== '');
   };
 
   const [formData, setFormData] = useState({
@@ -51,40 +44,28 @@ const AddProductForm = ({ onClose }: AddProductFormProps) => {
     ignore_stock: false
   });
 
-  const [availableCategories, setAvailableCategories] = useState<Category[]>([
-    { id: 'makeup', name: 'مكياج', icon: '💄' },
-    { id: 'perfumes', name: 'عطور', icon: '🌸' },
-    { id: 'flowers', name: 'ورد', icon: '🌹' },
-    { id: 'home', name: 'مستلزمات منزلية', icon: '🏠' },
-    { id: 'personal_care', name: 'عناية شخصية', icon: '🧴' },
-    { id: 'exclusive_offers', name: 'العروض الحصرية', icon: '✨' }
-  ]);
-
   const [showCategoryManager, setShowCategoryManager] = useState(false);
 
-  // تحميل الفئات من localStorage عند بدء تشغيل المكون
-  useEffect(() => {
-    const savedCategories = localStorage.getItem('productCategories');
-    if (savedCategories) {
-      try {
-        setAvailableCategories(JSON.parse(savedCategories));
-      } catch (error) {
-        console.error('Error loading categories from localStorage:', error);
-      }
+  // Fetch categories from database
+  const { data: availableCategories = [] } = useQuery({
+    queryKey: ['categories'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('categories')
+        .select(`
+          *,
+          subcategories (*)
+        `);
+      
+      if (error) throw error;
+      return data || [];
     }
-  }, []);
-
-  // حفظ الفئات في localStorage عند تغييرها
-  const handleCategoriesChange = (newCategories: Category[]) => {
-    setAvailableCategories(newCategories);
-    localStorage.setItem('productCategories', JSON.stringify(newCategories));
-  };
+  });
 
   const addProductMutation = useMutation({
     mutationFn: async (productData: any) => {
       console.log('Adding product with data:', productData);
 
-      // Clean the options data before sending to database
       const cleanedOptions = cleanOptionsData(productData.options);
 
       const productToInsert = {
@@ -95,7 +76,7 @@ const AddProductForm = ({ onClose }: AddProductFormProps) => {
         subcategories: productData.subcategories,
         cover_image: productData.cover_image || null,
         images: productData.images,
-        options: cleanedOptions as any, // Cast to Json type
+        options: cleanedOptions as any,
         stock_quantity: productData.ignore_stock ? null : (parseInt(productData.stock_quantity) || 0)
       };
 
@@ -200,7 +181,9 @@ const AddProductForm = ({ onClose }: AddProductFormProps) => {
       {showCategoryManager && (
         <CategoryManager 
           categories={availableCategories}
-          onCategoriesChange={handleCategoriesChange}
+          onCategoriesChange={() => {
+            queryClient.invalidateQueries({ queryKey: ['categories'] });
+          }}
           onClose={() => setShowCategoryManager(false)}
         />
       )}

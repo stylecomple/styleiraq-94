@@ -42,6 +42,30 @@ export type Database = {
         }
         Relationships: []
       }
+      categories: {
+        Row: {
+          created_at: string | null
+          icon: string
+          id: string
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          icon: string
+          id: string
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          icon?: string
+          id?: string
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       changes_log: {
         Row: {
           action_type: string
@@ -275,6 +299,41 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      subcategories: {
+        Row: {
+          category_id: string
+          created_at: string | null
+          icon: string
+          id: string
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          category_id: string
+          created_at?: string | null
+          icon: string
+          id: string
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          category_id?: string
+          created_at?: string | null
+          icon?: string
+          id?: string
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subcategories_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {

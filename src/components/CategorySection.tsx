@@ -1,5 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 
 type CategoryType = 'all' | string;
@@ -8,7 +10,14 @@ interface Category {
   id: CategoryType;
   name: string;
   icon: string;
-  subcategories?: string[];
+  subcategories?: Subcategory[];
+}
+
+interface Subcategory {
+  id: string;
+  name: string;
+  icon: string;
+  category_id: string;
 }
 
 interface CategorySectionProps {
@@ -18,32 +27,40 @@ interface CategorySectionProps {
 }
 
 const CategorySection = ({ selectedCategory, onCategorySelect, onSubcategoriesChange }: CategorySectionProps) => {
+  // Fetch categories from database
+  const { data: dbCategories } = useQuery({
+    queryKey: ['categories'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('categories')
+        .select(`
+          *,
+          subcategories (*)
+        `);
+      
+      if (error) throw error;
+      return data;
+    }
+  });
+
   const [categories, setCategories] = useState<Category[]>([
-    { id: 'all', name: 'جميع المنتجات', icon: '🛍️' },
-    { id: 'makeup', name: 'مكياج', icon: '💄' },
-    { id: 'perfumes', name: 'عطور', icon: '🌸' },
-    { id: 'flowers', name: 'ورد', icon: '🌹' },
-    { id: 'home', name: 'مستلزمات منزلية', icon: '🏠' },
-    { id: 'personal_care', name: 'عناية شخصية', icon: '🧴' },
-    { id: 'exclusive_offers', name: 'العروض الحصرية', icon: '✨' }
+    { id: 'all', name: 'جميع المنتجات', icon: '🛍️' }
   ]);
 
-  // تحميل الفئات من localStorage عند بدء تشغيل المكون
+  // Update categories when database data loads
   useEffect(() => {
-    const savedCategories = localStorage.getItem('productCategories');
-    if (savedCategories) {
-      try {
-        const loadedCategories = JSON.parse(savedCategories);
-        // إضافة خيار "جميع المنتجات" في البداية
-        setCategories([
-          { id: 'all', name: 'جميع المنتجات', icon: '🛍️' },
-          ...loadedCategories
-        ]);
-      } catch (error) {
-        console.error('Error loading categories from localStorage:', error);
-      }
+    if (dbCategories) {
+      const formattedCategories = dbCategories.map(cat => ({
+        ...cat,
+        subcategories: cat.subcategories || []
+      }));
+      
+      setCategories([
+        { id: 'all', name: 'جميع المنتجات', icon: '🛍️' },
+        ...formattedCategories
+      ]);
     }
-  }, []);
+  }, [dbCategories]);
 
   const handleCategorySelect = (categoryId: CategoryType) => {
     console.log('Category selected:', categoryId);
@@ -54,11 +71,8 @@ const CategorySection = ({ selectedCategory, onCategorySelect, onSubcategoriesCh
     console.log('Selected category data:', selectedCategoryData);
     
     if (onSubcategoriesChange) {
-      // Convert subcategory objects to strings if needed
       const subcategories = selectedCategoryData?.subcategories || [];
-      const subcategoryNames = subcategories.map(sub => 
-        typeof sub === 'string' ? sub : (sub as any).name
-      );
+      const subcategoryNames = subcategories.map(sub => sub.name);
       console.log('Passing subcategories:', subcategoryNames);
       onSubcategoriesChange(subcategoryNames);
     }

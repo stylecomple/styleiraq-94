@@ -1,5 +1,6 @@
-
 import React, { useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,6 +15,7 @@ interface Subcategory {
   id: string;
   name: string;
   icon: string;
+  category_id: string;
 }
 
 interface Category {
@@ -29,8 +31,10 @@ interface CategoryManagerProps {
   onClose: () => void;
 }
 
-const CategoryManager = ({ categories, onCategoriesChange, onClose }: CategoryManagerProps) => {
+const CategoryManager = ({ onClose }: CategoryManagerProps) => {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  
   const [newCategory, setNewCategory] = useState({ name: '', icon: '' });
   const [newSubcategory, setNewSubcategory] = useState({ name: '', icon: '', parentId: '' });
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
@@ -38,6 +42,163 @@ const CategoryManager = ({ categories, onCategoriesChange, onClose }: CategoryMa
   const [editCategoryData, setEditCategoryData] = useState({ name: '', icon: '' });
   const [editSubcategoryData, setEditSubcategoryData] = useState({ name: '', icon: '' });
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
+
+  // Fetch categories with subcategories
+  const { data: categories = [] } = useQuery({
+    queryKey: ['categories'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('categories')
+        .select(`
+          *,
+          subcategories (*)
+        `);
+      
+      if (error) throw error;
+      return data || [];
+    }
+  });
+
+  // Add category mutation
+  const addCategoryMutation = useMutation({
+    mutationFn: async ({ name, icon }: { name: string; icon: string }) => {
+      const categoryId = name.toLowerCase().replace(/\s+/g, '_');
+      
+      const { error } = await supabase
+        .from('categories')
+        .insert({ id: categoryId, name: name.trim(), icon });
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
+      setNewCategory({ name: '', icon: '' });
+      toast({
+        title: 'تم إضافة الفئة',
+        description: 'تم إضافة الفئة الجديدة بنجاح',
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'خطأ',
+        description: error.message || 'فشل في إضافة الفئة',
+        variant: 'destructive',
+      });
+    }
+  });
+
+  // Add subcategory mutation
+  const addSubcategoryMutation = useMutation({
+    mutationFn: async ({ name, icon, parentId }: { name: string; icon: string; parentId: string }) => {
+      const subcategoryId = `${parentId}_${name.toLowerCase().replace(/\s+/g, '_')}`;
+      
+      const { error } = await supabase
+        .from('subcategories')
+        .insert({ 
+          id: subcategoryId, 
+          name: name.trim(), 
+          icon, 
+          category_id: parentId 
+        });
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
+      setNewSubcategory({ name: '', icon: '', parentId: '' });
+      toast({
+        title: 'تم إضافة الفئة الفرعية',
+        description: 'تم إضافة الفئة الفرعية الجديدة بنجاح',
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'خطأ',
+        description: error.message || 'فشل في إضافة الفئة الفرعية',
+        variant: 'destructive',
+      });
+    }
+  });
+
+  // Update category mutation
+  const updateCategoryMutation = useMutation({
+    mutationFn: async ({ id, name, icon }: { id: string; name: string; icon: string }) => {
+      const { error } = await supabase
+        .from('categories')
+        .update({ name: name.trim(), icon })
+        .eq('id', id);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
+      setEditingCategory(null);
+      setEditCategoryData({ name: '', icon: '' });
+      toast({
+        title: 'تم تحديث الفئة',
+        description: 'تم تحديث الفئة بنجاح',
+      });
+    }
+  });
+
+  // Update subcategory mutation
+  const updateSubcategoryMutation = useMutation({
+    mutationFn: async ({ id, name, icon }: { id: string; name: string; icon: string }) => {
+      const { error } = await supabase
+        .from('subcategories')
+        .update({ name: name.trim(), icon })
+        .eq('id', id);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
+      setEditingSubcategory(null);
+      setEditSubcategoryData({ name: '', icon: '' });
+      toast({
+        title: 'تم تحديث الفئة الفرعية',
+        description: 'تم تحديث الفئة الفرعية بنجاح',
+      });
+    }
+  });
+
+  // Delete category mutation
+  const deleteCategoryMutation = useMutation({
+    mutationFn: async (categoryId: string) => {
+      const { error } = await supabase
+        .from('categories')
+        .delete()
+        .eq('id', categoryId);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
+      toast({
+        title: 'تم حذف الفئة',
+        description: 'تم حذف الفئة وجميع فئاتها الفرعية بنجاح',
+      });
+    }
+  });
+
+  // Delete subcategory mutation
+  const deleteSubcategoryMutation = useMutation({
+    mutationFn: async (subcategoryId: string) => {
+      const { error } = await supabase
+        .from('subcategories')
+        .delete()
+        .eq('id', subcategoryId);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
+      toast({
+        title: 'تم حذف الفئة الفرعية',
+        description: 'تم حذف الفئة الفرعية بنجاح',
+      });
+    }
+  });
 
   const addCategory = () => {
     if (!newCategory.name.trim() || !newCategory.icon) {
@@ -49,33 +210,9 @@ const CategoryManager = ({ categories, onCategoriesChange, onClose }: CategoryMa
       return;
     }
 
-    const categoryId = newCategory.name.toLowerCase().replace(/\s+/g, '_');
-    
-    if (categories.some(cat => cat.id === categoryId)) {
-      toast({
-        title: 'خطأ',
-        description: 'هذه الفئة موجودة بالفعل',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    const updatedCategories = [
-      ...categories,
-      {
-        id: categoryId,
-        name: newCategory.name.trim(),
-        icon: newCategory.icon,
-        subcategories: []
-      }
-    ];
-
-    onCategoriesChange(updatedCategories);
-    setNewCategory({ name: '', icon: '' });
-    
-    toast({
-      title: 'تم إضافة الفئة',
-      description: 'تم إضافة الفئة الجديدة بنجاح',
+    addCategoryMutation.mutate({
+      name: newCategory.name,
+      icon: newCategory.icon
     });
   };
 
@@ -89,42 +226,10 @@ const CategoryManager = ({ categories, onCategoriesChange, onClose }: CategoryMa
       return;
     }
 
-    const subcategoryId = `${newSubcategory.parentId}_${newSubcategory.name.toLowerCase().replace(/\s+/g, '_')}`;
-    
-    const updatedCategories = categories.map(cat => {
-      if (cat.id === newSubcategory.parentId) {
-        const existingSubcategories = cat.subcategories || [];
-        
-        if (existingSubcategories.some(sub => sub.id === subcategoryId)) {
-          toast({
-            title: 'خطأ',
-            description: 'هذه الفئة الفرعية موجودة بالفعل',
-            variant: 'destructive',
-          });
-          return cat;
-        }
-
-        return {
-          ...cat,
-          subcategories: [
-            ...existingSubcategories,
-            {
-              id: subcategoryId,
-              name: newSubcategory.name.trim(),
-              icon: newSubcategory.icon
-            }
-          ]
-        };
-      }
-      return cat;
-    });
-
-    onCategoriesChange(updatedCategories);
-    setNewSubcategory({ name: '', icon: '', parentId: '' });
-    
-    toast({
-      title: 'تم إضافة الفئة الفرعية',
-      description: 'تم إضافة الفئة الفرعية الجديدة بنجاح',
+    addSubcategoryMutation.mutate({
+      name: newSubcategory.name,
+      icon: newSubcategory.icon,
+      parentId: newSubcategory.parentId
     });
   };
 
@@ -134,7 +239,7 @@ const CategoryManager = ({ categories, onCategoriesChange, onClose }: CategoryMa
   };
 
   const saveEditCategory = () => {
-    if (!editCategoryData.name.trim() || !editCategoryData.icon) {
+    if (!editCategoryData.name.trim() || !editCategoryData.icon || !editingCategory) {
       toast({
         title: 'خطأ',
         description: 'يرجى إدخال اسم الفئة واختيار إيموجي',
@@ -143,19 +248,10 @@ const CategoryManager = ({ categories, onCategoriesChange, onClose }: CategoryMa
       return;
     }
 
-    const updatedCategories = categories.map(cat => 
-      cat.id === editingCategory 
-        ? { ...cat, name: editCategoryData.name.trim(), icon: editCategoryData.icon }
-        : cat
-    );
-
-    onCategoriesChange(updatedCategories);
-    setEditingCategory(null);
-    setEditCategoryData({ name: '', icon: '' });
-    
-    toast({
-      title: 'تم تحديث الفئة',
-      description: 'تم تحديث الفئة بنجاح',
+    updateCategoryMutation.mutate({
+      id: editingCategory,
+      name: editCategoryData.name,
+      icon: editCategoryData.icon
     });
   };
 
@@ -164,8 +260,8 @@ const CategoryManager = ({ categories, onCategoriesChange, onClose }: CategoryMa
     setEditSubcategoryData({ name: subcategory.name, icon: subcategory.icon });
   };
 
-  const saveEditSubcategory = (categoryId: string) => {
-    if (!editSubcategoryData.name.trim() || !editSubcategoryData.icon) {
+  const saveEditSubcategory = () => {
+    if (!editSubcategoryData.name.trim() || !editSubcategoryData.icon || !editingSubcategory) {
       toast({
         title: 'خطأ',
         description: 'يرجى إدخال اسم الفئة الفرعية واختيار إيموجي',
@@ -174,56 +270,10 @@ const CategoryManager = ({ categories, onCategoriesChange, onClose }: CategoryMa
       return;
     }
 
-    const updatedCategories = categories.map(cat => {
-      if (cat.id === categoryId) {
-        return {
-          ...cat,
-          subcategories: cat.subcategories?.map(sub => 
-            sub.id === editingSubcategory
-              ? { ...sub, name: editSubcategoryData.name.trim(), icon: editSubcategoryData.icon }
-              : sub
-          ) || []
-        };
-      }
-      return cat;
-    });
-
-    onCategoriesChange(updatedCategories);
-    setEditingSubcategory(null);
-    setEditSubcategoryData({ name: '', icon: '' });
-    
-    toast({
-      title: 'تم تحديث الفئة الفرعية',
-      description: 'تم تحديث الفئة الفرعية بنجاح',
-    });
-  };
-
-  const deleteCategory = (categoryId: string) => {
-    const updatedCategories = categories.filter(cat => cat.id !== categoryId);
-    onCategoriesChange(updatedCategories);
-    
-    toast({
-      title: 'تم حذف الفئة',
-      description: 'تم حذف الفئة وجميع فئاتها الفرعية بنجاح',
-    });
-  };
-
-  const deleteSubcategory = (categoryId: string, subcategoryId: string) => {
-    const updatedCategories = categories.map(cat => {
-      if (cat.id === categoryId) {
-        return {
-          ...cat,
-          subcategories: cat.subcategories?.filter(sub => sub.id !== subcategoryId) || []
-        };
-      }
-      return cat;
-    });
-
-    onCategoriesChange(updatedCategories);
-    
-    toast({
-      title: 'تم حذف الفئة الفرعية',
-      description: 'تم حذف الفئة الفرعية بنجاح',
+    updateSubcategoryMutation.mutate({
+      id: editingSubcategory,
+      name: editSubcategoryData.name,
+      icon: editSubcategoryData.icon
     });
   };
 
@@ -271,7 +321,7 @@ const CategoryManager = ({ categories, onCategoriesChange, onClose }: CategoryMa
                 </span>
               </div>
             </div>
-            <Button onClick={addCategory} className="bg-pink-600 hover:bg-pink-700">
+            <Button onClick={addCategory} className="bg-pink-600 hover:bg-pink-700" disabled={addCategoryMutation.isPending}>
               <Plus className="w-4 h-4 mr-2" />
               إضافة فئة
             </Button>
@@ -316,7 +366,7 @@ const CategoryManager = ({ categories, onCategoriesChange, onClose }: CategoryMa
                 onEmojiSelect={(emoji) => setNewSubcategory(prev => ({ ...prev, icon: emoji }))}
               />
             </div>
-            <Button onClick={addSubcategory} className="bg-blue-600 hover:bg-blue-700">
+            <Button onClick={addSubcategory} className="bg-blue-600 hover:bg-blue-700" disabled={addSubcategoryMutation.isPending}>
               <Plus className="w-4 h-4 mr-2" />
               إضافة فئة فرعية
             </Button>
@@ -355,7 +405,7 @@ const CategoryManager = ({ categories, onCategoriesChange, onClose }: CategoryMa
                           onChange={(e) => setEditCategoryData(prev => ({ ...prev, name: e.target.value }))}
                           className="w-40"
                         />
-                        <Button size="sm" onClick={saveEditCategory}>
+                        <Button size="sm" onClick={saveEditCategory} disabled={updateCategoryMutation.isPending}>
                           <Check className="w-4 h-4" />
                         </Button>
                         <Button size="sm" variant="outline" onClick={() => setEditingCategory(null)}>
@@ -388,7 +438,8 @@ const CategoryManager = ({ categories, onCategoriesChange, onClose }: CategoryMa
                       <Button 
                         size="sm" 
                         variant="destructive" 
-                        onClick={() => deleteCategory(category.id)}
+                        onClick={() => deleteCategoryMutation.mutate(category.id)}
+                        disabled={deleteCategoryMutation.isPending}
                       >
                         <X className="w-4 h-4" />
                       </Button>
@@ -412,7 +463,7 @@ const CategoryManager = ({ categories, onCategoriesChange, onClose }: CategoryMa
                               onChange={(e) => setEditSubcategoryData(prev => ({ ...prev, name: e.target.value }))}
                               className="w-40"
                             />
-                            <Button size="sm" onClick={() => saveEditSubcategory(category.id)}>
+                            <Button size="sm" onClick={saveEditSubcategory} disabled={updateSubcategoryMutation.isPending}>
                               <Check className="w-4 h-4" />
                             </Button>
                             <Button size="sm" variant="outline" onClick={() => setEditingSubcategory(null)}>
@@ -437,7 +488,8 @@ const CategoryManager = ({ categories, onCategoriesChange, onClose }: CategoryMa
                               <Button 
                                 size="sm" 
                                 variant="destructive" 
-                                onClick={() => deleteSubcategory(category.id, subcategory.id)}
+                                onClick={() => deleteSubcategoryMutation.mutate(subcategory.id)}
+                                disabled={deleteSubcategoryMutation.isPending}
                               >
                                 <X className="w-3 h-3" />
                               </Button>
