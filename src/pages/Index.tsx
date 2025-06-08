@@ -10,8 +10,11 @@ import Newsletter from '@/components/Newsletter';
 import Footer from '@/components/Footer';
 import DiscountBanner from '@/components/DiscountBanner';
 import { Product } from '@/types';
+import { useNavigate } from 'react-router-dom';
 
 const Index = () => {
+  const navigate = useNavigate();
+
   // Fetch active discounts for banner
   const { data: activeDiscounts } = useQuery({
     queryKey: ['active-discounts-banner'],
@@ -22,7 +25,14 @@ const Index = () => {
         .eq('is_active', true);
       
       if (error) throw error;
-      return data;
+      
+      // Type the data correctly for the DiscountBanner component
+      return (data || []).map(discount => ({
+        id: discount.id,
+        discount_type: discount.discount_type as 'all_products' | 'category' | 'subcategory',
+        target_value: discount.target_value,
+        discount_percentage: discount.discount_percentage
+      }));
     }
   });
 
@@ -51,6 +61,32 @@ const Index = () => {
     }
   });
 
+  // Get total product count for Hero component
+  const { data: productCount } = useQuery({
+    queryKey: ['product-count'],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from('products')
+        .select('*', { count: 'exact', head: true })
+        .eq('is_active', true);
+      
+      if (error) throw error;
+      return count || 0;
+    }
+  });
+
+  const handleStartShopping = () => {
+    navigate('/products');
+  };
+
+  const handleBrowseCollections = () => {
+    navigate('/products');
+  };
+
+  const handleCategoryClick = (categoryId: string) => {
+    navigate(`/products?category=${categoryId}`);
+  };
+
   return (
     <div className="min-h-screen">
       {/* Discount Banner */}
@@ -58,7 +94,12 @@ const Index = () => {
         <DiscountBanner discounts={activeDiscounts} />
       )}
       
-      <Hero />
+      <Hero 
+        onStartShopping={handleStartShopping}
+        onBrowseCollections={handleBrowseCollections}
+        onCategoryClick={handleCategoryClick}
+        productCount={productCount}
+      />
       <FeaturesSection />
       <CategorySection selectedCategory="all" onCategorySelect={() => {}} />
       
