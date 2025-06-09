@@ -403,6 +403,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      update_all_products_discount: {
+        Args: { new_discount: number }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "admin" | "user" | "owner"

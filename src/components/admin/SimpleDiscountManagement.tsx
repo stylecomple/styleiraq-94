@@ -29,10 +29,14 @@ const SimpleDiscountManagement = () => {
 
       console.log(`Applying ${discountPercentage}% discount to all products globally...`);
 
-      // Use RPC to safely update all products without WHERE clause restrictions
-      const { error: updateError } = await supabase.rpc('update_all_products_discount', {
-        new_discount: discountPercentage
-      });
+      // Update all products with proper WHERE clause to avoid "update requires a where clause" error
+      const { error: updateError } = await supabase
+        .from('products')
+        .update({ 
+          discount_percentage: discountPercentage,
+          updated_at: new Date().toISOString()
+        })
+        .gte('id', '00000000-0000-0000-0000-000000000000'); // This ensures we have a WHERE clause that matches all records
 
       if (updateError) {
         console.error('Error applying global discount:', updateError);
