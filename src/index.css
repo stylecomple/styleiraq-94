@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -37,19 +38,12 @@
     --radius: 0.5rem;
 
     --sidebar-background: 0 0% 98%;
-
     --sidebar-foreground: 240 5.3% 26.1%;
-
     --sidebar-primary: 240 5.9% 10%;
-
     --sidebar-primary-foreground: 0 0% 98%;
-
     --sidebar-accent: 240 4.8% 95.9%;
-
     --sidebar-accent-foreground: 240 5.9% 10%;
-
     --sidebar-border: 220 13% 91%;
-
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
@@ -90,6 +84,84 @@
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
+
+  /* Christmas Theme */
+  .theme-christmas {
+    --background: 354 100% 97%;
+    --foreground: 120 50% 15%;
+    --primary: 0 90% 50%;
+    --secondary: 120 50% 90%;
+    --accent: 120 40% 85%;
+    --card: 0 0% 100%;
+  }
+
+  .theme-christmas::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle at 20% 50%, rgba(255, 255, 255, 0.8) 2px, transparent 2px),
+                radial-gradient(circle at 80% 50%, rgba(255, 255, 255, 0.8) 1px, transparent 1px),
+                radial-gradient(circle at 40% 40%, rgba(255, 255, 255, 0.6) 1px, transparent 1px);
+    background-size: 50px 50px, 80px 80px, 120px 120px;
+    animation: snow 20s linear infinite;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  /* Valentine Theme */
+  .theme-valentine {
+    --background: 330 100% 98%;
+    --foreground: 330 50% 20%;
+    --primary: 330 80% 60%;
+    --secondary: 330 60% 90%;
+    --accent: 330 50% 85%;
+    --card: 0 0% 100%;
+  }
+
+  .theme-valentine::after {
+    content: "💕 💖 💕 💖 💕 💖 💕 💖 💕 💖 💕 💖 💕 💖 💕 💖";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    font-size: 20px;
+    opacity: 0.1;
+    animation: hearts 15s linear infinite;
+    pointer-events: none;
+    z-index: 1;
+    word-spacing: 30px;
+    line-height: 60px;
+  }
+
+  /* Halloween Theme */
+  .theme-halloween {
+    --background: 39 100% 97%;
+    --foreground: 20 50% 15%;
+    --primary: 39 100% 50%;
+    --secondary: 20 50% 90%;
+    --accent: 20 40% 85%;
+    --card: 0 0% 100%;
+  }
+
+  .theme-halloween::before {
+    content: "🎃 👻 🦇 🕷️ 🎃 👻 🦇 🕷️ 🎃 👻 🦇 🕷️";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    font-size: 16px;
+    opacity: 0.08;
+    animation: spooky 25s linear infinite;
+    pointer-events: none;
+    z-index: 1;
+    word-spacing: 40px;
+    line-height: 80px;
+  }
 }
 
 @layer base {
@@ -99,5 +171,33 @@
 
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+/* Theme Animations */
+@keyframes snow {
+  0% {
+    transform: translateY(-100vh) translateX(0);
+  }
+  100% {
+    transform: translateY(100vh) translateX(100px);
+  }
+}
+
+@keyframes hearts {
+  0% {
+    transform: translateY(-100vh) rotate(0deg);
+  }
+  100% {
+    transform: translateY(100vh) rotate(360deg);
+  }
+}
+
+@keyframes spooky {
+  0% {
+    transform: translateY(-100vh) translateX(0) rotate(0deg);
+  }
+  100% {
+    transform: translateY(100vh) translateX(-50px) rotate(180deg);
   }
 }

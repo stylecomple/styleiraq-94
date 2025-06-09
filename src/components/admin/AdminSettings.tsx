@@ -16,6 +16,12 @@ interface PaymentConfig {
   secret_key?: string;
 }
 
+interface ThemeConfig {
+  christmas: boolean;
+  valentine: boolean;
+  halloween: boolean;
+}
+
 const AdminSettings = () => {
   const { toast } = useToast();
   const { data: settings, isLoading, updateSettings } = useAdminSettings();
@@ -30,6 +36,11 @@ const AdminSettings = () => {
   const getZainConfig = (): PaymentConfig => {
     if (!settings?.zain_cash_config) return { enabled: false };
     return settings.zain_cash_config as unknown as PaymentConfig;
+  };
+
+  const getThemeConfig = (): ThemeConfig => {
+    if (!settings?.theme_config) return { christmas: false, valentine: false, halloween: false };
+    return settings.theme_config as unknown as ThemeConfig;
   };
 
   // Local state for form data
@@ -49,6 +60,12 @@ const AdminSettings = () => {
   const [zainApiKey, setZainApiKey] = useState(zainConfig.api_key ?? '');
   const [zainSecretKey, setZainSecretKey] = useState(zainConfig.secret_key ?? '');
 
+  // Theme Configuration
+  const themeConfig = getThemeConfig();
+  const [christmasTheme, setChristmasTheme] = useState(themeConfig.christmas);
+  const [valentineTheme, setValentineTheme] = useState(themeConfig.valentine);
+  const [halloweenTheme, setHalloweenTheme] = useState(themeConfig.halloween);
+
   // Update local state when settings change
   React.useEffect(() => {
     if (settings) {
@@ -67,6 +84,12 @@ const AdminSettings = () => {
       setZainMerchantId(zain.merchant_id ?? '');
       setZainApiKey(zain.api_key ?? '');
       setZainSecretKey(zain.secret_key ?? '');
+
+      // Theme settings
+      const theme = getThemeConfig();
+      setChristmasTheme(theme.christmas);
+      setValentineTheme(theme.valentine);
+      setHalloweenTheme(theme.halloween);
     }
   }, [settings]);
 
@@ -87,6 +110,11 @@ const AdminSettings = () => {
           merchant_id: zainMerchantId,
           api_key: zainApiKey,
           secret_key: zainSecretKey
+        },
+        theme_config: {
+          christmas: christmasTheme,
+          valentine: valentineTheme,
+          halloween: halloweenTheme
         }
       };
 
@@ -130,6 +158,60 @@ const AdminSettings = () => {
               id="store-status"
               checked={storeOpen}
               onCheckedChange={setStoreOpen}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Theme Configuration */}
+      <Card>
+        <CardHeader>
+          <CardTitle>إعدادات المظهر والثيمات</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <Label htmlFor="christmas-theme">ثيم الكريسماس 🎄</Label>
+              <p className="text-sm text-muted-foreground">
+                تفعيل المظهر الاحتفالي لموسم الكريسماس مع تأثيرات خاصة
+              </p>
+            </div>
+            <Switch
+              id="christmas-theme"
+              checked={christmasTheme}
+              onCheckedChange={setChristmasTheme}
+            />
+          </div>
+
+          <Separator />
+
+          <div className="flex items-center justify-between">
+            <div>
+              <Label htmlFor="valentine-theme">ثيم عيد الحب 💝</Label>
+              <p className="text-sm text-muted-foreground">
+                تفعيل المظهر الرومانسي لعيد الحب مع ألوان وردية وتأثيرات القلوب
+              </p>
+            </div>
+            <Switch
+              id="valentine-theme"
+              checked={valentineTheme}
+              onCheckedChange={setValentineTheme}
+            />
+          </div>
+
+          <Separator />
+
+          <div className="flex items-center justify-between">
+            <div>
+              <Label htmlFor="halloween-theme">ثيم الهالووين 🎃</Label>
+              <p className="text-sm text-muted-foreground">
+                تفعيل المظهر المرعب للهالووين مع ألوان برتقالية وسوداء
+              </p>
+            </div>
+            <Switch
+              id="halloween-theme"
+              checked={halloweenTheme}
+              onCheckedChange={setHalloweenTheme}
             />
           </div>
         </CardContent>

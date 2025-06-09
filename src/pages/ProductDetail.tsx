@@ -262,13 +262,6 @@ const ProductDetail = () => {
               </CardContent>
             </Card>
 
-            {/* Stock Info */}
-            {product.stock_quantity !== null && product.stock_quantity !== undefined && (
-              <div className="text-sm text-gray-600">
-                متوفر: {product.stock_quantity} قطعة
-              </div>
-            )}
-
             {/* Action Buttons */}
             <div className="flex gap-4">
               <Button 

@@ -7,6 +7,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { CartProvider } from "@/contexts/CartContext";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import Index from "@/pages/Index";
@@ -57,7 +58,9 @@ const App: React.FC = () => {
         <BrowserRouter>
           <AuthProvider>
             <CartProvider>
-              <AppContent />
+              <ThemeProvider>
+                <AppContent />
+              </ThemeProvider>
             </CartProvider>
           </AuthProvider>
         </BrowserRouter>

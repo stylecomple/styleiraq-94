@@ -17,6 +17,11 @@ interface AdminSettings {
     api_key?: string;
     secret_key?: string;
   };
+  theme_config: {
+    christmas: boolean;
+    valentine: boolean;
+    halloween: boolean;
+  };
 }
 
 export const useAdminSettings = () => {
@@ -37,7 +42,8 @@ export const useAdminSettings = () => {
           const defaultSettings = {
             is_store_open: true,
             visa_card_config: { enabled: false },
-            zain_cash_config: { enabled: false }
+            zain_cash_config: { enabled: false },
+            theme_config: { christmas: false, valentine: false, halloween: false }
           };
           
           const { data: newSettings, error: insertError } = await supabase
@@ -77,6 +83,14 @@ export const useAdminSettings = () => {
         await logChange(actionType, 'store', 'main_store', {
           previous_status: previousSettings.is_store_open,
           new_status: newSettings.is_store_open
+        });
+      }
+
+      // Log theme changes
+      if (newSettings.theme_config && previousSettings) {
+        await logChange('theme_updated', 'settings', 'theme_config', {
+          previous_themes: previousSettings.theme_config,
+          new_themes: newSettings.theme_config
         });
       }
       
