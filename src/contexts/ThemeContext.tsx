@@ -42,7 +42,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     refetchInterval: 30000 // Refetch every 30 seconds to get theme updates
   });
 
-  const themeConfig: ThemeConfig = settings?.theme_config || {
+  const themeConfig: ThemeConfig = (settings?.theme_config as ThemeConfig) || {
     christmas: false,
     valentine: false,
     halloween: false

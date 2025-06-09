@@ -46,6 +46,7 @@ export type Database = {
           id: string
           is_store_open: boolean
           notification_sound_url: string | null
+          theme_config: Json | null
           updated_at: string
           visa_card_config: Json | null
           zain_cash_config: Json | null
@@ -56,6 +57,7 @@ export type Database = {
           id?: string
           is_store_open?: boolean
           notification_sound_url?: string | null
+          theme_config?: Json | null
           updated_at?: string
           visa_card_config?: Json | null
           zain_cash_config?: Json | null
@@ -66,6 +68,7 @@ export type Database = {
           id?: string
           is_store_open?: boolean
           notification_sound_url?: string | null
+          theme_config?: Json | null
           updated_at?: string
           visa_card_config?: Json | null
           zain_cash_config?: Json | null
