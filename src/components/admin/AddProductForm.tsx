@@ -179,13 +179,7 @@ const AddProductForm = ({ onClose }: AddProductFormProps) => {
   return (
     <div className="space-y-6">
       {showCategoryManager && (
-        <CategoryManager 
-          categories={availableCategories}
-          onCategoriesChange={() => {
-            queryClient.invalidateQueries({ queryKey: ['categories'] });
-          }}
-          onClose={() => setShowCategoryManager(false)}
-        />
+        <CategoryManager />
       )}
       
       <Card className="mb-6">
