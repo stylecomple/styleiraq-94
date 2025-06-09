@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -25,6 +24,25 @@ export const useTheme = () => {
   return context;
 };
 
+// Helper function to validate and extract theme config
+const parseThemeConfig = (themeConfig: any): ThemeConfig => {
+  const defaultConfig: ThemeConfig = {
+    christmas: false,
+    valentine: false,
+    halloween: false,
+  };
+
+  if (!themeConfig || typeof themeConfig !== 'object' || Array.isArray(themeConfig)) {
+    return defaultConfig;
+  }
+
+  return {
+    christmas: typeof themeConfig.christmas === 'boolean' ? themeConfig.christmas : false,
+    valentine: typeof themeConfig.valentine === 'boolean' ? themeConfig.valentine : false,
+    halloween: typeof themeConfig.halloween === 'boolean' ? themeConfig.halloween : false,
+  };
+};
+
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [activeTheme, setActiveTheme] = useState<'christmas' | 'valentine' | 'halloween' | 'default'>('default');
 
@@ -42,14 +60,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     refetchInterval: 30000 // Refetch every 30 seconds to get theme updates
   });
 
-  const themeConfig: ThemeConfig = {
-    christmas: false,
-    valentine: false,
-    halloween: false,
-    ...(settings?.theme_config && typeof settings.theme_config === 'object' && !Array.isArray(settings.theme_config) 
-      ? settings.theme_config as ThemeConfig 
-      : {})
-  };
+  const themeConfig: ThemeConfig = parseThemeConfig(settings?.theme_config);
 
   useEffect(() => {
     // Determine active theme based on priority
