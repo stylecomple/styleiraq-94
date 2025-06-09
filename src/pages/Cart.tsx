@@ -196,11 +196,6 @@ const Cart = () => {
 
   const completeOrder = async (orderId: string) => {
     try {
-      // Send Telegram notification
-      await supabase.functions.invoke('send-telegram-notification', {
-        body: { orderId }
-      });
-
       clearCart();
       toast({
         title: "تم إنشاء الطلب بنجاح",
@@ -216,7 +211,7 @@ const Cart = () => {
       console.error('Error completing order:', error);
       toast({
         title: "تم إنشاء الطلب",
-        description: "تم إنشاء الطلب بنجاح ولكن قد يكون هناك تأخير في الإشعارات",
+        description: "تم إنشاء الطلب بنجاح",
       });
     }
   };

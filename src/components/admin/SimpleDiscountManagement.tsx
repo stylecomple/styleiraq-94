@@ -39,7 +39,7 @@ const SimpleDiscountManagement = () => {
     }
   });
 
-  // Apply global discount mutation
+  // Apply global discount mutation - only creates discount record, doesn't update products
   const applyDiscountMutation = useMutation({
     mutationFn: async (percentage: number) => {
       const { data: userData, error: userError } = await supabase.auth.getUser();
@@ -67,22 +67,17 @@ const SimpleDiscountManagement = () => {
         .single();
       
       if (error) throw error;
-
-      // Apply discount to all products
-      await supabase.rpc('apply_active_discounts');
-      
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['global-discount'] });
-      queryClient.invalidateQueries({ queryKey: ['products'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+      queryClient.invalidateQueries({ queryKey: ['active-discounts'] });
       
       setDiscountPercentage(0);
       
       toast({
         title: 'تم تطبيق الخصم',
-        description: 'تم تطبيق الخصم على جميع المنتجات',
+        description: 'سيظهر الخصم في سلة التسوق للعملاء',
       });
     },
     onError: (error: any) => {
@@ -94,7 +89,7 @@ const SimpleDiscountManagement = () => {
     }
   });
 
-  // Remove discount mutation
+  // Remove discount mutation - only deactivates discount record
   const removeDiscountMutation = useMutation({
     mutationFn: async () => {
       // Deactivate global discount
@@ -105,18 +100,14 @@ const SimpleDiscountManagement = () => {
         .eq('is_active', true);
       
       if (error) throw error;
-
-      // Reset all product discounts
-      await supabase.rpc('reset_all_product_discounts');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['global-discount'] });
-      queryClient.invalidateQueries({ queryKey: ['products'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+      queryClient.invalidateQueries({ queryKey: ['active-discounts'] });
       
       toast({
         title: 'تم إزالة الخصم',
-        description: 'تم إزالة الخصم من جميع المنتجات',
+        description: 'لن يظهر الخصم في سلة التسوق بعد الآن',
       });
     },
     onError: (error: any) => {
@@ -167,7 +158,7 @@ const SimpleDiscountManagement = () => {
                   خصم عام نشط: {globalDiscount.discount_percentage}%
                 </p>
                 <p className="text-sm text-green-600">
-                  مطبق على جميع المنتجات
+                  سيظهر في سلة التسوق للعملاء
                 </p>
               </div>
               <div className="flex items-center gap-2">
@@ -193,7 +184,7 @@ const SimpleDiscountManagement = () => {
       {/* Apply New Discount */}
       <Card>
         <CardHeader>
-          <CardTitle>تطبيق خصم جديد على جميع المنتجات</CardTitle>
+          <CardTitle>تطبيق خصم على سلة التسوق</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
@@ -208,7 +199,7 @@ const SimpleDiscountManagement = () => {
               placeholder="أدخل نسبة الخصم (1-100)"
             />
             <p className="text-sm text-gray-600 mt-1">
-              سيتم تطبيق هذا الخصم على جميع المنتجات
+              سيظهر هذا الخصم في سلة التسوق للعملاء
             </p>
           </div>
 

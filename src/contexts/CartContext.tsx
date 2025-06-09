@@ -1,14 +1,15 @@
-
 import React, { createContext, useContext, useReducer, useEffect, ReactNode, useState } from 'react';
 
 export interface CartItem {
   id: string;
   name: string;
   price: number;
+  originalPrice?: number;
   image: string;
   quantity: number;
   selectedColor?: string | null;
   selectedOption?: string | null;
+  discountPercentage?: number;
 }
 
 interface CartState {
