@@ -117,36 +117,21 @@ const SimpleDiscountManagement = () => {
 
       console.log('Discount record created:', discountRecord);
 
-      // Now apply the discount to products
+      // Now apply the discount to products using the cleaner approach
       if (discountType === 'all_products') {
-        console.log(`Applying ${discountPercentage}% discount to all products globally...`);
+        console.log(`Applying ${discountPercentage}% discount to all products...`);
 
-        // Get all product IDs first, then update them
-        const { data: allProducts, error: fetchError } = await supabase
+        const { error: updateError } = await supabase
           .from('products')
-          .select('id')
+          .update({ 
+            discount_percentage: discountPercentage,
+            updated_at: new Date().toISOString()
+          })
           .eq('is_active', true);
 
-        if (fetchError) {
-          console.error('Error fetching products:', fetchError);
-          throw fetchError;
-        }
-
-        if (allProducts && allProducts.length > 0) {
-          const productIds = allProducts.map(p => p.id);
-          
-          const { error: updateError } = await supabase
-            .from('products')
-            .update({ 
-              discount_percentage: discountPercentage,
-              updated_at: new Date().toISOString()
-            })
-            .in('id', productIds);
-
-          if (updateError) {
-            console.error('Error applying global discount:', updateError);
-            throw updateError;
-          }
+        if (updateError) {
+          console.error('Error applying global discount:', updateError);
+          throw updateError;
         }
 
         await logChange(
@@ -155,42 +140,24 @@ const SimpleDiscountManagement = () => {
           'all_products',
           {
             discount_percentage: discountPercentage,
-            operation: 'global_discount_update',
-            affected_products: allProducts?.length || 0
+            operation: 'global_discount_update'
           }
         );
       } else if (discountType === 'category') {
         console.log(`Applying ${discountPercentage}% discount to category: ${targetValue}`);
         
-        // Get all products that belong to this category
-        const { data: productsInCategory, error: fetchError } = await supabase
+        const { error: updateError } = await supabase
           .from('products')
-          .select('id')
+          .update({ 
+            discount_percentage: discountPercentage,
+            updated_at: new Date().toISOString()
+          })
           .contains('categories', [targetValue])
           .eq('is_active', true);
 
-        if (fetchError) {
-          console.error('Error fetching products in category:', fetchError);
-          throw fetchError;
-        }
-
-        console.log(`Found ${productsInCategory?.length || 0} products in category`);
-
-        if (productsInCategory && productsInCategory.length > 0) {
-          const productIds = productsInCategory.map(p => p.id);
-          
-          const { error: updateError } = await supabase
-            .from('products')
-            .update({ 
-              discount_percentage: discountPercentage,
-              updated_at: new Date().toISOString()
-            })
-            .in('id', productIds);
-
-          if (updateError) {
-            console.error('Error applying category discount:', updateError);
-            throw updateError;
-          }
+        if (updateError) {
+          console.error('Error applying category discount:', updateError);
+          throw updateError;
         }
 
         await logChange(
@@ -200,42 +167,24 @@ const SimpleDiscountManagement = () => {
           {
             discount_percentage: discountPercentage,
             discount_type: discountType,
-            target_value: targetValue,
-            affected_products: productsInCategory?.length || 0
+            target_value: targetValue
           }
         );
       } else if (discountType === 'subcategory') {
         console.log(`Applying ${discountPercentage}% discount to subcategory: ${targetValue}`);
         
-        // Get all products that belong to this subcategory
-        const { data: productsInSubcategory, error: fetchError } = await supabase
+        const { error: updateError } = await supabase
           .from('products')
-          .select('id')
+          .update({ 
+            discount_percentage: discountPercentage,
+            updated_at: new Date().toISOString()
+          })
           .contains('subcategories', [targetValue])
           .eq('is_active', true);
 
-        if (fetchError) {
-          console.error('Error fetching products in subcategory:', fetchError);
-          throw fetchError;
-        }
-
-        console.log(`Found ${productsInSubcategory?.length || 0} products in subcategory`);
-
-        if (productsInSubcategory && productsInSubcategory.length > 0) {
-          const productIds = productsInSubcategory.map(p => p.id);
-          
-          const { error: updateError } = await supabase
-            .from('products')
-            .update({ 
-              discount_percentage: discountPercentage,
-              updated_at: new Date().toISOString()
-            })
-            .in('id', productIds);
-
-          if (updateError) {
-            console.error('Error applying subcategory discount:', updateError);
-            throw updateError;
-          }
+        if (updateError) {
+          console.error('Error applying subcategory discount:', updateError);
+          throw updateError;
         }
 
         await logChange(
@@ -245,8 +194,7 @@ const SimpleDiscountManagement = () => {
           {
             discount_percentage: discountPercentage,
             discount_type: discountType,
-            target_value: targetValue,
-            affected_products: productsInSubcategory?.length || 0
+            target_value: targetValue
           }
         );
       }
@@ -312,80 +260,49 @@ const SimpleDiscountManagement = () => {
         if (discount.discount_type === 'all_products') {
           console.log('Resetting all products discount to 0');
           
-          // Get all product IDs first, then reset them
-          const { data: allProducts, error: fetchError } = await supabase
+          const { error: resetError } = await supabase
             .from('products')
-            .select('id')
+            .update({ 
+              discount_percentage: 0,
+              updated_at: new Date().toISOString()
+            })
             .eq('is_active', true);
-
-          if (fetchError) {
-            console.error('Error fetching products for reset:', fetchError);
-            throw fetchError;
-          }
-
-          if (allProducts && allProducts.length > 0) {
-            const productIds = allProducts.map(p => p.id);
-            
-            const { error: resetError } = await supabase
-              .from('products')
-              .update({ 
-                discount_percentage: 0,
-                updated_at: new Date().toISOString()
-              })
-              .in('id', productIds);
-            
-            if (resetError) {
-              console.error('Error resetting all products:', resetError);
-              throw resetError;
-            }
+          
+          if (resetError) {
+            console.error('Error resetting all products:', resetError);
+            throw resetError;
           }
         } else if (discount.discount_type === 'category') {
           console.log('Resetting category products discount to 0');
-          const { data: productsInCategory } = await supabase
+          
+          const { error: resetError } = await supabase
             .from('products')
-            .select('id')
+            .update({ 
+              discount_percentage: 0,
+              updated_at: new Date().toISOString()
+            })
             .contains('categories', [discount.target_value])
             .eq('is_active', true);
-
-          if (productsInCategory && productsInCategory.length > 0) {
-            const productIds = productsInCategory.map(p => p.id);
-            
-            const { error: resetError } = await supabase
-              .from('products')
-              .update({ 
-                discount_percentage: 0,
-                updated_at: new Date().toISOString()
-              })
-              .in('id', productIds);
-            
-            if (resetError) {
-              console.error('Error resetting category products:', resetError);
-              throw resetError;
-            }
+          
+          if (resetError) {
+            console.error('Error resetting category products:', resetError);
+            throw resetError;
           }
         } else if (discount.discount_type === 'subcategory') {
           console.log('Resetting subcategory products discount to 0');
-          const { data: productsInSubcategory } = await supabase
+          
+          const { error: resetError } = await supabase
             .from('products')
-            .select('id')
+            .update({ 
+              discount_percentage: 0,
+              updated_at: new Date().toISOString()
+            })
             .contains('subcategories', [discount.target_value])
             .eq('is_active', true);
-
-          if (productsInSubcategory && productsInSubcategory.length > 0) {
-            const productIds = productsInSubcategory.map(p => p.id);
-            
-            const { error: resetError } = await supabase
-              .from('products')
-              .update({ 
-                discount_percentage: 0,
-                updated_at: new Date().toISOString()
-              })
-              .in('id', productIds);
-            
-            if (resetError) {
-              console.error('Error resetting subcategory products:', resetError);
-              throw resetError;
-            }
+          
+          if (resetError) {
+            console.error('Error resetting subcategory products:', resetError);
+            throw resetError;
           }
         }
       }
