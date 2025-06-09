@@ -1,5 +1,6 @@
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
 interface ThemeConfig {
@@ -45,24 +46,34 @@ const parseThemeConfig = (themeConfig: any): ThemeConfig => {
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [activeTheme, setActiveTheme] = useState<'christmas' | 'valentine' | 'halloween' | 'default'>('default');
+  const queryClient = useQueryClient();
 
   const { data: settings, isLoading } = useQuery({
     queryKey: ['admin-settings-theme'],
     queryFn: async () => {
+      console.log('Fetching theme settings...');
       const { data, error } = await supabase
         .from('admin_settings')
         .select('theme_config')
         .single();
       
-      if (error) throw error;
+      if (error) {
+        console.error('Theme settings error:', error);
+        throw error;
+      }
+      
+      console.log('Theme settings fetched:', data);
       return data;
     },
-    refetchInterval: 30000 // Refetch every 30 seconds to get theme updates
+    refetchInterval: 5000, // Check for updates every 5 seconds
+    staleTime: 0, // Always consider data stale
   });
 
   const themeConfig: ThemeConfig = parseThemeConfig(settings?.theme_config);
 
   useEffect(() => {
+    console.log('Theme config changed:', themeConfig);
+    
     // Determine active theme based on priority
     if (themeConfig.christmas) {
       setActiveTheme('christmas');
@@ -76,6 +87,8 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [themeConfig]);
 
   useEffect(() => {
+    console.log('Active theme changed to:', activeTheme);
+    
     // Apply theme classes to body
     const body = document.body;
     
@@ -85,6 +98,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     // Add active theme class
     if (activeTheme !== 'default') {
       body.classList.add(`theme-${activeTheme}`);
+      console.log(`Applied theme class: theme-${activeTheme}`);
     }
 
     return () => {
@@ -92,6 +106,31 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       body.classList.remove('theme-christmas', 'theme-valentine', 'theme-halloween');
     };
   }, [activeTheme]);
+
+  // Listen for real-time updates to admin_settings
+  useEffect(() => {
+    const channel = supabase
+      .channel('admin-settings-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'admin_settings',
+        },
+        (payload) => {
+          console.log('Admin settings updated via realtime:', payload);
+          // Invalidate the query to refetch fresh data
+          queryClient.invalidateQueries({ queryKey: ['admin-settings-theme'] });
+          queryClient.invalidateQueries({ queryKey: ['admin-settings'] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
 
   return (
     <ThemeContext.Provider value={{ activeTheme, themeConfig, isLoading }}>

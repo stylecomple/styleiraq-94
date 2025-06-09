@@ -60,11 +60,11 @@ const AdminSettings = () => {
   const [zainApiKey, setZainApiKey] = useState(zainConfig.api_key ?? '');
   const [zainSecretKey, setZainSecretKey] = useState(zainConfig.secret_key ?? '');
 
-  // Theme Configuration
-  const themeConfig = getThemeConfig();
-  const [christmasTheme, setChristmasTheme] = useState(themeConfig.christmas);
-  const [valentineTheme, setValentineTheme] = useState(themeConfig.valentine);
-  const [halloweenTheme, setHalloweenTheme] = useState(themeConfig.halloween);
+  // Theme Configuration - get current values from database
+  const currentThemeConfig = getThemeConfig();
+  const [christmasTheme, setChristmasTheme] = useState(currentThemeConfig.christmas);
+  const [valentineTheme, setValentineTheme] = useState(currentThemeConfig.valentine);
+  const [halloweenTheme, setHalloweenTheme] = useState(currentThemeConfig.halloween);
 
   // Update local state when settings change
   React.useEffect(() => {
@@ -85,13 +85,49 @@ const AdminSettings = () => {
       setZainApiKey(zain.api_key ?? '');
       setZainSecretKey(zain.secret_key ?? '');
 
-      // Theme settings
+      // Theme settings - sync with database
       const theme = getThemeConfig();
       setChristmasTheme(theme.christmas);
       setValentineTheme(theme.valentine);
       setHalloweenTheme(theme.halloween);
     }
   }, [settings]);
+
+  // Handle individual theme toggle with immediate save
+  const handleThemeToggle = async (themeType: 'christmas' | 'valentine' | 'halloween', newValue: boolean) => {
+    const updatedThemeConfig = {
+      christmas: themeType === 'christmas' ? newValue : christmasTheme,
+      valentine: themeType === 'valentine' ? newValue : valentineTheme,
+      halloween: themeType === 'halloween' ? newValue : halloweenTheme,
+    };
+
+    // Update local state immediately
+    if (themeType === 'christmas') setChristmasTheme(newValue);
+    if (themeType === 'valentine') setValentineTheme(newValue);
+    if (themeType === 'halloween') setHalloweenTheme(newValue);
+
+    try {
+      await updateSettings({
+        theme_config: updatedThemeConfig
+      });
+      
+      toast({
+        title: "تم التحديث",
+        description: `تم ${newValue ? 'تفعيل' : 'إلغاء'} ثيم ${themeType === 'christmas' ? 'الكريسماس' : themeType === 'valentine' ? 'عيد الحب' : 'الهالووين'}`,
+      });
+    } catch (error) {
+      // Revert local state on error
+      if (themeType === 'christmas') setChristmasTheme(!newValue);
+      if (themeType === 'valentine') setValentineTheme(!newValue);
+      if (themeType === 'halloween') setHalloweenTheme(!newValue);
+      
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ أثناء تحديث الثيم",
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleSaveSettings = async () => {
     setIsSubmitting(true);
@@ -110,11 +146,6 @@ const AdminSettings = () => {
           merchant_id: zainMerchantId,
           api_key: zainApiKey,
           secret_key: zainSecretKey
-        },
-        theme_config: {
-          christmas: christmasTheme,
-          valentine: valentineTheme,
-          halloween: halloweenTheme
         }
       };
 
@@ -179,7 +210,7 @@ const AdminSettings = () => {
             <Switch
               id="christmas-theme"
               checked={christmasTheme}
-              onCheckedChange={setChristmasTheme}
+              onCheckedChange={(checked) => handleThemeToggle('christmas', checked)}
             />
           </div>
 
@@ -195,7 +226,7 @@ const AdminSettings = () => {
             <Switch
               id="valentine-theme"
               checked={valentineTheme}
-              onCheckedChange={setValentineTheme}
+              onCheckedChange={(checked) => handleThemeToggle('valentine', checked)}
             />
           </div>
 
@@ -211,7 +242,7 @@ const AdminSettings = () => {
             <Switch
               id="halloween-theme"
               checked={halloweenTheme}
-              onCheckedChange={setHalloweenTheme}
+              onCheckedChange={(checked) => handleThemeToggle('halloween', checked)}
             />
           </div>
         </CardContent>
