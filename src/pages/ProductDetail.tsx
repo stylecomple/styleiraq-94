@@ -10,6 +10,7 @@ import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { ArrowRight, ShoppingCart, Heart, Minus, Plus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import FormattedText from '@/components/FormattedText';
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -205,7 +206,12 @@ const ProductDetail = () => {
               </div>
 
               {product.description && (
-                <p className="text-gray-600 mb-6">{product.description}</p>
+                <div className="mb-6">
+                  <FormattedText 
+                    text={product.description} 
+                    className="text-gray-600 leading-relaxed"
+                  />
+                </div>
               )}
             </div>
 

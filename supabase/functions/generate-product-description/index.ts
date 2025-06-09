@@ -29,7 +29,7 @@ serve(async (req) => {
       categoryContext += ` Subcategories: ${subcategories.join(', ')}.`;
     }
 
-    const prompt = `Create a compelling marketing description for a product called "${productName}".${categoryContext} ${currentDescription ? `Current description: "${currentDescription}". Improve and enhance it.` : 'Create a new description.'} Make it concise, engaging, and focused on benefits. Keep it under 150 words. Write in Arabic and make sure the description is suitable for the product's category.`;
+    const prompt = `Create a compelling marketing description for a product called "${productName}".${categoryContext} ${currentDescription ? `Current description: "${currentDescription}". Improve and enhance it.` : 'Create a new description.'} Make it concise, engaging, and focused on benefits. Keep it under 150 words. Write in Arabic and make sure the description is suitable for the product's category. Return ONLY the description text without any introductory phrases or explanations.`;
 
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${geminiApiKey}`, {
       method: 'POST',
@@ -56,11 +56,18 @@ serve(async (req) => {
       throw new Error(data.error?.message || 'Failed to generate description');
     }
 
-    const generatedDescription = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    let generatedDescription = data.candidates?.[0]?.content?.parts?.[0]?.text;
     
     if (!generatedDescription) {
       throw new Error('No description generated');
     }
+
+    // Clean up any introductory phrases that might still appear
+    generatedDescription = generatedDescription
+      .replace(/^Here's.*?description.*?:?\s*/i, '')
+      .replace(/^إليك.*?وصف.*?:?\s*/i, '')
+      .replace(/^تحسين.*?وصف.*?:?\s*/i, '')
+      .trim();
 
     return new Response(JSON.stringify({ description: generatedDescription }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
