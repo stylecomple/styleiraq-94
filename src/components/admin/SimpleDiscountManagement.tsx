@@ -70,47 +70,73 @@ const SimpleDiscountManagement = () => {
       
       if (!user) throw new Error('User not authenticated');
 
-      // Create discount record
+      // Get current user info
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError || !userData.user) {
+        throw new Error('المستخدم غير مسجل الدخول');
+      }
+
+      // Create discount record with explicit field mapping
       const discountData = {
         discount_type: discountType,
         target_value: discountType === 'all_products' ? null : targetValue,
         discount_percentage: discountPercentage,
-        created_by: user.id,
+        created_by: userData.user.id,
         is_active: true
       };
 
-      console.log('Creating discount record:', discountData);
+      console.log('Creating discount record with data:', discountData);
       
+      // First, deactivate all existing discounts to avoid conflicts
+      const { error: deactivateError } = await supabase
+        .from('active_discounts')
+        .update({ is_active: false })
+        .eq('is_active', true);
+
+      if (deactivateError) {
+        console.error('Error deactivating existing discounts:', deactivateError);
+        // Don't throw here, continue with creating new discount
+      }
+
+      // Insert new discount record
       const { data: discountRecord, error: discountError } = await supabase
         .from('active_discounts')
-        .insert(discountData)
+        .insert([discountData])
         .select()
         .single();
 
       if (discountError) {
         console.error('Error creating discount record:', discountError);
-        throw discountError;
+        throw new Error(`فشل في إنشاء سجل الخصم: ${discountError.message}`);
       }
 
+      console.log('Discount record created successfully:', discountRecord);
+
       // Apply discounts using the database function
+      console.log('Calling apply_active_discounts function...');
       const { error: applyError } = await supabase.rpc('apply_active_discounts');
       
       if (applyError) {
         console.error('Error applying active discounts:', applyError);
-        throw applyError;
+        throw new Error(`فشل في تطبيق الخصومات: ${applyError.message}`);
       }
 
+      console.log('Discounts applied successfully');
       return discountRecord;
     },
     onSuccess: async (discountRecord) => {
       console.log('Discount applied successfully:', discountRecord);
       
       // Log the change
-      await logChange('discount_applied', 'discount', discountRecord.id, {
-        discount_type: discountRecord.discount_type,
-        target_value: discountRecord.target_value,
-        discount_percentage: discountRecord.discount_percentage
-      });
+      try {
+        await logChange('discount_applied', 'discount', discountRecord.id, {
+          discount_type: discountRecord.discount_type,
+          target_value: discountRecord.target_value,
+          discount_percentage: discountRecord.discount_percentage
+        });
+      } catch (logError) {
+        console.error('Error logging change:', logError);
+      }
 
       queryClient.invalidateQueries({ queryKey: ['active-discounts'] });
       queryClient.invalidateQueries({ queryKey: ['products'] });
@@ -125,11 +151,11 @@ const SimpleDiscountManagement = () => {
       setTargetValue('');
       setDiscountPercentage(0);
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error('Discount application failed:', error);
       toast({
         title: 'خطأ في تطبيق الخصم',
-        description: 'فشل في تطبيق الخصم. يرجى المحاولة مرة أخرى.',
+        description: error.message || 'فشل في تطبيق الخصم. يرجى المحاولة مرة أخرى.',
         variant: 'destructive',
       });
     }
@@ -137,21 +163,33 @@ const SimpleDiscountManagement = () => {
 
   const removeDiscountMutation = useMutation({
     mutationFn: async (discountId: string) => {
+      console.log('Removing discount:', discountId);
+      
       const { error } = await supabase
         .from('active_discounts')
         .update({ is_active: false })
         .eq('id', discountId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error deactivating discount:', error);
+        throw new Error(`فشل في إلغاء تفعيل الخصم: ${error.message}`);
+      }
 
       // Apply remaining active discounts
       const { error: applyError } = await supabase.rpc('apply_active_discounts');
-      if (applyError) throw applyError;
+      if (applyError) {
+        console.error('Error reapplying discounts:', applyError);
+        throw new Error(`فشل في إعادة تطبيق الخصومات: ${applyError.message}`);
+      }
 
       return discountId;
     },
     onSuccess: async (discountId) => {
-      await logChange('discount_removed', 'discount', discountId, {});
+      try {
+        await logChange('discount_removed', 'discount', discountId, {});
+      } catch (logError) {
+        console.error('Error logging change:', logError);
+      }
       
       queryClient.invalidateQueries({ queryKey: ['active-discounts'] });
       queryClient.invalidateQueries({ queryKey: ['products'] });
@@ -161,10 +199,11 @@ const SimpleDiscountManagement = () => {
         description: 'تم إزالة الخصم بنجاح',
       });
     },
-    onError: () => {
+    onError: (error: any) => {
+      console.error('Error removing discount:', error);
       toast({
         title: 'خطأ',
-        description: 'فشل في إزالة الخصم',
+        description: error.message || 'فشل في إزالة الخصم',
         variant: 'destructive',
       });
     }
@@ -188,6 +227,12 @@ const SimpleDiscountManagement = () => {
       });
       return;
     }
+
+    console.log('Starting discount application with:', {
+      discountType,
+      targetValue,
+      discountPercentage
+    });
 
     applyDiscountMutation.mutate({
       discountType,
