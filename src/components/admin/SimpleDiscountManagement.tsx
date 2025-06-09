@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useChangeLogger } from '@/hooks/useChangeLogger';
-import { Trash2, Percent, Package } from 'lucide-react';
+import { Trash2, Percent, Package, Eye, EyeOff } from 'lucide-react';
 
 interface Discount {
   id: string;
@@ -76,7 +76,6 @@ const SimpleDiscountManagement = () => {
       const { data, error } = await supabase
         .from('active_discounts')
         .select('*')
-        .eq('is_active', true)
         .order('created_at', { ascending: false });
       
       if (error) throw error;
@@ -84,7 +83,7 @@ const SimpleDiscountManagement = () => {
     }
   });
 
-  // Apply discount mutation
+  // Apply discount mutation with proper WHERE clauses
   const applyDiscountMutation = useMutation({
     mutationFn: async () => {
       const { data: userData, error: userError } = await supabase.auth.getUser();
@@ -113,25 +112,27 @@ const SimpleDiscountManagement = () => {
       
       if (discountError) throw discountError;
 
-      // Apply discount to products using proper WHERE clauses
+      // Apply discount to products with proper WHERE clauses
       if (discountType === 'all_products') {
         console.log(`Applying ${discountPercentage}% discount to all products...`);
         const { error } = await supabase
           .from('products')
           .update({ discount_percentage: discountPercentage })
-          .neq('id', '00000000-0000-0000-0000-000000000000'); // WHERE clause to avoid update error
+          .eq('is_active', true); // WHERE clause targeting only active products
       } else if (discountType === 'category') {
         console.log(`Applying ${discountPercentage}% discount to category ${targetValue}...`);
         const { error } = await supabase
           .from('products')
           .update({ discount_percentage: discountPercentage })
-          .contains('categories', [targetValue]); // WHERE clause for specific category
+          .contains('categories', [targetValue])
+          .eq('is_active', true); // Combined WHERE clauses
       } else if (discountType === 'subcategory') {
         console.log(`Applying ${discountPercentage}% discount to subcategory ${targetValue}...`);
         const { error } = await supabase
           .from('products')
           .update({ discount_percentage: discountPercentage })
-          .contains('subcategories', [targetValue]); // WHERE clause for specific subcategory
+          .contains('subcategories', [targetValue])
+          .eq('is_active', true); // Combined WHERE clauses
       }
 
       const targetName = discountType === 'all_products' 
@@ -178,40 +179,45 @@ const SimpleDiscountManagement = () => {
     }
   });
 
-  // Remove discount mutation
+  // Remove discount mutation with proper WHERE clauses
   const removeDiscountMutation = useMutation({
     mutationFn: async (discountId: string) => {
       const discount = activeDiscounts?.find(d => d.id === discountId);
       if (!discount) throw new Error('الخصم غير موجود');
 
-      // Deactivate discount record
-      const { error: deactivateError } = await supabase
-        .from('active_discounts')
-        .update({ is_active: false })
-        .eq('id', discountId);
-      
-      if (deactivateError) throw deactivateError;
-
-      // Remove discount from products using proper WHERE clauses
+      // Remove discount from products with proper WHERE clauses
       if (discount.discount_type === 'all_products') {
         console.log('Removing discount from all products...');
         const { error } = await supabase
           .from('products')
           .update({ discount_percentage: 0 })
-          .neq('id', '00000000-0000-0000-0000-000000000000'); // WHERE clause to avoid update error
+          .eq('is_active', true)
+          .gte('discount_percentage', 1); // Only update products that actually have discounts
       } else if (discount.discount_type === 'category') {
         console.log(`Removing discount from category ${discount.target_value}...`);
         const { error } = await supabase
           .from('products')
           .update({ discount_percentage: 0 })
-          .contains('categories', [discount.target_value]); // WHERE clause for specific category
+          .contains('categories', [discount.target_value])
+          .eq('is_active', true)
+          .gte('discount_percentage', 1);
       } else if (discount.discount_type === 'subcategory') {
         console.log(`Removing discount from subcategory ${discount.target_value}...`);
         const { error } = await supabase
           .from('products')
           .update({ discount_percentage: 0 })
-          .contains('subcategories', [discount.target_value]); // WHERE clause for specific subcategory
+          .contains('subcategories', [discount.target_value])
+          .eq('is_active', true)
+          .gte('discount_percentage', 1);
       }
+
+      // Delete discount record completely
+      const { error: deleteError } = await supabase
+        .from('active_discounts')
+        .delete()
+        .eq('id', discountId);
+      
+      if (deleteError) throw deleteError;
 
       await logChange(
         'discount_removed',
@@ -229,14 +235,102 @@ const SimpleDiscountManagement = () => {
       queryClient.invalidateQueries({ queryKey: ['featured-products'] });
       
       toast({
-        title: 'تم إزالة الخصم',
-        description: 'تم إزالة الخصم من المنتجات',
+        title: 'تم حذف الخصم',
+        description: 'تم حذف الخصم نهائياً من النظام',
       });
     },
     onError: (error: any) => {
       toast({
         title: 'خطأ',
-        description: 'فشل في إزالة الخصم',
+        description: 'فشل في حذف الخصم',
+        variant: 'destructive',
+      });
+    }
+  });
+
+  // Toggle discount active status
+  const toggleDiscountMutation = useMutation({
+    mutationFn: async ({ discountId, isActive }: { discountId: string; isActive: boolean }) => {
+      const discount = activeDiscounts?.find(d => d.id === discountId);
+      if (!discount) throw new Error('الخصم غير موجود');
+
+      // Update discount status
+      const { error: updateError } = await supabase
+        .from('active_discounts')
+        .update({ is_active: isActive })
+        .eq('id', discountId);
+      
+      if (updateError) throw updateError;
+
+      // If deactivating, remove discount from products
+      if (!isActive) {
+        if (discount.discount_type === 'all_products') {
+          await supabase
+            .from('products')
+            .update({ discount_percentage: 0 })
+            .eq('is_active', true)
+            .gte('discount_percentage', 1);
+        } else if (discount.discount_type === 'category') {
+          await supabase
+            .from('products')
+            .update({ discount_percentage: 0 })
+            .contains('categories', [discount.target_value])
+            .eq('is_active', true)
+            .gte('discount_percentage', 1);
+        } else if (discount.discount_type === 'subcategory') {
+          await supabase
+            .from('products')
+            .update({ discount_percentage: 0 })
+            .contains('subcategories', [discount.target_value])
+            .eq('is_active', true)
+            .gte('discount_percentage', 1);
+        }
+      } else {
+        // If activating, apply discount to products
+        if (discount.discount_type === 'all_products') {
+          await supabase
+            .from('products')
+            .update({ discount_percentage: discount.discount_percentage })
+            .eq('is_active', true);
+        } else if (discount.discount_type === 'category') {
+          await supabase
+            .from('products')
+            .update({ discount_percentage: discount.discount_percentage })
+            .contains('categories', [discount.target_value])
+            .eq('is_active', true);
+        } else if (discount.discount_type === 'subcategory') {
+          await supabase
+            .from('products')
+            .update({ discount_percentage: discount.discount_percentage })
+            .contains('subcategories', [discount.target_value])
+            .eq('is_active', true);
+        }
+      }
+
+      await logChange(
+        isActive ? 'discount_activated' : 'discount_deactivated',
+        'active_discounts',
+        discountId,
+        {
+          operation: isActive ? 'activation' : 'deactivation'
+        }
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['active-discounts'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+      queryClient.invalidateQueries({ queryKey: ['featured-products'] });
+      
+      toast({
+        title: 'تم تحديث حالة الخصم',
+        description: 'تم تحديث حالة الخصم بنجاح',
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'خطأ',
+        description: 'فشل في تحديث حالة الخصم',
         variant: 'destructive',
       });
     }
@@ -282,29 +376,49 @@ const SimpleDiscountManagement = () => {
 
   return (
     <div className="space-y-4 md:space-y-6">
-      {/* Active Discounts */}
+      {/* Active and Inactive Discounts */}
       {activeDiscounts && activeDiscounts.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
               <Package className="w-4 h-4 md:w-5 md:h-5" />
-              <span className="text-sm md:text-base">الخصومات النشطة</span>
+              <span className="text-sm md:text-base">الخصومات المحفوظة</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
               {activeDiscounts.map((discount) => (
-                <div key={discount.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 md:p-4 border rounded-lg bg-green-50 gap-3">
+                <div key={discount.id} className={`flex flex-col sm:flex-row sm:items-center justify-between p-3 md:p-4 border rounded-lg gap-3 ${
+                  discount.is_active ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'
+                }`}>
                   <div>
-                    <p className="font-semibold text-green-800 text-sm md:text-base">
+                    <p className={`font-semibold text-sm md:text-base ${
+                      discount.is_active ? 'text-green-800' : 'text-gray-600'
+                    }`}>
                       {getDiscountDisplayText(discount)} - خصم {discount.discount_percentage}%
                     </p>
-                    <p className="text-xs md:text-sm text-green-600">
-                      نشط على المنتجات
+                    <p className={`text-xs md:text-sm ${
+                      discount.is_active ? 'text-green-600' : 'text-gray-500'
+                    }`}>
+                      {discount.is_active ? 'نشط على المنتجات' : 'غير نشط'}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Badge className="bg-green-100 text-green-800 text-xs">نشط</Badge>
+                    <Badge className={discount.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}>
+                      {discount.is_active ? 'نشط' : 'معطل'}
+                    </Badge>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => toggleDiscountMutation.mutate({ 
+                        discountId: discount.id, 
+                        isActive: !discount.is_active 
+                      })}
+                      disabled={toggleDiscountMutation.isPending}
+                      className="text-xs"
+                    >
+                      {discount.is_active ? <EyeOff className="w-3 h-3 md:w-4 md:h-4" /> : <Eye className="w-3 h-3 md:w-4 md:h-4" />}
+                    </Button>
                     <Button
                       variant="outline"
                       size="sm"
