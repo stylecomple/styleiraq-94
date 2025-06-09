@@ -65,8 +65,8 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       console.log('Theme settings fetched:', data);
       return data;
     },
-    refetchInterval: 2000, // Reduce frequency
-    staleTime: 1000, // Cache for 1 second
+    refetchInterval: 30000, // Check every 30 seconds for changes
+    staleTime: 5000, // Cache for 5 seconds
   });
 
   const themeConfig: ThemeConfig = parseThemeConfig(settings?.theme_config);
@@ -77,7 +77,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     
     let newActiveTheme: 'christmas' | 'valentine' | 'halloween' | 'default' = 'default';
     
-    // Determine active theme based on priority
+    // Determine active theme based on which one is true
     if (themeConfig.christmas) {
       newActiveTheme = 'christmas';
     } else if (themeConfig.valentine) {
@@ -115,10 +115,8 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
   }, [activeTheme]);
 
-  // Listen for real-time updates to admin_settings with debouncing
+  // Listen for real-time updates to admin_settings
   useEffect(() => {
-    let timeoutId: NodeJS.Timeout;
-
     const channel = supabase
       .channel('admin-settings-changes')
       .on(
@@ -130,19 +128,14 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         },
         (payload) => {
           console.log('Admin settings updated via realtime:', payload);
-          
-          // Debounce the query invalidation to prevent rapid updates
-          clearTimeout(timeoutId);
-          timeoutId = setTimeout(() => {
-            queryClient.invalidateQueries({ queryKey: ['admin-settings-theme'] });
-            queryClient.invalidateQueries({ queryKey: ['admin-settings'] });
-          }, 500);
+          // Invalidate and refetch theme settings immediately
+          queryClient.invalidateQueries({ queryKey: ['admin-settings-theme'] });
+          queryClient.invalidateQueries({ queryKey: ['admin-settings'] });
         }
       )
       .subscribe();
 
     return () => {
-      clearTimeout(timeoutId);
       supabase.removeChannel(channel);
     };
   }, [queryClient]);

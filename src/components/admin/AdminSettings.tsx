@@ -1,9 +1,11 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useAdminSettings } from '@/hooks/useAdminSettings';
 import { Separator } from '@/components/ui/separator';
@@ -13,12 +15,6 @@ interface PaymentConfig {
   merchant_id?: string;
   api_key?: string;
   secret_key?: string;
-}
-
-interface ThemeConfig {
-  christmas: boolean;
-  valentine: boolean;
-  halloween: boolean;
 }
 
 const AdminSettings = () => {
@@ -37,9 +33,14 @@ const AdminSettings = () => {
     return settings.zain_cash_config as unknown as PaymentConfig;
   };
 
-  const getThemeConfig = (): ThemeConfig => {
-    if (!settings?.theme_config) return { christmas: false, valentine: false, halloween: false };
-    return settings.theme_config as unknown as ThemeConfig;
+  const getCurrentTheme = (): string => {
+    if (!settings?.theme_config) return 'default';
+    const themeConfig = settings.theme_config as any;
+    
+    if (themeConfig.christmas) return 'christmas';
+    if (themeConfig.valentine) return 'valentine';
+    if (themeConfig.halloween) return 'halloween';
+    return 'default';
   };
 
   // Local state for form data
@@ -59,13 +60,14 @@ const AdminSettings = () => {
   const [zainApiKey, setZainApiKey] = useState(zainConfig.api_key ?? '');
   const [zainSecretKey, setZainSecretKey] = useState(zainConfig.secret_key ?? '');
 
-  // Theme Configuration - using database values directly
-  const themeConfig = getThemeConfig();
+  // Theme Configuration
+  const [selectedTheme, setSelectedTheme] = useState(getCurrentTheme());
 
   // Update local state when settings change
   React.useEffect(() => {
     if (settings) {
       setStoreOpen(settings.is_store_open ?? true);
+      setSelectedTheme(getCurrentTheme());
       
       // Visa Card settings
       const visa = getVisaConfig();
@@ -83,33 +85,45 @@ const AdminSettings = () => {
     }
   }, [settings]);
 
-  // Handle individual theme toggle with optimistic updates
-  const handleThemeToggle = async (themeType: 'christmas' | 'valentine' | 'halloween', newValue: boolean) => {
-    console.log(`Toggling ${themeType} to ${newValue}`);
+  // Handle theme change
+  const handleThemeChange = async (newTheme: string) => {
+    console.log(`Changing theme to: ${newTheme}`);
+    setSelectedTheme(newTheme);
     
-    const updatedThemeConfig = {
-      christmas: themeType === 'christmas' ? newValue : themeConfig.christmas,
-      valentine: themeType === 'valentine' ? newValue : themeConfig.valentine,
-      halloween: themeType === 'halloween' ? newValue : themeConfig.halloween,
+    const themeConfig = {
+      christmas: newTheme === 'christmas',
+      valentine: newTheme === 'valentine',
+      halloween: newTheme === 'halloween'
     };
 
     try {
       await updateSettings({
-        theme_config: updatedThemeConfig
+        theme_config: themeConfig
       });
       
-      console.log(`Successfully updated ${themeType} theme to ${newValue}`);
+      console.log(`Successfully updated theme to ${newTheme}`);
       toast({
         title: "تم التحديث",
-        description: `تم ${newValue ? 'تفعيل' : 'إلغاء'} ثيم ${themeType === 'christmas' ? 'الكريسماس' : themeType === 'valentine' ? 'عيد الحب' : 'الهالووين'}`,
+        description: `تم تغيير ثيم المتجر إلى ${getThemeLabel(newTheme)}`,
       });
     } catch (error) {
-      console.error(`Error updating ${themeType} theme:`, error);
+      console.error(`Error updating theme:`, error);
+      // Revert the local state on error
+      setSelectedTheme(getCurrentTheme());
       toast({
         title: "خطأ",
         description: "حدث خطأ أثناء تحديث الثيم",
         variant: "destructive",
       });
+    }
+  };
+
+  const getThemeLabel = (theme: string) => {
+    switch (theme) {
+      case 'christmas': return 'الكريسماس 🎄';
+      case 'valentine': return 'عيد الحب 💝';
+      case 'halloween': return 'الهالووين 🎃';
+      default: return 'الافتراضي';
     }
   };
 
@@ -181,53 +195,37 @@ const AdminSettings = () => {
       {/* Theme Configuration */}
       <Card>
         <CardHeader>
-          <CardTitle>إعدادات المظهر والثيمات</CardTitle>
+          <CardTitle>إعدادات مظهر المتجر</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <Label htmlFor="christmas-theme">ثيم الكريسماس 🎄</Label>
-              <p className="text-sm text-muted-foreground">
-                تفعيل المظهر الاحتفالي لموسم الكريسماس مع تأثيرات خاصة
-              </p>
-            </div>
-            <Switch
-              id="christmas-theme"
-              checked={themeConfig.christmas}
-              onCheckedChange={(checked) => handleThemeToggle('christmas', checked)}
-            />
+          <div className="space-y-2">
+            <Label htmlFor="theme-selector">اختر ثيم المتجر</Label>
+            <p className="text-sm text-muted-foreground">
+              سيتم تطبيق الثيم المختار على جميع المستخدمين في المتجر
+            </p>
+            <Select
+              value={selectedTheme}
+              onValueChange={handleThemeChange}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="اختر الثيم" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="default">الثيم الافتراضي</SelectItem>
+                <SelectItem value="christmas">ثيم الكريسماس 🎄</SelectItem>
+                <SelectItem value="valentine">ثيم عيد الحب 💝</SelectItem>
+                <SelectItem value="halloween">ثيم الهالووين 🎃</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
-          <Separator />
-
-          <div className="flex items-center justify-between">
-            <div>
-              <Label htmlFor="valentine-theme">ثيم عيد الحب 💝</Label>
-              <p className="text-sm text-muted-foreground">
-                تفعيل المظهر الرومانسي لعيد الحب مع ألوان وردية وتأثيرات القلوب
-              </p>
-            </div>
-            <Switch
-              id="valentine-theme"
-              checked={themeConfig.valentine}
-              onCheckedChange={(checked) => handleThemeToggle('valentine', checked)}
-            />
-          </div>
-
-          <Separator />
-
-          <div className="flex items-center justify-between">
-            <div>
-              <Label htmlFor="halloween-theme">ثيم الهالووين 🎃</Label>
-              <p className="text-sm text-muted-foreground">
-                تفعيل المظهر المرعب للهالووين مع ألوان برتقالية وسوداء
-              </p>
-            </div>
-            <Switch
-              id="halloween-theme"
-              checked={themeConfig.halloween}
-              onCheckedChange={(checked) => handleThemeToggle('halloween', checked)}
-            />
+          <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+            <p className="text-sm text-gray-600">
+              <strong>الثيم الحالي:</strong> {getThemeLabel(selectedTheme)}
+            </p>
+            <p className="text-xs text-gray-500 mt-1">
+              سيرى جميع العملاء هذا الثيم عند زيارة المتجر
+            </p>
           </div>
         </CardContent>
       </Card>
