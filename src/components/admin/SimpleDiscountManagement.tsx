@@ -85,7 +85,7 @@ const SimpleDiscountManagement = () => {
     }
   });
 
-  // Apply discount mutation
+  // Apply discount mutation - now using the improved RPC function
   const applyDiscountMutation = useMutation({
     mutationFn: async () => {
       const { data: userData, error: userError } = await supabase.auth.getUser();
@@ -93,7 +93,7 @@ const SimpleDiscountManagement = () => {
         throw new Error('المستخدم غير مسجل الدخول');
       }
 
-      // First, create the discount record in active_discounts table
+      // Create the discount record in active_discounts table
       const discountData = {
         discount_type: discountType,
         target_value: discountType === 'all_products' ? null : targetValue,
@@ -117,89 +117,27 @@ const SimpleDiscountManagement = () => {
 
       console.log('Discount record created:', discountRecord);
 
-      // Now apply the discount to products using the cleaner approach
-      if (discountType === 'all_products') {
-        console.log(`Applying ${discountPercentage}% discount to all products...`);
+      // Apply discounts using the improved RPC function
+      console.log('Applying discounts using improved RPC function...');
+      const { error: rpcError } = await supabase.rpc('apply_active_discounts');
 
-        const { error: updateError } = await supabase
-          .from('products')
-          .update({ 
-            discount_percentage: discountPercentage,
-            updated_at: new Date().toISOString()
-          })
-          .eq('is_active', true);
-
-        if (updateError) {
-          console.error('Error applying global discount:', updateError);
-          throw updateError;
-        }
-
-        await logChange(
-          'global_discount_applied',
-          'products',
-          'all_products',
-          {
-            discount_percentage: discountPercentage,
-            operation: 'global_discount_update'
-          }
-        );
-      } else if (discountType === 'category') {
-        console.log(`Applying ${discountPercentage}% discount to category: ${targetValue}`);
-        
-        const { error: updateError } = await supabase
-          .from('products')
-          .update({ 
-            discount_percentage: discountPercentage,
-            updated_at: new Date().toISOString()
-          })
-          .contains('categories', [targetValue])
-          .eq('is_active', true);
-
-        if (updateError) {
-          console.error('Error applying category discount:', updateError);
-          throw updateError;
-        }
-
-        await logChange(
-          'category_discount_applied',
-          'products',
-          targetValue,
-          {
-            discount_percentage: discountPercentage,
-            discount_type: discountType,
-            target_value: targetValue
-          }
-        );
-      } else if (discountType === 'subcategory') {
-        console.log(`Applying ${discountPercentage}% discount to subcategory: ${targetValue}`);
-        
-        const { error: updateError } = await supabase
-          .from('products')
-          .update({ 
-            discount_percentage: discountPercentage,
-            updated_at: new Date().toISOString()
-          })
-          .contains('subcategories', [targetValue])
-          .eq('is_active', true);
-
-        if (updateError) {
-          console.error('Error applying subcategory discount:', updateError);
-          throw updateError;
-        }
-
-        await logChange(
-          'subcategory_discount_applied',
-          'products',
-          targetValue,
-          {
-            discount_percentage: discountPercentage,
-            discount_type: discountType,
-            target_value: targetValue
-          }
-        );
+      if (rpcError) {
+        console.error('Error applying discounts via RPC:', rpcError);
+        throw rpcError;
       }
 
-      console.log(`Successfully applied ${discountPercentage}% discount`);
+      await logChange(
+        `${discountType}_discount_applied`,
+        'products',
+        discountType === 'all_products' ? 'all_products' : targetValue,
+        {
+          discount_percentage: discountPercentage,
+          discount_type: discountType,
+          target_value: targetValue
+        }
+      );
+
+      console.log(`Successfully applied ${discountPercentage}% discount using RPC`);
       return discountRecord;
     },
     onSuccess: () => {
@@ -227,7 +165,7 @@ const SimpleDiscountManagement = () => {
     }
   });
 
-  // Remove discount mutation
+  // Remove discount mutation - using the improved RPC function
   const removeDiscountMutation = useMutation({
     mutationFn: async (discountId: string) => {
       console.log('Removing discount:', discountId);
@@ -255,56 +193,13 @@ const SimpleDiscountManagement = () => {
         throw deactivateError;
       }
 
-      // Reset products affected by this discount back to 0
-      if (discount) {
-        if (discount.discount_type === 'all_products') {
-          console.log('Resetting all products discount to 0');
-          
-          const { error: resetError } = await supabase
-            .from('products')
-            .update({ 
-              discount_percentage: 0,
-              updated_at: new Date().toISOString()
-            })
-            .eq('is_active', true);
-          
-          if (resetError) {
-            console.error('Error resetting all products:', resetError);
-            throw resetError;
-          }
-        } else if (discount.discount_type === 'category') {
-          console.log('Resetting category products discount to 0');
-          
-          const { error: resetError } = await supabase
-            .from('products')
-            .update({ 
-              discount_percentage: 0,
-              updated_at: new Date().toISOString()
-            })
-            .contains('categories', [discount.target_value])
-            .eq('is_active', true);
-          
-          if (resetError) {
-            console.error('Error resetting category products:', resetError);
-            throw resetError;
-          }
-        } else if (discount.discount_type === 'subcategory') {
-          console.log('Resetting subcategory products discount to 0');
-          
-          const { error: resetError } = await supabase
-            .from('products')
-            .update({ 
-              discount_percentage: 0,
-              updated_at: new Date().toISOString()
-            })
-            .contains('subcategories', [discount.target_value])
-            .eq('is_active', true);
-          
-          if (resetError) {
-            console.error('Error resetting subcategory products:', resetError);
-            throw resetError;
-          }
-        }
+      // Reapply all remaining active discounts using the improved RPC function
+      console.log('Reapplying remaining discounts using improved RPC function...');
+      const { error: rpcError } = await supabase.rpc('apply_active_discounts');
+      
+      if (rpcError) {
+        console.error('Error reapplying discounts via RPC:', rpcError);
+        throw rpcError;
       }
 
       await logChange(
@@ -324,7 +219,7 @@ const SimpleDiscountManagement = () => {
       
       toast({
         title: 'تم إيقاف الخصم',
-        description: 'تم إيقاف الخصم وإعادة تعيين الأسعار',
+        description: 'تم إيقاف الخصم وإعادة تطبيق الخصومات المتبقية',
       });
     },
     onError: (error: any) => {

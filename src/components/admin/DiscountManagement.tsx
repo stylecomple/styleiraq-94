@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -141,7 +140,7 @@ const DiscountManagement = () => {
     }
   };
 
-  // Create discount mutation
+  // Create discount mutation - using improved RPC function
   const createDiscountMutation = useMutation({
     mutationFn: async () => {
       console.log('Creating discount with:', {
@@ -179,8 +178,14 @@ const DiscountManagement = () => {
       
       console.log('Discount created successfully:', data);
 
-      // Apply discounts to products manually
-      await applyDiscountsToProducts();
+      // Apply discounts using the improved RPC function
+      console.log('Applying discounts using improved RPC function...');
+      const { error: rpcError } = await supabase.rpc('apply_active_discounts');
+      
+      if (rpcError) {
+        console.error('Error applying discounts via RPC:', rpcError);
+        throw rpcError;
+      }
       
       return data;
     },
@@ -210,7 +215,7 @@ const DiscountManagement = () => {
     }
   });
 
-  // Delete discount mutation
+  // Delete discount mutation - using improved RPC function
   const deleteDiscountMutation = useMutation({
     mutationFn: async (discountId: string) => {
       const { error } = await supabase
@@ -220,8 +225,14 @@ const DiscountManagement = () => {
       
       if (error) throw error;
 
-      // Reapply remaining discounts after deletion
-      await applyDiscountsToProducts();
+      // Reapply remaining discounts using the improved RPC function
+      console.log('Reapplying remaining discounts using improved RPC function...');
+      const { error: rpcError } = await supabase.rpc('apply_active_discounts');
+      
+      if (rpcError) {
+        console.error('Error reapplying discounts via RPC:', rpcError);
+        throw rpcError;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['active-discounts'] });
@@ -231,7 +242,7 @@ const DiscountManagement = () => {
       
       toast({
         title: 'تم حذف الخصم',
-        description: 'تم إزالة الخصم من المنتجات',
+        description: 'تم إزالة الخصم وإعادة تطبيق الخصومات المتبقية',
       });
     },
     onError: (error: any) => {

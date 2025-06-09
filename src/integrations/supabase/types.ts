@@ -389,7 +389,7 @@ export type Database = {
     }
     Functions: {
       apply_active_discounts: {
-        Args: Record<PropertyKey, never>
+        Args: { product_ids?: string[] }
         Returns: undefined
       }
       has_role: {
