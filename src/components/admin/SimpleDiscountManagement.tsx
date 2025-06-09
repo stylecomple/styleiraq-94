@@ -44,6 +44,8 @@ const SimpleDiscountManagement = () => {
   const [categoryDiscountType, setCategoryDiscountType] = useState<'category' | 'subcategory'>('category');
   const [selectedTarget, setSelectedTarget] = useState<string>('');
   const [categoryDiscountPercentage, setCategoryDiscountPercentage] = useState<number>(0);
+  const [specificDiscountPercentage, setSpecificDiscountPercentage] = useState<number>(0);
+  const [specificCategory, setSpecificCategory] = useState<string>('');
 
   // Fetch categories
   const { data: categories } = useQuery({
@@ -128,6 +130,66 @@ const SimpleDiscountManagement = () => {
       toast({
         title: 'خطأ',
         description: error.message || 'فشل في تطبيق الخصم',
+        variant: 'destructive',
+      });
+    }
+  });
+
+  // Apply specific category discount mutation
+  const applySpecificDiscountMutation = useMutation({
+    mutationFn: async ({ categoryId, percentage }: { categoryId: string; percentage: number }) => {
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError || !userData.user) {
+        throw new Error('المستخدم غير مسجل الدخول');
+      }
+
+      console.log(`Applying ${percentage}% discount to category ${categoryId}...`);
+
+      // Apply discount to products in specific category using WHERE clause
+      const { data, error } = await supabase
+        .from('products')
+        .update({ discount_percentage: percentage })
+        .contains('categories', [categoryId]);
+
+      if (error) {
+        console.error('Error updating category product discounts:', error);
+        throw new Error('فشل في تطبيق الخصم على المنتجات');
+      }
+
+      const categoryName = categories?.find(c => c.id === categoryId)?.name || categoryId;
+
+      await logChange(
+        'specific_category_discount_applied',
+        'products',
+        categoryId,
+        {
+          discount_percentage: percentage,
+          operation: 'category_discount_update',
+          category_name: categoryName,
+          affected_category: categoryId
+        }
+      );
+
+      console.log(`Successfully applied discount to category ${categoryName}`);
+      return { discount_percentage: percentage, category_name: categoryName };
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+      queryClient.invalidateQueries({ queryKey: ['featured-products'] });
+      
+      setSpecificDiscountPercentage(0);
+      setSpecificCategory('');
+      
+      toast({
+        title: 'تم تطبيق الخصم على الفئة',
+        description: `تم تطبيق خصم ${data.discount_percentage}% على منتجات فئة ${data.category_name}`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'خطأ',
+        description: error.message || 'فشل في تطبيق الخصم على الفئة',
         variant: 'destructive',
       });
     }
@@ -289,6 +351,31 @@ const SimpleDiscountManagement = () => {
     applyCategoryDiscountMutation.mutate();
   };
 
+  const handleApplySpecificDiscount = () => {
+    if (specificDiscountPercentage < 0 || specificDiscountPercentage > 100) {
+      toast({
+        title: 'خطأ',
+        description: 'يجب أن تكون نسبة الخصم بين 0 و 100',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!specificCategory) {
+      toast({
+        title: 'خطأ',
+        description: 'يجب اختيار الفئة',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    applySpecificDiscountMutation.mutate({
+      categoryId: specificCategory,
+      percentage: specificDiscountPercentage
+    });
+  };
+
   const handleApplyProductDiscount = () => {
     if (productDiscountPercentage < 0 || productDiscountPercentage > 100) {
       toast({
@@ -323,11 +410,16 @@ const SimpleDiscountManagement = () => {
   return (
     <div className="space-y-4 md:space-y-6">
       <Tabs defaultValue="category-discount" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="category-discount" className="flex items-center gap-2 text-xs md:text-sm">
             <Tag className="w-3 h-3 md:w-4 md:h-4" />
             <span className="hidden sm:inline">خصم الفئات</span>
             <span className="sm:hidden">فئات</span>
+          </TabsTrigger>
+          <TabsTrigger value="specific-discount" className="flex items-center gap-2 text-xs md:text-sm">
+            <Percent className="w-3 h-3 md:w-4 md:h-4" />
+            <span className="hidden sm:inline">خصم محدد</span>
+            <span className="sm:hidden">محدد</span>
           </TabsTrigger>
           <TabsTrigger value="product-discount" className="flex items-center gap-2 text-xs md:text-sm">
             <Package className="w-3 h-3 md:w-4 md:h-4" />
@@ -445,6 +537,66 @@ const SimpleDiscountManagement = () => {
                 className="w-full bg-green-600 hover:bg-green-700 text-sm md:text-base"
               >
                 {applyCategoryDiscountMutation.isPending ? 'جاري التطبيق...' : `تطبيق خصم ${categoryDiscountPercentage}%`}
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="specific-discount" className="space-y-4 md:space-y-6">
+          {/* Specific Category Discount */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
+                <Percent className="w-4 h-4 md:w-5 md:h-5" />
+                <span className="text-sm md:text-base">تطبيق خصم على فئة محددة</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="p-3 md:p-4 border rounded-lg bg-blue-50">
+                <p className="text-blue-800 font-medium mb-2 text-sm md:text-base">💡 معلومة</p>
+                <p className="text-xs md:text-sm text-blue-700">
+                  سيتم تطبيق هذا الخصم مباشرة على منتجات الفئة المحددة فقط. 
+                  يتم استخدام WHERE clause لضمان استهداف المنتجات الصحيحة.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="specific-category" className="text-sm md:text-base">الفئة</Label>
+                  <Select value={specificCategory} onValueChange={setSpecificCategory}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="اختر الفئة" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories?.map((category) => (
+                        <SelectItem key={category.id} value={category.id}>
+                          {category.icon} {category.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="specific-discount-percentage" className="text-sm md:text-base">نسبة الخصم (%)</Label>
+                  <Input
+                    id="specific-discount-percentage"
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={specificDiscountPercentage}
+                    onChange={(e) => setSpecificDiscountPercentage(Number(e.target.value))}
+                    placeholder="أدخل نسبة الخصم (0-100)"
+                  />
+                </div>
+              </div>
+
+              <Button 
+                onClick={handleApplySpecificDiscount}
+                disabled={applySpecificDiscountMutation.isPending || !specificCategory}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-sm md:text-base"
+              >
+                {applySpecificDiscountMutation.isPending ? 'جاري التطبيق...' : `تطبيق خصم ${specificDiscountPercentage}% على الفئة المحددة`}
               </Button>
             </CardContent>
           </Card>
