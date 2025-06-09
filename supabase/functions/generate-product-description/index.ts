@@ -13,14 +13,23 @@ serve(async (req) => {
   }
 
   try {
-    const { productName, currentDescription } = await req.json();
+    const { productName, currentDescription, categories, subcategories } = await req.json();
     const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
 
     if (!geminiApiKey) {
       throw new Error('GEMINI_API_KEY not configured');
     }
 
-    const prompt = `Create a compelling marketing description for a product called "${productName}". ${currentDescription ? `Current description: "${currentDescription}". Improve and enhance it.` : 'Create a new description.'} Make it concise, engaging, and focused on benefits. Keep it under 150 words. Write in Arabic.`;
+    // Build context from categories and subcategories
+    let categoryContext = '';
+    if (categories && categories.length > 0) {
+      categoryContext += ` This product belongs to the following categories: ${categories.join(', ')}.`;
+    }
+    if (subcategories && subcategories.length > 0) {
+      categoryContext += ` Subcategories: ${subcategories.join(', ')}.`;
+    }
+
+    const prompt = `Create a compelling marketing description for a product called "${productName}".${categoryContext} ${currentDescription ? `Current description: "${currentDescription}". Improve and enhance it.` : 'Create a new description.'} Make it concise, engaging, and focused on benefits. Keep it under 150 words. Write in Arabic and make sure the description is suitable for the product's category.`;
 
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${geminiApiKey}`, {
       method: 'POST',

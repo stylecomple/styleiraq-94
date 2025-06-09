@@ -137,10 +137,25 @@ const AddProductForm = ({ onClose }: AddProductFormProps) => {
     setIsGeneratingDescription(true);
     
     try {
+      // Get category and subcategory names for better context
+      const categoryNames = formData.categories.map(catId => {
+        const category = availableCategories.find(cat => cat.id === catId);
+        return category?.name;
+      }).filter(Boolean);
+
+      const subcategoryNames = formData.subcategories.map(subId => {
+        const subcategory = availableCategories
+          .flatMap(cat => cat.subcategories || [])
+          .find(sub => sub.id === subId);
+        return subcategory?.name;
+      }).filter(Boolean);
+
       const { data, error } = await supabase.functions.invoke('generate-product-description', {
         body: {
           productName: formData.name,
-          currentDescription: formData.description
+          currentDescription: formData.description,
+          categories: categoryNames,
+          subcategories: subcategoryNames
         }
       });
 

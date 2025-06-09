@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -10,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { X } from 'lucide-react';
+import { X, Sparkles } from 'lucide-react';
 import ProductOptionsManager from './ProductOptionsManager';
 import { ProductOption } from '@/types';
 
@@ -83,6 +82,8 @@ const EditProductForm = ({ product, onClose }: EditProductFormProps) => {
     discount_percentage: product.discount_percentage?.toString() || '0'
   });
 
+  const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
+
   const updateProductMutation = useMutation({
     mutationFn: async (productData: any) => {
       console.log('Updating product with data:', productData);
@@ -138,6 +139,60 @@ const EditProductForm = ({ product, onClose }: EditProductFormProps) => {
       });
     }
   });
+
+  const generateDescription = async () => {
+    if (!formData.name) {
+      toast({
+        title: 'خطأ',
+        description: 'يرجى إدخال اسم المنتج أولاً',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsGeneratingDescription(true);
+    
+    try {
+      // Get category and subcategory names for better context
+      const categoryNames = formData.categories.map(catId => {
+        const category = availableCategories.find(cat => cat.id === catId);
+        return category?.name;
+      }).filter(Boolean);
+
+      const subcategoryNames = formData.subcategories.map(subId => {
+        const subcategory = availableCategories
+          .flatMap(cat => cat.subcategories || [])
+          .find(sub => sub.id === subId);
+        return subcategory?.name;
+      }).filter(Boolean);
+
+      const { data, error } = await supabase.functions.invoke('generate-product-description', {
+        body: {
+          productName: formData.name,
+          currentDescription: formData.description,
+          categories: categoryNames,
+          subcategories: subcategoryNames
+        }
+      });
+
+      if (error) throw error;
+
+      setFormData(prev => ({ ...prev, description: data.description }));
+      toast({
+        title: 'تم إنشاء الوصف',
+        description: 'تم إنشاء وصف تسويقي للمنتج بنجاح',
+      });
+    } catch (error) {
+      console.error('Error generating description:', error);
+      toast({
+        title: 'خطأ',
+        description: 'فشل في إنشاء الوصف. تأكد من إعداد مفتاح Gemini AI',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsGeneratingDescription(false);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -292,12 +347,25 @@ const EditProductForm = ({ product, onClose }: EditProductFormProps) => {
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="description">الوصف</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="description">الوصف</Label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={generateDescription}
+                disabled={isGeneratingDescription || !formData.name}
+                className="flex items-center gap-2"
+              >
+                <Sparkles className="w-4 h-4" />
+                {isGeneratingDescription ? 'جاري الإنشاء...' : 'إنشاء وصف بالذكاء الاصطناعي'}
+              </Button>
+            </div>
             <Textarea
               id="description"
               value={formData.description}
               onChange={(e) => handleInputChange('description', e.target.value)}
-              placeholder="أدخل وصف المنتج"
+              placeholder="أدخل وصف المنتج أو استخدم الذكاء الاصطناعي لإنشاء وصف تسويقي"
               rows={3}
             />
           </div>
