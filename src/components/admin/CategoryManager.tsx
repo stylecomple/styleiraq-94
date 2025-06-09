@@ -25,13 +25,7 @@ interface Category {
   subcategories?: Subcategory[];
 }
 
-interface CategoryManagerProps {
-  categories: Category[];
-  onCategoriesChange: (categories: Category[]) => void;
-  onClose: () => void;
-}
-
-const CategoryManager = ({ onClose }: CategoryManagerProps) => {
+const CategoryManager = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
@@ -289,11 +283,8 @@ const CategoryManager = ({ onClose }: CategoryManagerProps) => {
 
   return (
     <Card className="mb-6">
-      <CardHeader className="flex flex-row items-center justify-between">
+      <CardHeader>
         <CardTitle>إدارة الفئات والفئات الفرعية</CardTitle>
-        <Button variant="outline" size="sm" onClick={onClose}>
-          <X className="w-4 h-4" />
-        </Button>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Add Main Category */}
