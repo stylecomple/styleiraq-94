@@ -388,12 +388,20 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      apply_active_discounts: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       has_role: {
         Args: {
           _user_id: string
           _role: Database["public"]["Enums"]["app_role"]
         }
         Returns: boolean
+      }
+      reset_all_product_discounts: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
       }
     }
     Enums: {
