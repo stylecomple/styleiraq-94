@@ -8,7 +8,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Trash2, Percent } from 'lucide-react';
+import { useChangeLogger } from '@/hooks/useChangeLogger';
+import { Trash2, Percent, Package, ShoppingCart } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface GlobalDiscount {
   id: string;
@@ -20,10 +22,12 @@ interface GlobalDiscount {
 const SimpleDiscountManagement = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { logChange } = useChangeLogger();
   
-  const [discountPercentage, setDiscountPercentage] = useState<number>(0);
+  const [cartDiscountPercentage, setCartDiscountPercentage] = useState<number>(0);
+  const [productDiscountPercentage, setProductDiscountPercentage] = useState<number>(0);
 
-  // Fetch current global discount
+  // Fetch current global cart discount
   const { data: globalDiscount, isLoading } = useQuery({
     queryKey: ['global-discount'],
     queryFn: async () => {
@@ -39,8 +43,8 @@ const SimpleDiscountManagement = () => {
     }
   });
 
-  // Apply global discount mutation - only creates discount record, doesn't update products
-  const applyDiscountMutation = useMutation({
+  // Apply cart-level discount mutation
+  const applyCartDiscountMutation = useMutation({
     mutationFn: async (percentage: number) => {
       const { data: userData, error: userError } = await supabase.auth.getUser();
       if (userError || !userData.user) {
@@ -73,10 +77,10 @@ const SimpleDiscountManagement = () => {
       queryClient.invalidateQueries({ queryKey: ['global-discount'] });
       queryClient.invalidateQueries({ queryKey: ['active-discounts'] });
       
-      setDiscountPercentage(0);
+      setCartDiscountPercentage(0);
       
       toast({
-        title: 'تم تطبيق الخصم',
+        title: 'تم تطبيق خصم سلة التسوق',
         description: 'سيظهر الخصم في سلة التسوق للعملاء',
       });
     },
@@ -89,8 +93,118 @@ const SimpleDiscountManagement = () => {
     }
   });
 
-  // Remove discount mutation - only deactivates discount record
-  const removeDiscountMutation = useMutation({
+  // Apply direct product discount mutation
+  const applyProductDiscountMutation = useMutation({
+    mutationFn: async (percentage: number) => {
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError || !userData.user) {
+        throw new Error('المستخدم غير مسجل الدخول');
+      }
+
+      console.log(`Applying ${percentage}% discount to all products...`);
+
+      // Update all products with the discount percentage
+      const { data, error } = await supabase
+        .from('products')
+        .update({ discount_percentage: percentage })
+        .neq('id', '00000000-0000-0000-0000-000000000000'); // This ensures we update all products
+
+      if (error) {
+        console.error('Error updating product discounts:', error);
+        throw new Error('فشل في تطبيق الخصم على المنتجات');
+      }
+
+      // Log the change
+      await logChange(
+        'bulk_product_discount_applied',
+        'products',
+        'all',
+        {
+          discount_percentage: percentage,
+          operation: 'bulk_discount_update',
+          affected_products: 'all'
+        }
+      );
+
+      console.log('Successfully applied discount to all products');
+      return { discount_percentage: percentage };
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+      queryClient.invalidateQueries({ queryKey: ['featured-products'] });
+      
+      setProductDiscountPercentage(0);
+      
+      toast({
+        title: 'تم تطبيق الخصم على المنتجات',
+        description: `تم تطبيق خصم ${data.discount_percentage}% على جميع المنتجات في قاعدة البيانات`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'خطأ',
+        description: error.message || 'فشل في تطبيق الخصم على المنتجات',
+        variant: 'destructive',
+      });
+    }
+  });
+
+  // Remove all product discounts mutation
+  const removeProductDiscountsMutation = useMutation({
+    mutationFn: async () => {
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError || !userData.user) {
+        throw new Error('المستخدم غير مسجل الدخول');
+      }
+
+      console.log('Removing all product discounts...');
+
+      // Reset all products to 0% discount
+      const { error } = await supabase
+        .from('products')
+        .update({ discount_percentage: 0 })
+        .neq('id', '00000000-0000-0000-0000-000000000000'); // This ensures we update all products
+
+      if (error) {
+        console.error('Error removing product discounts:', error);
+        throw new Error('فشل في إزالة الخصومات من المنتجات');
+      }
+
+      // Log the change
+      await logChange(
+        'bulk_product_discount_removed',
+        'products',
+        'all',
+        {
+          operation: 'bulk_discount_removal',
+          affected_products: 'all'
+        }
+      );
+
+      console.log('Successfully removed all product discounts');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+      queryClient.invalidateQueries({ queryKey: ['featured-products'] });
+      
+      toast({
+        title: 'تم إزالة الخصومات',
+        description: 'تم إزالة جميع الخصومات من المنتجات',
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'خطأ',
+        description: error.message || 'فشل في إزالة الخصومات',
+        variant: 'destructive',
+      });
+    }
+  });
+
+  // Remove cart discount mutation
+  const removeCartDiscountMutation = useMutation({
     mutationFn: async () => {
       // Deactivate global discount
       const { error } = await supabase
@@ -106,7 +220,7 @@ const SimpleDiscountManagement = () => {
       queryClient.invalidateQueries({ queryKey: ['active-discounts'] });
       
       toast({
-        title: 'تم إزالة الخصم',
+        title: 'تم إزالة خصم سلة التسوق',
         description: 'لن يظهر الخصم في سلة التسوق بعد الآن',
       });
     },
@@ -119,8 +233,8 @@ const SimpleDiscountManagement = () => {
     }
   });
 
-  const handleApplyDiscount = () => {
-    if (discountPercentage <= 0 || discountPercentage > 100) {
+  const handleApplyCartDiscount = () => {
+    if (cartDiscountPercentage <= 0 || cartDiscountPercentage > 100) {
       toast({
         title: 'خطأ',
         description: 'يجب أن تكون نسبة الخصم بين 1 و 100',
@@ -129,11 +243,28 @@ const SimpleDiscountManagement = () => {
       return;
     }
 
-    applyDiscountMutation.mutate(discountPercentage);
+    applyCartDiscountMutation.mutate(cartDiscountPercentage);
   };
 
-  const handleRemoveDiscount = () => {
-    removeDiscountMutation.mutate();
+  const handleApplyProductDiscount = () => {
+    if (productDiscountPercentage < 0 || productDiscountPercentage > 100) {
+      toast({
+        title: 'خطأ',
+        description: 'يجب أن تكون نسبة الخصم بين 0 و 100',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    applyProductDiscountMutation.mutate(productDiscountPercentage);
+  };
+
+  const handleRemoveCartDiscount = () => {
+    removeCartDiscountMutation.mutate();
+  };
+
+  const handleRemoveProductDiscounts = () => {
+    removeProductDiscountsMutation.mutate();
   };
 
   if (isLoading) {
@@ -142,76 +273,147 @@ const SimpleDiscountManagement = () => {
 
   return (
     <div className="space-y-6">
-      {/* Current Discount Status */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Percent className="w-5 h-5" />
-            حالة الخصم الحالية
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {globalDiscount ? (
-            <div className="flex items-center justify-between p-4 border rounded-lg bg-green-50">
+      <Tabs defaultValue="cart-discount" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="cart-discount" className="flex items-center gap-2">
+            <ShoppingCart className="w-4 h-4" />
+            خصم سلة التسوق
+          </TabsTrigger>
+          <TabsTrigger value="product-discount" className="flex items-center gap-2">
+            <Package className="w-4 h-4" />
+            خصم المنتجات المباشر
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="cart-discount" className="space-y-6">
+          {/* Current Cart Discount Status */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ShoppingCart className="w-5 h-5" />
+                حالة خصم سلة التسوق الحالية
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {globalDiscount ? (
+                <div className="flex items-center justify-between p-4 border rounded-lg bg-green-50">
+                  <div>
+                    <p className="font-semibold text-green-800">
+                      خصم سلة التسوق نشط: {globalDiscount.discount_percentage}%
+                    </p>
+                    <p className="text-sm text-green-600">
+                      سيظهر في سلة التسوق للعملاء
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge className="bg-green-100 text-green-800">نشط</Badge>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleRemoveCartDiscount}
+                      disabled={removeCartDiscountMutation.isPending}
+                    >
+                      <Trash2 className="w-4 h-4 text-red-500" />
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-gray-500 mb-4">لا يوجد خصم سلة تسوق نشط حالياً</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Apply New Cart Discount */}
+          <Card>
+            <CardHeader>
+              <CardTitle>تطبيق خصم على سلة التسوق</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
               <div>
-                <p className="font-semibold text-green-800">
-                  خصم عام نشط: {globalDiscount.discount_percentage}%
-                </p>
-                <p className="text-sm text-green-600">
-                  سيظهر في سلة التسوق للعملاء
+                <Label htmlFor="cart-discount-percentage">نسبة الخصم (%)</Label>
+                <Input
+                  id="cart-discount-percentage"
+                  type="number"
+                  min="1"
+                  max="100"
+                  value={cartDiscountPercentage}
+                  onChange={(e) => setCartDiscountPercentage(Number(e.target.value))}
+                  placeholder="أدخل نسبة الخصم (1-100)"
+                />
+                <p className="text-sm text-gray-600 mt-1">
+                  سيظهر هذا الخصم في سلة التسوق للعملاء
                 </p>
               </div>
-              <div className="flex items-center gap-2">
-                <Badge className="bg-green-100 text-green-800">نشط</Badge>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleRemoveDiscount}
-                  disabled={removeDiscountMutation.isPending}
+
+              <Button 
+                onClick={handleApplyCartDiscount}
+                disabled={applyCartDiscountMutation.isPending || !cartDiscountPercentage}
+                className="w-full bg-green-600 hover:bg-green-700"
+              >
+                {applyCartDiscountMutation.isPending ? 'جاري التطبيق...' : `تطبيق خصم سلة ${cartDiscountPercentage}%`}
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="product-discount" className="space-y-6">
+          {/* Direct Product Discount */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Package className="w-5 h-5" />
+                تطبيق خصم مباشر على جميع المنتجات
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="p-4 border rounded-lg bg-yellow-50">
+                <p className="text-yellow-800 font-medium mb-2">⚠️ تحذير هام</p>
+                <p className="text-sm text-yellow-700">
+                  سيتم تطبيق هذا الخصم مباشرة على جميع المنتجات في قاعدة البيانات. 
+                  هذا سيغير أسعار المنتجات نفسها وليس فقط في سلة التسوق.
+                </p>
+              </div>
+
+              <div>
+                <Label htmlFor="product-discount-percentage">نسبة الخصم (%)</Label>
+                <Input
+                  id="product-discount-percentage"
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={productDiscountPercentage}
+                  onChange={(e) => setProductDiscountPercentage(Number(e.target.value))}
+                  placeholder="أدخل نسبة الخصم (0-100)"
+                />
+                <p className="text-sm text-gray-600 mt-1">
+                  سيتم تحديث جميع المنتجات بهذه النسبة (0 = إزالة جميع الخصومات)
+                </p>
+              </div>
+
+              <div className="flex gap-2">
+                <Button 
+                  onClick={handleApplyProductDiscount}
+                  disabled={applyProductDiscountMutation.isPending}
+                  className="flex-1 bg-orange-600 hover:bg-orange-700"
                 >
-                  <Trash2 className="w-4 h-4 text-red-500" />
+                  {applyProductDiscountMutation.isPending ? 'جاري التطبيق...' : `تطبيق خصم ${productDiscountPercentage}% على جميع المنتجات`}
+                </Button>
+                
+                <Button 
+                  onClick={handleRemoveProductDiscounts}
+                  disabled={removeProductDiscountsMutation.isPending}
+                  variant="outline"
+                  className="text-red-600 border-red-300 hover:bg-red-50"
+                >
+                  {removeProductDiscountsMutation.isPending ? 'جاري الإزالة...' : 'إزالة جميع الخصومات'}
                 </Button>
               </div>
-            </div>
-          ) : (
-            <div className="text-center py-8">
-              <p className="text-gray-500 mb-4">لا يوجد خصم نشط حالياً</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Apply New Discount */}
-      <Card>
-        <CardHeader>
-          <CardTitle>تطبيق خصم على سلة التسوق</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <Label htmlFor="discount-percentage">نسبة الخصم (%)</Label>
-            <Input
-              id="discount-percentage"
-              type="number"
-              min="1"
-              max="100"
-              value={discountPercentage}
-              onChange={(e) => setDiscountPercentage(Number(e.target.value))}
-              placeholder="أدخل نسبة الخصم (1-100)"
-            />
-            <p className="text-sm text-gray-600 mt-1">
-              سيظهر هذا الخصم في سلة التسوق للعملاء
-            </p>
-          </div>
-
-          <Button 
-            onClick={handleApplyDiscount}
-            disabled={applyDiscountMutation.isPending || !discountPercentage}
-            className="w-full bg-green-600 hover:bg-green-700"
-          >
-            {applyDiscountMutation.isPending ? 'جاري التطبيق...' : `تطبيق خصم ${discountPercentage}%`}
-          </Button>
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
