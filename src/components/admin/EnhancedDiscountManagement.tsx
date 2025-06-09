@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -123,7 +122,7 @@ const EnhancedDiscountManagement = () => {
   });
 
   // Advanced products query with WHERE conditions
-  const { data: filteredProducts, isLoading: productsLoading } = useAdvancedDiscountQuery({
+  const { data: filteredProducts, isLoading: productsLoading, error: productsError } = useAdvancedDiscountQuery({
     table: 'products',
     select: 'id, name, price, discount_percentage, stock_quantity, is_active, categories, subcategories',
     whereConditions: whereConditions,
@@ -161,11 +160,11 @@ const EnhancedDiscountManagement = () => {
         throw insertError;
       }
 
-      // Apply discount to filtered products if conditions are specified
-      if (whereConditions.length > 0 && filteredProducts && Array.isArray(filteredProducts)) {
+      // Apply discount to filtered products if conditions are specified and we have valid data
+      if (whereConditions.length > 0 && filteredProducts && !productsError && Array.isArray(filteredProducts)) {
         console.log(`Applying discount to ${filteredProducts.length} filtered products`);
         
-        const productIds = filteredProducts.map((p: Product) => p.id);
+        const productIds = (filteredProducts as Product[]).map(p => p.id);
         
         // Apply discounts to specific products using the improved RPC function
         const { error: rpcError } = await supabase.rpc('apply_active_discounts', {
@@ -195,7 +194,7 @@ const EnhancedDiscountManagement = () => {
           discount_type: discountType,
           target_value: targetValue,
           where_conditions: whereConditions,
-          affected_products_count: Array.isArray(filteredProducts) ? filteredProducts.length : 0
+          affected_products_count: (filteredProducts && !productsError && Array.isArray(filteredProducts)) ? filteredProducts.length : 0
         }
       );
 
@@ -247,12 +246,13 @@ const EnhancedDiscountManagement = () => {
       return;
     }
 
+    const validProducts = filteredProducts && !productsError && Array.isArray(filteredProducts);
     console.log('Applying complex discount:', { 
       discountType, 
       targetValue, 
       discountPercentage, 
       whereConditions,
-      filteredProductsCount: Array.isArray(filteredProducts) ? filteredProducts.length : 0 
+      filteredProductsCount: validProducts ? filteredProducts.length : 0 
     });
     
     applyComplexDiscountMutation.mutate();
@@ -268,6 +268,12 @@ const EnhancedDiscountManagement = () => {
       const subcategory = subcategories?.find(s => s.id === discount.target_value);
       return `فئة فرعية: ${subcategory?.name || discount.target_value}`;
     }
+  };
+
+  const getProductsCount = () => {
+    if (productsError) return 0;
+    if (!filteredProducts || !Array.isArray(filteredProducts)) return 0;
+    return filteredProducts.length;
   };
 
   return (
@@ -384,9 +390,11 @@ const EnhancedDiscountManagement = () => {
               </div>
               {productsLoading ? (
                 <p className="text-sm text-blue-600">جاري تحميل المنتجات المفلترة...</p>
+              ) : productsError ? (
+                <p className="text-sm text-red-600">خطأ في تحميل المنتجات: {productsError.message}</p>
               ) : (
                 <p className="text-sm text-blue-700">
-                  سيتم تطبيق الخصم على {Array.isArray(filteredProducts) ? filteredProducts.length : 0} منتج مطابق للشروط
+                  سيتم تطبيق الخصم على {getProductsCount()} منتج مطابق للشروط
                 </p>
               )}
             </div>
