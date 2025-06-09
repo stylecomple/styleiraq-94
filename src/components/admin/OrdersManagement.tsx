@@ -2,6 +2,12 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useToast } from '@/hooks/use-toast';
+import { Eye, Search, Filter } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -10,70 +16,68 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Eye, Clock, CheckCircle, Truck, Package } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { useChangeLogger } from '@/hooks/useChangeLogger';
-import EnhancedOrderDetailsDialog from './EnhancedOrderDetailsDialog';
+import OrderDetailsDialog from './OrderDetailsDialog';
 
-interface Order {
-  id: string;
-  user_id: string;
-  total_amount: number;
-  status: string;
-  shipping_address: string;
-  phone: string;
-  payment_method: string;
-  governorate: string;
-  created_at: string;
+interface OrdersManagementProps {
+  DeleteOrderButton?: React.ComponentType<{ order: any }>;
 }
 
-const OrdersManagement = () => {
+const OrdersManagement = ({ DeleteOrderButton }: OrdersManagementProps) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { logChange } = useChangeLogger();
-  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-  const [showDetailsDialog, setShowDetailsDialog] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
 
   const { data: orders, isLoading } = useQuery({
     queryKey: ['admin-orders'],
     queryFn: async () => {
+      console.log('Fetching orders...');
       const { data, error } = await supabase
         .from('orders')
-        .select('*')
+        .select(`
+          *,
+          order_items (
+            id,
+            quantity,
+            price,
+            product_id,
+            selected_color,
+            products (name, cover_image)
+          )
+        `)
         .order('created_at', { ascending: false });
       
-      if (error) throw error;
-      return data as Order[];
+      if (error) {
+        console.error('Error fetching orders:', error);
+        throw error;
+      }
+      console.log('Fetched orders:', data?.length);
+      return data;
     }
   });
 
-  const updateOrderStatusMutation = useMutation({
-    mutationFn: async ({ orderId, newStatus }: { orderId: string; newStatus: string }) => {
-      const { error } = await supabase
+  const updateOrderMutation = useMutation({
+    mutationFn: async ({ orderId, status }: { orderId: string; status: string }) => {
+      const { data, error } = await supabase
         .from('orders')
-        .update({ status: newStatus })
-        .eq('id', orderId);
+        .update({ status, updated_at: new Date().toISOString() })
+        .eq('id', orderId)
+        .select()
+        .single();
       
       if (error) throw error;
-
-      // Log the change
-      await logChange('order_status_updated', 'order', orderId, {
-        new_status: newStatus
-      });
-
-      return { orderId, newStatus };
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
       toast({
-        title: 'تم تحديث حالة الطلب',
+        title: 'تم تحديث الطلب',
         description: 'تم تحديث حالة الطلب بنجاح',
       });
     },
-    onError: (error: any) => {
-      console.error('Error updating order status:', error);
+    onError: () => {
       toast({
         title: 'خطأ',
         description: 'فشل في تحديث حالة الطلب',
@@ -104,128 +108,144 @@ const OrdersManagement = () => {
     }
   };
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'pending': return <Clock className="w-4 h-4" />;
-      case 'confirmed': return <CheckCircle className="w-4 h-4" />;
-      case 'shipped': return <Truck className="w-4 h-4" />;
-      case 'delivered': return <Package className="w-4 h-4" />;
-      default: return <Clock className="w-4 h-4" />;
-    }
+  const handleStatusChange = (orderId: string, newStatus: string) => {
+    updateOrderMutation.mutate({ orderId, status: newStatus });
   };
+
+  const filteredOrders = orders?.filter(order => {
+    const matchesSearch = order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         order.phone?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         order.shipping_address?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  }) || [];
 
   const formatPrice = (price: number) => {
     return `${price.toLocaleString('ar-IQ')} د.ع`;
   };
 
-  const handleViewDetails = (order: Order) => {
-    setSelectedOrder(order);
-    setShowDetailsDialog(true);
-  };
-
-  const handleStatusUpdate = (orderId: string, newStatus: string) => {
-    updateOrderStatusMutation.mutate({ orderId, newStatus });
-  };
-
   if (isLoading) {
-    return <div className="text-center">جاري التحميل...</div>;
+    return <div className="text-center py-8">جاري التحميل...</div>;
   }
 
   return (
-    <div className="space-y-4">
-      <div className="border rounded-lg">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="text-right">رقم الطلب</TableHead>
-              <TableHead className="text-right">الهاتف</TableHead>
-              <TableHead className="text-right">المحافظة</TableHead>
-              <TableHead className="text-right">المبلغ الإجمالي</TableHead>
-              <TableHead className="text-right">طريقة الدفع</TableHead>
-              <TableHead className="text-right">الحالة</TableHead>
-              <TableHead className="text-right">تاريخ الطلب</TableHead>
-              <TableHead className="text-right">الإجراءات</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {orders?.map((order) => (
-              <TableRow key={order.id}>
-                <TableCell className="font-medium">
-                  #{order.id.slice(-8)}
-                </TableCell>
-                <TableCell>{order.phone}</TableCell>
-                <TableCell>{order.governorate}</TableCell>
-                <TableCell>{formatPrice(order.total_amount)}</TableCell>
-                <TableCell>{order.payment_method}</TableCell>
-                <TableCell>
-                  <Badge className={getStatusColor(order.status)}>
-                    <div className="flex items-center gap-1">
-                      {getStatusIcon(order.status)}
-                      {getStatusText(order.status)}
-                    </div>
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  {new Date(order.created_at).toLocaleDateString('ar')}
-                </TableCell>
-                <TableCell>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleViewDetails(order)}
-                    >
-                      <Eye className="w-4 h-4" />
-                    </Button>
-                    
-                    {order.status === 'pending' && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleStatusUpdate(order.id, 'confirmed')}
-                        disabled={updateOrderStatusMutation.isPending}
-                        className="text-blue-600 hover:text-blue-700"
-                      >
-                        تأكيد
-                      </Button>
-                    )}
-                    
-                    {order.status === 'confirmed' && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleStatusUpdate(order.id, 'shipped')}
-                        disabled={updateOrderStatusMutation.isPending}
-                        className="text-purple-600 hover:text-purple-700"
-                      >
-                        شحن
-                      </Button>
-                    )}
-                    
-                    {order.status === 'shipped' && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleStatusUpdate(order.id, 'delivered')}
-                        disabled={updateOrderStatusMutation.isPending}
-                        className="text-green-600 hover:text-green-700"
-                      >
-                        تسليم
-                      </Button>
-                    )}
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+    <div className="space-y-4 md:space-y-6">
+      {/* Search and Filter */}
+      <div className="flex flex-col sm:flex-row gap-3 md:gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+          <Input
+            placeholder="البحث برقم الطلب أو رقم الهاتف..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10 text-sm md:text-base"
+          />
+        </div>
+        <div className="w-full sm:w-48">
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="text-sm md:text-base">
+              <div className="flex items-center gap-2">
+                <Filter className="w-4 h-4" />
+                <SelectValue />
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">جميع الحالات</SelectItem>
+              <SelectItem value="pending">في الانتظار</SelectItem>
+              <SelectItem value="confirmed">مؤكد</SelectItem>
+              <SelectItem value="shipped">تم الشحن</SelectItem>
+              <SelectItem value="delivered">تم التسليم</SelectItem>
+              <SelectItem value="cancelled">ملغي</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
-      <EnhancedOrderDetailsDialog
+      {/* Orders Table */}
+      <div className="border rounded-lg overflow-hidden">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="text-right text-xs md:text-sm">رقم الطلب</TableHead>
+                <TableHead className="text-right text-xs md:text-sm hidden sm:table-cell">المبلغ الإجمالي</TableHead>
+                <TableHead className="text-right text-xs md:text-sm">الحالة</TableHead>
+                <TableHead className="text-right text-xs md:text-sm hidden md:table-cell">تاريخ الإنشاء</TableHead>
+                <TableHead className="text-right text-xs md:text-sm hidden lg:table-cell">عدد المنتجات</TableHead>
+                <TableHead className="text-right text-xs md:text-sm">الإجراءات</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredOrders.map((order) => (
+                <TableRow key={order.id}>
+                  <TableCell className="font-mono text-xs md:text-sm">
+                    #{order.id.substring(0, 8)}
+                  </TableCell>
+                  <TableCell className="font-medium text-xs md:text-sm hidden sm:table-cell">
+                    {formatPrice(order.total_amount)}
+                  </TableCell>
+                  <TableCell>
+                    <Select
+                      value={order.status}
+                      onValueChange={(value) => handleStatusChange(order.id, value)}
+                      disabled={updateOrderMutation.isPending}
+                    >
+                      <SelectTrigger className="w-full sm:w-32 md:w-40 p-1 h-8 text-xs">
+                        <Badge className={`${getStatusColor(order.status)} text-xs px-1 py-0`}>
+                          {getStatusText(order.status)}
+                        </Badge>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="pending">في الانتظار</SelectItem>
+                        <SelectItem value="confirmed">مؤكد</SelectItem>
+                        <SelectItem value="shipped">تم الشحن</SelectItem>
+                        <SelectItem value="delivered">تم التسليم</SelectItem>
+                        <SelectItem value="cancelled">ملغي</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </TableCell>
+                  <TableCell className="text-xs md:text-sm hidden md:table-cell">
+                    {new Date(order.created_at).toLocaleDateString('ar-EG')}
+                  </TableCell>
+                  <TableCell className="text-xs md:text-sm hidden lg:table-cell">
+                    {order.order_items?.length || 0} منتج
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1 md:gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedOrder(order);
+                          setIsDialogOpen(true);
+                        }}
+                        className="h-8 px-2 md:px-3"
+                      >
+                        <Eye className="w-3 h-3 md:w-4 md:h-4" />
+                        <span className="hidden sm:inline ml-1 text-xs">عرض</span>
+                      </Button>
+                      {DeleteOrderButton && <DeleteOrderButton order={order} />}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+        
+        {filteredOrders.length === 0 && (
+          <div className="text-center py-8 text-muted-foreground text-sm md:text-base">
+            {searchTerm || statusFilter !== 'all' ? 'لم يتم العثور على طلبات مطابقة' : 'لا توجد طلبات حالياً'}
+          </div>
+        )}
+      </div>
+
+      {/* Order Details Dialog */}
+      <OrderDetailsDialog
         order={selectedOrder}
-        isOpen={showDetailsDialog}
+        isOpen={isDialogOpen}
         onClose={() => {
-          setShowDetailsDialog(false);
+          setIsDialogOpen(false);
           setSelectedOrder(null);
         }}
       />
