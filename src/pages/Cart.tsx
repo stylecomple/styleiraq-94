@@ -14,6 +14,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import PaymentDialog from '@/components/PaymentDialog';
 import { useNavigate } from 'react-router-dom';
+import { useCartDiscounts } from '@/hooks/useCartDiscounts';
 
 interface PaymentConfig {
   enabled: boolean;
@@ -30,7 +31,6 @@ const Cart = () => {
     items, 
     removeFromCart, 
     updateQuantity, 
-    getTotalPrice, 
     clearCart,
     isPaymentDialogOpen,
     selectedPaymentMethod,
@@ -46,6 +46,9 @@ const Cart = () => {
   const [governorate, setGovernorate] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'cash_on_delivery' | 'visa_card' | 'zain_cash'>('cash_on_delivery');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Use the new discount hook
+  const { discountedCartItems, hasDiscounts } = useCartDiscounts(items);
 
   const { data: adminSettings } = useQuery({
     queryKey: ['admin-settings'],
@@ -70,6 +73,10 @@ const Cart = () => {
     if (governorate === 'بغداد') return 5000;
     if (governorate === 'العامريه') return 2000;
     return 6000;
+  };
+
+  const getTotalPrice = () => {
+    return discountedCartItems.reduce((total, item) => total + item.price * item.quantity, 0);
   };
 
   const getTotalWithShipping = () => {
@@ -147,12 +154,12 @@ const Cart = () => {
 
       if (orderError) throw orderError;
 
-      // Create order items with selected options
-      const orderItems = items.map(item => ({
+      // Create order items with discounted prices
+      const orderItems = discountedCartItems.map(item => ({
         order_id: order.id,
         product_id: item.id,
         quantity: item.quantity,
-        price: item.price,
+        price: item.price, // Use discounted price
         selected_color: item.selectedOption || null
       }));
 
@@ -167,7 +174,7 @@ const Cart = () => {
         const orderData = {
           orderId: order.id,
           totalAmount: getTotalWithShipping(),
-          items: items
+          items: discountedCartItems
         };
         openPaymentDialog(paymentMethod, orderData);
       } else {
@@ -271,11 +278,16 @@ const Cart = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <ShoppingCart className="w-5 h-5" />
-                  المنتجات ({items.length})
+                  المنتجات ({discountedCartItems.length})
+                  {hasDiscounts && (
+                    <Badge variant="default" className="bg-red-500 text-white">
+                      خصم متاح!
+                    </Badge>
+                  )}
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {items.length === 0 ? (
+                {discountedCartItems.length === 0 ? (
                   <div className="text-center py-8">
                     <ShoppingCart className="w-16 h-16 text-gray-400 mx-auto mb-4" />
                     <p className="text-gray-600 mb-4">السلة فارغة</p>
@@ -285,7 +297,7 @@ const Cart = () => {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {items.map((item) => (
+                    {discountedCartItems.map((item) => (
                       <div key={`${item.id}-${item.selectedOption || 'default'}`} className="flex items-center justify-between border-b pb-4">
                         <div className="flex items-center space-x-4">
                           <img
@@ -300,7 +312,19 @@ const Cart = () => {
                                 {item.selectedOption}
                               </Badge>
                             )}
-                            <p className="text-gray-600">{formatPrice(item.price)}</p>
+                            <div className="flex items-center gap-2">
+                              {item.discountPercentage > 0 ? (
+                                <>
+                                  <span className="text-red-600 font-bold">{formatPrice(item.price)}</span>
+                                  <span className="text-gray-400 line-through text-sm">{formatPrice(item.originalPrice)}</span>
+                                  <Badge variant="destructive" className="text-xs">
+                                    -{item.discountPercentage}%
+                                  </Badge>
+                                </>
+                              ) : (
+                                <span className="text-gray-600">{formatPrice(item.price)}</span>
+                              )}
+                            </div>
                           </div>
                         </div>
                         <div className="flex items-center space-x-4">
@@ -354,10 +378,24 @@ const Cart = () => {
                       <span>{formatPrice(getShippingCost())}</span>
                     </div>
                   )}
+                  {hasDiscounts && (
+                    <div className="flex justify-between text-red-600">
+                      <span>توفير الخصم:</span>
+                      <span>
+                        -{formatPrice(
+                          discountedCartItems.reduce((total, item) => 
+                            total + ((item.originalPrice - item.price) * item.quantity), 0
+                          )
+                        )}
+                      </span>
+                    </div>
+                  )}
                   <div className="border-t pt-2">
                     <div className="flex justify-between font-bold text-lg">
                       <span>المجموع الكلي:</span>
-                      <span>{formatPrice(getTotalWithShipping())}</span>
+                      <span className={hasDiscounts ? "text-red-600" : ""}>
+                        {formatPrice(getTotalWithShipping())}
+                      </span>
                     </div>
                   </div>
                 </div>
