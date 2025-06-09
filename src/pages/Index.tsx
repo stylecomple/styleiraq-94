@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import Hero from '@/components/Hero';
 import FeaturesSection from '@/components/FeaturesSection';
 import DiscountBanner from '@/components/DiscountBanner';
+import GlobalDiscountAlert from '@/components/GlobalDiscountAlert';
 import { useNavigate } from 'react-router-dom';
 
 interface Discount {
@@ -35,6 +36,21 @@ const Index = () => {
         target_value: discount.target_value,
         discount_percentage: discount.discount_percentage
       }));
+    }
+  });
+
+  // Check for global discounts on all products
+  const { data: hasGlobalDiscount } = useQuery({
+    queryKey: ['global-discount-check'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('products')
+        .select('discount_percentage')
+        .gt('discount_percentage', 0)
+        .limit(1);
+      
+      if (error) throw error;
+      return data && data.length > 0 ? data[0].discount_percentage : null;
     }
   });
 
@@ -69,6 +85,11 @@ const Index = () => {
       {/* Discount Banner */}
       {activeDiscounts && activeDiscounts.length > 0 && (
         <DiscountBanner discounts={activeDiscounts} />
+      )}
+      
+      {/* Global Discount Alert - Cool effects for site-wide discounts */}
+      {hasGlobalDiscount && (
+        <GlobalDiscountAlert discountPercentage={hasGlobalDiscount} />
       )}
       
       <Hero 
