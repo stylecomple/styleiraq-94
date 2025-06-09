@@ -11,7 +11,7 @@ interface WhereCondition {
 }
 
 interface AdvancedQueryOptions {
-  table: 'products' | 'categories' | 'subcategories' | 'active_discounts' | 'orders';
+  table: string;
   select?: string;
   whereConditions: WhereCondition[];
   orderBy?: { column: string; ascending: boolean };

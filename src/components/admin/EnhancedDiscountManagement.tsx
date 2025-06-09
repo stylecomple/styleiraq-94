@@ -45,6 +45,17 @@ interface Discount {
   is_active: boolean;
 }
 
+interface Product {
+  id: string;
+  name: string;
+  price: number;
+  discount_percentage: number;
+  stock_quantity: number;
+  is_active: boolean;
+  categories: string[];
+  subcategories: string[];
+}
+
 const EnhancedDiscountManagement = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -151,10 +162,10 @@ const EnhancedDiscountManagement = () => {
       }
 
       // Apply discount to filtered products if conditions are specified
-      if (whereConditions.length > 0 && filteredProducts) {
+      if (whereConditions.length > 0 && filteredProducts && Array.isArray(filteredProducts)) {
         console.log(`Applying discount to ${filteredProducts.length} filtered products`);
         
-        const productIds = filteredProducts.map(p => p.id);
+        const productIds = filteredProducts.map((p: Product) => p.id);
         
         // Apply discounts to specific products using the improved RPC function
         const { error: rpcError } = await supabase.rpc('apply_active_discounts', {
@@ -184,7 +195,7 @@ const EnhancedDiscountManagement = () => {
           discount_type: discountType,
           target_value: targetValue,
           where_conditions: whereConditions,
-          affected_products_count: filteredProducts?.length || 0
+          affected_products_count: Array.isArray(filteredProducts) ? filteredProducts.length : 0
         }
       );
 
@@ -241,7 +252,7 @@ const EnhancedDiscountManagement = () => {
       targetValue, 
       discountPercentage, 
       whereConditions,
-      filteredProductsCount: filteredProducts?.length || 0 
+      filteredProductsCount: Array.isArray(filteredProducts) ? filteredProducts.length : 0 
     });
     
     applyComplexDiscountMutation.mutate();
@@ -375,7 +386,7 @@ const EnhancedDiscountManagement = () => {
                 <p className="text-sm text-blue-600">جاري تحميل المنتجات المفلترة...</p>
               ) : (
                 <p className="text-sm text-blue-700">
-                  سيتم تطبيق الخصم على {filteredProducts?.length || 0} منتج مطابق للشروط
+                  سيتم تطبيق الخصم على {Array.isArray(filteredProducts) ? filteredProducts.length : 0} منتج مطابق للشروط
                 </p>
               )}
             </div>
