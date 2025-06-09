@@ -21,6 +21,7 @@ const AdminSettings = () => {
   const { toast } = useToast();
   const { data: settings, isLoading, updateSettings } = useAdminSettings();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUpdatingTheme, setIsUpdatingTheme] = useState(false);
 
   // Helper functions to safely cast payment configs
   const getVisaConfig = (): PaymentConfig => {
@@ -60,14 +61,10 @@ const AdminSettings = () => {
   const [zainApiKey, setZainApiKey] = useState(zainConfig.api_key ?? '');
   const [zainSecretKey, setZainSecretKey] = useState(zainConfig.secret_key ?? '');
 
-  // Theme Configuration
-  const [selectedTheme, setSelectedTheme] = useState(getCurrentTheme());
-
   // Update local state when settings change
   React.useEffect(() => {
     if (settings) {
       setStoreOpen(settings.is_store_open ?? true);
-      setSelectedTheme(getCurrentTheme());
       
       // Visa Card settings
       const visa = getVisaConfig();
@@ -87,8 +84,10 @@ const AdminSettings = () => {
 
   // Handle theme change
   const handleThemeChange = async (newTheme: string) => {
+    if (isUpdatingTheme) return; // Prevent multiple simultaneous updates
+    
     console.log(`Changing theme to: ${newTheme}`);
-    setSelectedTheme(newTheme);
+    setIsUpdatingTheme(true);
     
     const themeConfig = {
       christmas: newTheme === 'christmas',
@@ -108,13 +107,13 @@ const AdminSettings = () => {
       });
     } catch (error) {
       console.error(`Error updating theme:`, error);
-      // Revert the local state on error
-      setSelectedTheme(getCurrentTheme());
       toast({
         title: "خطأ",
         description: "حدث خطأ أثناء تحديث الثيم",
         variant: "destructive",
       });
+    } finally {
+      setIsUpdatingTheme(false);
     }
   };
 
@@ -168,6 +167,8 @@ const AdminSettings = () => {
     return <div className="text-center py-8">جاري التحميل...</div>;
   }
 
+  const currentTheme = getCurrentTheme();
+
   return (
     <div className="space-y-6">
       {/* Store Status */}
@@ -204,8 +205,9 @@ const AdminSettings = () => {
               سيتم تطبيق الثيم المختار على جميع المستخدمين في المتجر
             </p>
             <Select
-              value={selectedTheme}
+              value={currentTheme}
               onValueChange={handleThemeChange}
+              disabled={isUpdatingTheme}
             >
               <SelectTrigger>
                 <SelectValue placeholder="اختر الثيم" />
@@ -221,7 +223,8 @@ const AdminSettings = () => {
 
           <div className="mt-4 p-4 bg-gray-50 rounded-lg">
             <p className="text-sm text-gray-600">
-              <strong>الثيم الحالي:</strong> {getThemeLabel(selectedTheme)}
+              <strong>الثيم الحالي:</strong> {getThemeLabel(currentTheme)}
+              {isUpdatingTheme && <span className="ml-2 text-blue-600">(جاري التحديث...)</span>}
             </p>
             <p className="text-xs text-gray-500 mt-1">
               سيرى جميع العملاء هذا الثيم عند زيارة المتجر

@@ -66,7 +66,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       return data;
     },
     refetchInterval: 30000, // Check every 30 seconds for changes
-    staleTime: 5000, // Cache for 5 seconds
+    staleTime: 1000, // Cache for 1 second to reduce conflicts
   });
 
   const themeConfig: ThemeConfig = parseThemeConfig(settings?.theme_config);
@@ -131,6 +131,9 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           // Invalidate and refetch theme settings immediately
           queryClient.invalidateQueries({ queryKey: ['admin-settings-theme'] });
           queryClient.invalidateQueries({ queryKey: ['admin-settings'] });
+          
+          // Force refetch to get the latest data
+          queryClient.refetchQueries({ queryKey: ['admin-settings-theme'] });
         }
       )
       .subscribe();
