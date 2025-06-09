@@ -1,210 +1,171 @@
+
 import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Plus, Package, Users, BarChart3, Settings, MessageSquare, Percent } from 'lucide-react';
 import ProductsManagement from '@/components/admin/ProductsManagement';
-import EnhancedOrdersManagement from '@/components/admin/EnhancedOrdersManagement';
-import CategoryManager from '@/components/admin/CategoryManager';
-import SimpleDiscountManagement from '@/components/admin/SimpleDiscountManagement';
+import AddProductForm from '@/components/admin/AddProductForm';
 import UserManagement from '@/components/admin/UserManagement';
-import FeedbackManagement from '@/components/admin/FeedbackManagement';
-import AdminSettings from '@/components/admin/AdminSettings';
 import StatisticsPanel from '@/components/admin/StatisticsPanel';
+import AdminSettings from '@/components/admin/AdminSettings';
+import FeedbackManagement from '@/components/admin/FeedbackManagement';
+import EnhancedDiscountManagement from '@/components/admin/EnhancedDiscountManagement';
+import EnhancedOrdersManagement from '@/components/admin/EnhancedOrdersManagement';
 import ChangesLogPanel from '@/components/admin/ChangesLogPanel';
-import { Package, ShoppingCart, Users, MessageSquare, Settings, BarChart3, FileText, Percent, FolderTree } from 'lucide-react';
 
 const AdminPanel = () => {
-  const { user, loading } = useAuth();
-  const [activeTab, setActiveTab] = useState('stats');
+  const { user, isAdmin, loading } = useAuth();
+  const [showAddProduct, setShowAddProduct] = useState(false);
+  const [activeTab, setActiveTab] = useState('products');
 
-  const { data: hasAdminRole, isLoading: roleLoading } = useQuery({
-    queryKey: ['user-role', user?.id],
-    queryFn: async () => {
-      if (!user) return false;
-      
-      const { data, error } = await supabase.rpc('has_role', {
-        _user_id: user.id,
-        _role: 'admin'
-      });
-      
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!user
-  });
-
-  if (loading || roleLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-600"></div>
-      </div>
-    );
+  if (loading) {
+    return <div className="flex justify-center items-center min-h-screen">جاري التحميل...</div>;
   }
 
-  if (!user || !hasAdminRole) {
-    return <Navigate to="/" replace />;
+  if (!user || !isAdmin) {
+    return <Navigate to="/auth" replace />;
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-2 sm:px-4 py-4 sm:py-8">
-        <div className="mb-4 sm:mb-8">
-          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-800 mb-2">لوحة الإدارة</h1>
-          <p className="text-sm sm:text-base text-gray-600">إدارة المتجر والمنتجات والطلبات</p>
-        </div>
-
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
-          <div className="overflow-x-auto">
-            <TabsList className="grid w-max min-w-full grid-cols-4 lg:grid-cols-9 gap-1 p-1">
-              <TabsTrigger value="stats" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3">
-                <BarChart3 className="w-3 h-3 sm:w-4 sm:h-4" />
-                <span className="hidden xs:inline">الإحصائيات</span>
-              </TabsTrigger>
-              <TabsTrigger value="products" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3">
-                <Package className="w-3 h-3 sm:w-4 sm:h-4" />
-                <span className="hidden xs:inline">المنتجات</span>
-              </TabsTrigger>
-              <TabsTrigger value="orders" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3">
-                <ShoppingCart className="w-3 h-3 sm:w-4 sm:h-4" />
-                <span className="hidden xs:inline">الطلبات</span>
-              </TabsTrigger>
-              <TabsTrigger value="categories" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3">
-                <FolderTree className="w-3 h-3 sm:w-4 sm:h-4" />
-                <span className="hidden xs:inline">الفئات</span>
-              </TabsTrigger>
-              <TabsTrigger value="discounts" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3">
-                <Percent className="w-3 h-3 sm:w-4 sm:h-4" />
-                <span className="hidden xs:inline">الخصومات</span>
-              </TabsTrigger>
-              <TabsTrigger value="users" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3">
-                <Users className="w-3 h-3 sm:w-4 sm:h-4" />
-                <span className="hidden xs:inline">المستخدمين</span>
-              </TabsTrigger>
-              <TabsTrigger value="feedback" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3">
-                <MessageSquare className="w-3 h-3 sm:w-4 sm:h-4" />
-                <span className="hidden xs:inline">التعليقات</span>
-              </TabsTrigger>
-              <TabsTrigger value="logs" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3">
-                <FileText className="w-3 h-3 sm:w-4 sm:h-4" />
-                <span className="hidden xs:inline">السجلات</span>
-              </TabsTrigger>
-              <TabsTrigger value="settings" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3">
-                <Settings className="w-3 h-3 sm:w-4 sm:h-4" />
-                <span className="hidden xs:inline">الإعدادات</span>
-              </TabsTrigger>
-            </TabsList>
-          </div>
-
-          <TabsContent value="stats">
-            <StatisticsPanel />
-          </TabsContent>
-
-          <TabsContent value="products">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
-                  <Package className="w-4 h-4 sm:w-5 sm:h-5" />
-                  إدارة المنتجات
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ProductsManagement />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="orders">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
-                  <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5" />
-                  إدارة الطلبات
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <EnhancedOrdersManagement />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="categories">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
-                  <FolderTree className="w-4 h-4 sm:w-5 sm:h-5" />
-                  إدارة الفئات
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CategoryManager />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="discounts">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
-                  <Percent className="w-4 h-4 sm:w-5 sm:h-5" />
-                  إدارة الخصومات
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <SimpleDiscountManagement />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="users">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
-                  <Users className="w-4 h-4 sm:w-5 sm:h-5" />
-                  إدارة المستخدمين
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <UserManagement />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="feedback">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
-                  <MessageSquare className="w-4 h-4 sm:w-5 sm:h-5" />
-                  إدارة التعليقات
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <FeedbackManagement />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="logs">
-            <ChangesLogPanel />
-          </TabsContent>
-
-          <TabsContent value="settings">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
-                  <Settings className="w-4 h-4 sm:w-5 sm:h-5" />
-                  إعدادات النظام
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <AdminSettings />
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+    <div className="container mx-auto p-6 space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold">لوحة الإدارة</h1>
+        {activeTab === 'products' && (
+          <Button 
+            onClick={() => setShowAddProduct(true)}
+            className="bg-pink-600 hover:bg-pink-700 flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            إضافة منتج جديد
+          </Button>
+        )}
       </div>
+
+      {showAddProduct && (
+        <AddProductForm onClose={() => setShowAddProduct(false)} />
+      )}
+
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <TabsList className="grid w-full grid-cols-7">
+          <TabsTrigger value="products" className="flex items-center gap-2">
+            <Package className="w-4 h-4" />
+            المنتجات
+          </TabsTrigger>
+          <TabsTrigger value="orders" className="flex items-center gap-2">
+            <BarChart3 className="w-4 h-4" />
+            الطلبات
+          </TabsTrigger>
+          <TabsTrigger value="users" className="flex items-center gap-2">
+            <Users className="w-4 h-4" />
+            المستخدمين
+          </TabsTrigger>
+          <TabsTrigger value="statistics" className="flex items-center gap-2">
+            <BarChart3 className="w-4 h-4" />
+            الإحصائيات
+          </TabsTrigger>
+          <TabsTrigger value="discounts" className="flex items-center gap-2">
+            <Percent className="w-4 h-4" />
+            الخصومات
+          </TabsTrigger>
+          <TabsTrigger value="feedback" className="flex items-center gap-2">
+            <MessageSquare className="w-4 h-4" />
+            التقييمات
+          </TabsTrigger>
+          <TabsTrigger value="settings" className="flex items-center gap-2">
+            <Settings className="w-4 h-4" />
+            الإعدادات
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="products" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Package className="w-5 h-5" />
+                إدارة المنتجات
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ProductsManagement />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="orders" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>إدارة الطلبات</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <EnhancedOrdersManagement />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="users" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="w-5 h-5" />
+                إدارة المستخدمين
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <UserManagement />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="statistics" className="space-y-6">
+          <StatisticsPanel />
+          <ChangesLogPanel />
+        </TabsContent>
+
+        <TabsContent value="discounts" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Percent className="w-5 h-5" />
+                إدارة الخصومات
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <EnhancedDiscountManagement />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="feedback" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MessageSquare className="w-5 h-5" />
+                إدارة التقييمات
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <FeedbackManagement />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="settings" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Settings className="w-5 h-5" />
+                إعدادات النظام
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <AdminSettings />
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

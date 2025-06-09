@@ -317,7 +317,7 @@ const AddProductForm = ({ onClose }: AddProductFormProps) => {
               <MultiImageUpload
                 images={formData.images}
                 onImagesChange={(images) => setFormData(prev => ({ ...prev, images }))}
-                maxImages={5}
+                maxImages={10}
               />
             </div>
 

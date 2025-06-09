@@ -57,8 +57,21 @@ const ImageUploadCrop = ({ onImageUploaded, currentImage, aspectRatio = 1 }: Ima
       const scaleX = image.naturalWidth / image.width;
       const scaleY = image.naturalHeight / image.height;
 
-      canvas.width = crop.width;
-      canvas.height = crop.height;
+      // Calculate optimal canvas size for high quality
+      const pixelRatio = window.devicePixelRatio || 1;
+      const canvasWidth = crop.width * pixelRatio;
+      const canvasHeight = crop.height * pixelRatio;
+
+      canvas.width = canvasWidth;
+      canvas.height = canvasHeight;
+
+      // Scale the context for high DPI displays
+      ctx.scale(pixelRatio, pixelRatio);
+      ctx.imageSmoothingQuality = 'high';
+
+      // Set canvas size for CSS
+      canvas.style.width = `${crop.width}px`;
+      canvas.style.height = `${crop.height}px`;
 
       ctx.drawImage(
         image,
@@ -73,11 +86,15 @@ const ImageUploadCrop = ({ onImageUploaded, currentImage, aspectRatio = 1 }: Ima
       );
 
       return new Promise((resolve) => {
-        canvas.toBlob((blob) => {
-          if (blob) {
-            resolve(blob);
-          }
-        }, 'image/jpeg', 0.9);
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              resolve(blob);
+            }
+          },
+          'image/webp', // Use WebP for better compression and quality
+          0.95 // High quality
+        );
       });
     },
     []
@@ -92,12 +109,12 @@ const ImageUploadCrop = ({ onImageUploaded, currentImage, aspectRatio = 1 }: Ima
       const croppedImageBlob = await getCroppedImg(imgRef.current, completedCrop);
       
       // Create a new file from the cropped blob
-      const croppedFile = new File([croppedImageBlob], selectedFile.name, {
-        type: 'image/jpeg',
+      const fileExt = 'webp'; // Use WebP for better quality
+      const croppedFile = new File([croppedImageBlob], `${selectedFile.name.split('.')[0]}.${fileExt}`, {
+        type: 'image/webp',
       });
 
       // Upload to Supabase Storage
-      const fileExt = selectedFile.name.split('.').pop();
       const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`;
       const filePath = `products/${fileName}`;
 
@@ -131,7 +148,7 @@ const ImageUploadCrop = ({ onImageUploaded, currentImage, aspectRatio = 1 }: Ima
       
       toast({
         title: "تم رفع الصورة",
-        description: "تم رفع الصورة بنجاح",
+        description: "تم رفع الصورة بجودة عالية",
       });
 
     } catch (error: any) {
@@ -182,25 +199,31 @@ const ImageUploadCrop = ({ onImageUploaded, currentImage, aspectRatio = 1 }: Ima
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-4xl">
           <DialogHeader>
-            <DialogTitle>قص الصورة</DialogTitle>
+            <DialogTitle>قص الصورة الرئيسية</DialogTitle>
           </DialogHeader>
           
           <div className="space-y-4">
             {imageSrc && (
-              <ReactCrop
-                crop={crop}
-                onChange={(_, percentCrop) => setCrop(percentCrop)}
-                onComplete={(c) => setCompletedCrop(c)}
-                aspect={aspectRatio}
-                className="max-h-96"
-              >
-                <img
-                  ref={imgRef}
-                  alt="Crop me"
-                  src={imageSrc}
-                  className="max-h-96 w-auto"
-                />
-              </ReactCrop>
+              <div className="flex flex-col items-center">
+                <ReactCrop
+                  crop={crop}
+                  onChange={(_, percentCrop) => setCrop(percentCrop)}
+                  onComplete={(c) => setCompletedCrop(c)}
+                  aspect={aspectRatio}
+                  className="max-h-96"
+                >
+                  <img
+                    ref={imgRef}
+                    alt="Crop me"
+                    src={imageSrc}
+                    className="max-h-96 w-auto"
+                    style={{ maxHeight: '400px' }}
+                  />
+                </ReactCrop>
+                <p className="text-sm text-gray-600 mt-2">
+                  سيتم حفظ الصورة بجودة عالية باستخدام تقنية WebP
+                </p>
+              </div>
             )}
             
             <div className="flex justify-end gap-2">
