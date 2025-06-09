@@ -41,11 +41,11 @@ const SimpleDiscountManagement = () => {
   const { logChange } = useChangeLogger();
   
   const [productDiscountPercentage, setProductDiscountPercentage] = useState<number>(0);
-  const [categoryDiscountType, setCategoryDiscountType] = useState<'category' | 'subcategory'>('category');
-  const [selectedTarget, setSelectedTarget] = useState<string>('');
-  const [categoryDiscountPercentage, setCategoryDiscountPercentage] = useState<number>(0);
+  const [specificDiscountType, setSpecificDiscountType] = useState<'category' | 'subcategory'>('category');
+  const [specificTarget, setSpecificTarget] = useState<string>('');
   const [specificDiscountPercentage, setSpecificDiscountPercentage] = useState<number>(0);
-  const [specificCategory, setSpecificCategory] = useState<string>('');
+  const [directCategory, setDirectCategory] = useState<string>('');
+  const [directDiscountPercentage, setDirectDiscountPercentage] = useState<number>(0);
 
   // Fetch categories
   const { data: categories } = useQuery({
@@ -74,7 +74,7 @@ const SimpleDiscountManagement = () => {
   });
 
   // Fetch active category/subcategory discounts
-  const { data: categoryDiscounts, isLoading } = useQuery({
+  const { data: activeDiscounts, isLoading } = useQuery({
     queryKey: ['category-discounts'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -89,8 +89,8 @@ const SimpleDiscountManagement = () => {
     }
   });
 
-  // Apply category discount mutation
-  const applyCategoryDiscountMutation = useMutation({
+  // Apply specific discount mutation
+  const applySpecificDiscountMutation = useMutation({
     mutationFn: async () => {
       const { data: userData, error: userError } = await supabase.auth.getUser();
       if (userError || !userData.user) {
@@ -100,9 +100,9 @@ const SimpleDiscountManagement = () => {
       const { data, error } = await supabase
         .from('active_discounts')
         .insert({
-          discount_type: categoryDiscountType,
-          target_value: selectedTarget,
-          discount_percentage: categoryDiscountPercentage,
+          discount_type: specificDiscountType,
+          target_value: specificTarget,
+          discount_percentage: specificDiscountPercentage,
           created_by: userData.user.id,
           is_active: true
         })
@@ -110,6 +110,23 @@ const SimpleDiscountManagement = () => {
         .single();
       
       if (error) throw error;
+
+      const targetName = specificDiscountType === 'category' 
+        ? categories?.find(c => c.id === specificTarget)?.name 
+        : subcategories?.find(s => s.id === specificTarget)?.name;
+
+      await logChange(
+        'specific_discount_applied',
+        'active_discounts',
+        data.id,
+        {
+          discount_type: specificDiscountType,
+          target_value: specificTarget,
+          discount_percentage: specificDiscountPercentage,
+          target_name: targetName
+        }
+      );
+
       return data;
     },
     onSuccess: () => {
@@ -117,9 +134,9 @@ const SimpleDiscountManagement = () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
       queryClient.invalidateQueries({ queryKey: ['admin-products'] });
       
-      setCategoryDiscountType('category');
-      setSelectedTarget('');
-      setCategoryDiscountPercentage(0);
+      setSpecificDiscountType('category');
+      setSpecificTarget('');
+      setSpecificDiscountPercentage(0);
       
       toast({
         title: 'تم تطبيق الخصم',
@@ -135,8 +152,8 @@ const SimpleDiscountManagement = () => {
     }
   });
 
-  // Apply specific category discount mutation
-  const applySpecificDiscountMutation = useMutation({
+  // Apply direct category discount mutation
+  const applyDirectDiscountMutation = useMutation({
     mutationFn: async ({ categoryId, percentage }: { categoryId: string; percentage: number }) => {
       const { data: userData, error: userError } = await supabase.auth.getUser();
       if (userError || !userData.user) {
@@ -159,7 +176,7 @@ const SimpleDiscountManagement = () => {
       const categoryName = categories?.find(c => c.id === categoryId)?.name || categoryId;
 
       await logChange(
-        'specific_category_discount_applied',
+        'direct_category_discount_applied',
         'products',
         categoryId,
         {
@@ -178,8 +195,8 @@ const SimpleDiscountManagement = () => {
       queryClient.invalidateQueries({ queryKey: ['admin-products'] });
       queryClient.invalidateQueries({ queryKey: ['featured-products'] });
       
-      setSpecificDiscountPercentage(0);
-      setSpecificCategory('');
+      setDirectDiscountPercentage(0);
+      setDirectCategory('');
       
       toast({
         title: 'تم تطبيق الخصم على الفئة',
@@ -301,8 +318,8 @@ const SimpleDiscountManagement = () => {
     }
   });
 
-  // Remove category discount mutation
-  const removeCategoryDiscountMutation = useMutation({
+  // Remove specific discount mutation
+  const removeSpecificDiscountMutation = useMutation({
     mutationFn: async (discountId: string) => {
       const { error } = await supabase
         .from('active_discounts')
@@ -310,6 +327,15 @@ const SimpleDiscountManagement = () => {
         .eq('id', discountId);
       
       if (error) throw error;
+
+      await logChange(
+        'specific_discount_removed',
+        'active_discounts',
+        discountId,
+        {
+          operation: 'discount_removal'
+        }
+      );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['category-discounts'] });
@@ -329,8 +355,8 @@ const SimpleDiscountManagement = () => {
     }
   });
 
-  const handleApplyCategoryDiscount = () => {
-    if (categoryDiscountPercentage <= 0 || categoryDiscountPercentage > 100) {
+  const handleApplySpecificDiscount = () => {
+    if (specificDiscountPercentage <= 0 || specificDiscountPercentage > 100) {
       toast({
         title: 'خطأ',
         description: 'يجب أن تكون نسبة الخصم بين 1 و 100',
@@ -339,7 +365,7 @@ const SimpleDiscountManagement = () => {
       return;
     }
 
-    if (!selectedTarget) {
+    if (!specificTarget) {
       toast({
         title: 'خطأ',
         description: 'يجب اختيار الفئة أو الفئة الفرعية',
@@ -348,11 +374,11 @@ const SimpleDiscountManagement = () => {
       return;
     }
 
-    applyCategoryDiscountMutation.mutate();
+    applySpecificDiscountMutation.mutate();
   };
 
-  const handleApplySpecificDiscount = () => {
-    if (specificDiscountPercentage < 0 || specificDiscountPercentage > 100) {
+  const handleApplyDirectDiscount = () => {
+    if (directDiscountPercentage < 0 || directDiscountPercentage > 100) {
       toast({
         title: 'خطأ',
         description: 'يجب أن تكون نسبة الخصم بين 0 و 100',
@@ -361,7 +387,7 @@ const SimpleDiscountManagement = () => {
       return;
     }
 
-    if (!specificCategory) {
+    if (!directCategory) {
       toast({
         title: 'خطأ',
         description: 'يجب اختيار الفئة',
@@ -370,9 +396,9 @@ const SimpleDiscountManagement = () => {
       return;
     }
 
-    applySpecificDiscountMutation.mutate({
-      categoryId: specificCategory,
-      percentage: specificDiscountPercentage
+    applyDirectDiscountMutation.mutate({
+      categoryId: directCategory,
+      percentage: directDiscountPercentage
     });
   };
 
@@ -409,13 +435,8 @@ const SimpleDiscountManagement = () => {
 
   return (
     <div className="space-y-4 md:space-y-6">
-      <Tabs defaultValue="category-discount" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="category-discount" className="flex items-center gap-2 text-xs md:text-sm">
-            <Tag className="w-3 h-3 md:w-4 md:h-4" />
-            <span className="hidden sm:inline">خصم الفئات</span>
-            <span className="sm:hidden">فئات</span>
-          </TabsTrigger>
+      <Tabs defaultValue="specific-discount" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="specific-discount" className="flex items-center gap-2 text-xs md:text-sm">
             <Percent className="w-3 h-3 md:w-4 md:h-4" />
             <span className="hidden sm:inline">خصم محدد</span>
@@ -428,19 +449,19 @@ const SimpleDiscountManagement = () => {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="category-discount" className="space-y-4 md:space-y-6">
-          {/* Current Category Discounts */}
+        <TabsContent value="specific-discount" className="space-y-4 md:space-y-6">
+          {/* Active Discounts */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
                 <Tag className="w-4 h-4 md:w-5 md:h-5" />
-                <span className="text-sm md:text-base">خصومات الفئات النشطة</span>
+                <span className="text-sm md:text-base">الخصومات النشطة</span>
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {categoryDiscounts && categoryDiscounts.length > 0 ? (
+              {activeDiscounts && activeDiscounts.length > 0 ? (
                 <div className="space-y-3">
-                  {categoryDiscounts.map((discount) => (
+                  {activeDiscounts.map((discount) => (
                     <div key={discount.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 md:p-4 border rounded-lg bg-green-50 gap-3">
                       <div>
                         <p className="font-semibold text-green-800 text-sm md:text-base">
@@ -455,8 +476,8 @@ const SimpleDiscountManagement = () => {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => removeCategoryDiscountMutation.mutate(discount.id)}
-                          disabled={removeCategoryDiscountMutation.isPending}
+                          onClick={() => removeSpecificDiscountMutation.mutate(discount.id)}
+                          disabled={removeSpecificDiscountMutation.isPending}
                         >
                           <Trash2 className="w-3 h-3 md:w-4 md:h-4 text-red-500" />
                         </Button>
@@ -466,13 +487,13 @@ const SimpleDiscountManagement = () => {
                 </div>
               ) : (
                 <div className="text-center py-6 md:py-8">
-                  <p className="text-gray-500 mb-4 text-sm md:text-base">لا توجد خصومات فئات نشطة حالياً</p>
+                  <p className="text-gray-500 mb-4 text-sm md:text-base">لا توجد خصومات نشطة حالياً</p>
                 </div>
               )}
             </CardContent>
           </Card>
 
-          {/* Apply New Category Discount */}
+          {/* Apply New Specific Discount */}
           <Card>
             <CardHeader>
               <CardTitle className="text-lg md:text-xl">تطبيق خصم على فئة أو فئة فرعية</CardTitle>
@@ -480,8 +501,8 @@ const SimpleDiscountManagement = () => {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <Label htmlFor="discount-type" className="text-sm md:text-base">نوع الخصم</Label>
-                  <Select value={categoryDiscountType} onValueChange={(value: any) => setCategoryDiscountType(value)}>
+                  <Label htmlFor="specific-discount-type" className="text-sm md:text-base">نوع الخصم</Label>
+                  <Select value={specificDiscountType} onValueChange={(value: any) => setSpecificDiscountType(value)}>
                     <SelectTrigger>
                       <SelectValue placeholder="اختر نوع الخصم" />
                     </SelectTrigger>
@@ -493,15 +514,15 @@ const SimpleDiscountManagement = () => {
                 </div>
 
                 <div>
-                  <Label htmlFor="target" className="text-sm md:text-base">
-                    {categoryDiscountType === 'category' ? 'الفئة' : 'الفئة الفرعية'}
+                  <Label htmlFor="specific-target" className="text-sm md:text-base">
+                    {specificDiscountType === 'category' ? 'الفئة' : 'الفئة الفرعية'}
                   </Label>
-                  <Select value={selectedTarget} onValueChange={setSelectedTarget}>
+                  <Select value={specificTarget} onValueChange={setSpecificTarget}>
                     <SelectTrigger>
-                      <SelectValue placeholder={`اختر ${categoryDiscountType === 'category' ? 'الفئة' : 'الفئة الفرعية'}`} />
+                      <SelectValue placeholder={`اختر ${specificDiscountType === 'category' ? 'الفئة' : 'الفئة الفرعية'}`} />
                     </SelectTrigger>
                     <SelectContent>
-                      {categoryDiscountType === 'category' 
+                      {specificDiscountType === 'category' 
                         ? categories?.map((category) => (
                             <SelectItem key={category.id} value={category.id}>
                               {category.icon} {category.name}
@@ -518,37 +539,35 @@ const SimpleDiscountManagement = () => {
                 </div>
 
                 <div>
-                  <Label htmlFor="category-discount-percentage" className="text-sm md:text-base">نسبة الخصم (%)</Label>
+                  <Label htmlFor="specific-discount-percentage" className="text-sm md:text-base">نسبة الخصم (%)</Label>
                   <Input
-                    id="category-discount-percentage"
+                    id="specific-discount-percentage"
                     type="number"
                     min="1"
                     max="100"
-                    value={categoryDiscountPercentage}
-                    onChange={(e) => setCategoryDiscountPercentage(Number(e.target.value))}
+                    value={specificDiscountPercentage}
+                    onChange={(e) => setSpecificDiscountPercentage(Number(e.target.value))}
                     placeholder="أدخل نسبة الخصم (1-100)"
                   />
                 </div>
               </div>
 
               <Button 
-                onClick={handleApplyCategoryDiscount}
-                disabled={applyCategoryDiscountMutation.isPending || !selectedTarget || !categoryDiscountPercentage}
+                onClick={handleApplySpecificDiscount}
+                disabled={applySpecificDiscountMutation.isPending || !specificTarget || !specificDiscountPercentage}
                 className="w-full bg-green-600 hover:bg-green-700 text-sm md:text-base"
               >
-                {applyCategoryDiscountMutation.isPending ? 'جاري التطبيق...' : `تطبيق خصم ${categoryDiscountPercentage}%`}
+                {applySpecificDiscountMutation.isPending ? 'جاري التطبيق...' : `تطبيق خصم ${specificDiscountPercentage}%`}
               </Button>
             </CardContent>
           </Card>
-        </TabsContent>
 
-        <TabsContent value="specific-discount" className="space-y-4 md:space-y-6">
-          {/* Specific Category Discount */}
+          {/* Direct Category Discount */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
                 <Percent className="w-4 h-4 md:w-5 md:h-5" />
-                <span className="text-sm md:text-base">تطبيق خصم على فئة محددة</span>
+                <span className="text-sm md:text-base">تطبيق خصم مباشر على فئة محددة</span>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -562,8 +581,8 @@ const SimpleDiscountManagement = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="specific-category" className="text-sm md:text-base">الفئة</Label>
-                  <Select value={specificCategory} onValueChange={setSpecificCategory}>
+                  <Label htmlFor="direct-category" className="text-sm md:text-base">الفئة</Label>
+                  <Select value={directCategory} onValueChange={setDirectCategory}>
                     <SelectTrigger>
                       <SelectValue placeholder="اختر الفئة" />
                     </SelectTrigger>
@@ -578,25 +597,25 @@ const SimpleDiscountManagement = () => {
                 </div>
 
                 <div>
-                  <Label htmlFor="specific-discount-percentage" className="text-sm md:text-base">نسبة الخصم (%)</Label>
+                  <Label htmlFor="direct-discount-percentage" className="text-sm md:text-base">نسبة الخصم (%)</Label>
                   <Input
-                    id="specific-discount-percentage"
+                    id="direct-discount-percentage"
                     type="number"
                     min="0"
                     max="100"
-                    value={specificDiscountPercentage}
-                    onChange={(e) => setSpecificDiscountPercentage(Number(e.target.value))}
+                    value={directDiscountPercentage}
+                    onChange={(e) => setDirectDiscountPercentage(Number(e.target.value))}
                     placeholder="أدخل نسبة الخصم (0-100)"
                   />
                 </div>
               </div>
 
               <Button 
-                onClick={handleApplySpecificDiscount}
-                disabled={applySpecificDiscountMutation.isPending || !specificCategory}
+                onClick={handleApplyDirectDiscount}
+                disabled={applyDirectDiscountMutation.isPending || !directCategory}
                 className="w-full bg-blue-600 hover:bg-blue-700 text-sm md:text-base"
               >
-                {applySpecificDiscountMutation.isPending ? 'جاري التطبيق...' : `تطبيق خصم ${specificDiscountPercentage}% على الفئة المحددة`}
+                {applyDirectDiscountMutation.isPending ? 'جاري التطبيق...' : `تطبيق خصم ${directDiscountPercentage}% على الفئة المحددة`}
               </Button>
             </CardContent>
           </Card>
