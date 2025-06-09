@@ -1,266 +1,119 @@
 
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.0';
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
-
-interface TelegramUpdate {
-  update_id: number;
-  message?: {
-    message_id: number;
-    from: {
-      id: number;
-      first_name: string;
-      username?: string;
-    };
-    chat: {
-      id: number;
-      type: string;
-      title?: string;
-    };
-    text?: string;
-    date: number;
-  };
-  my_chat_member?: {
-    chat: {
-      id: number;
-      type: string;
-      title?: string;
-    };
-    from: {
-      id: number;
-      first_name: string;
-      username?: string;
-    };
-    date: number;
-    old_chat_member: any;
-    new_chat_member: any;
-  };
 }
 
-const handler = async (req: Request): Promise<Response> => {
-  console.log('🤖 Telegram bot function called');
-  console.log('📝 Request method:', req.method);
-  console.log('📝 Request headers:', Object.fromEntries(req.headers.entries()));
-  
+serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response('ok', { headers: corsHeaders })
   }
 
   try {
-    const telegramToken = Deno.env.get('TELEGRAM_BOT_TOKEN');
-    const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-    
-    if (!telegramToken) {
-      console.error('❌ TELEGRAM_BOT_TOKEN not found');
-      throw new Error('TELEGRAM_BOT_TOKEN not found');
+    const { record } = await req.json()
+    console.log('Received webhook for new order:', record)
+
+    const TELEGRAM_BOT_TOKEN = Deno.env.get('TELEGRAM_BOT_TOKEN')
+    if (!TELEGRAM_BOT_TOKEN) {
+      console.error('TELEGRAM_BOT_TOKEN is not configured')
+      return new Response('Bot token not configured', { status: 500 })
     }
 
-    if (!supabaseUrl || !supabaseKey) {
-      console.error('❌ Supabase environment variables not found');
-      throw new Error('Supabase environment variables not found');
-    }
+    // Get bot info and chats
+    const botInfoResponse = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getMe`)
+    const botInfo = await botInfoResponse.json()
+    console.log('Bot info:', botInfo)
 
-    console.log('✅ Environment variables loaded');
+    // Get updates to find chats/groups where the bot was added
+    const updatesResponse = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getUpdates`)
+    const updates = await updatesResponse.json()
+    console.log('Bot updates:', updates)
 
-    // Initialize Supabase client
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    // Parse request body
-    let update: TelegramUpdate;
-    try {
-      const requestText = await req.text();
-      console.log('📝 Raw request body:', requestText);
-      
-      if (!requestText) {
-        console.log('⚠️ Empty request body');
-        return new Response('Empty request body', { status: 400 });
-      }
-      
-      update = JSON.parse(requestText);
-      console.log('📨 Parsed update:', JSON.stringify(update, null, 2));
-    } catch (parseError) {
-      console.error('❌ Error parsing request body:', parseError);
-      return new Response('Invalid JSON', { status: 400 });
-    }
-
-    // Handle bot being added to groups/channels
-    if (update.my_chat_member) {
-      const { chat, new_chat_member } = update.my_chat_member;
-      
-      console.log(`🏠 Bot status change in ${chat.type}: ${chat.title || chat.id}`);
-      console.log(`📊 New status: ${new_chat_member.status}`);
-      
-      if (new_chat_member.status === 'administrator' || new_chat_member.status === 'member') {
-        console.log(`✅ Bot added to ${chat.type}: ${chat.title || chat.id} (${chat.id})`);
-        
-        // Send welcome message to the group/channel
-        const telegramApiUrl = `https://api.telegram.org/bot${telegramToken}/sendMessage`;
-        
-        let welcomeMessage = '';
-        if (chat.type === 'group' || chat.type === 'supergroup') {
-          welcomeMessage = `مرحباً! 👋\n\nتم إضافة بوت ستايل العامرية للمجموعة بنجاح!\n\nسوف تحصلون على إشعارات فورية عند وصول طلبات جديدة. 🛍️✨\n\nشكراً لكم! 💚`;
-        } else if (chat.type === 'channel') {
-          welcomeMessage = `🎉 تم إضافة بوت ستايل العامرية للقناة!\n\nسيتم إرسال إشعارات الطلبات الجديدة هنا تلقائياً. 📢\n\nأهلاً وسهلاً! 💚`;
+    // Extract unique chat IDs from updates
+    const chatIds = new Set()
+    if (updates.ok && updates.result) {
+      updates.result.forEach((update: any) => {
+        if (update.message?.chat?.id) {
+          chatIds.add(update.message.chat.id)
         }
-        
-        if (welcomeMessage) {
-          try {
-            const response = await fetch(telegramApiUrl, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                chat_id: chat.id,
-                text: welcomeMessage,
-                parse_mode: 'HTML',
-              }),
-            });
-
-            const result = await response.json();
-            
-            if (response.ok) {
-              console.log('✅ Welcome message sent to group/channel');
-            } else {
-              console.error('❌ Failed to send welcome message:', result);
-            }
-          } catch (error) {
-            console.error('❌ Error sending welcome message:', error);
-          }
+        if (update.my_chat_member?.chat?.id) {
+          chatIds.add(update.my_chat_member.chat.id)
         }
-      } else if (new_chat_member.status === 'left' || new_chat_member.status === 'kicked') {
-        console.log(`❌ Bot removed from ${chat.type}: ${chat.title || chat.id}`);
-      }
-      
-      return new Response('OK', { status: 200 });
-    }
-    
-    if (!update.message || !update.message.text) {
-      console.log('⚠️ No message or text in update');
-      return new Response('OK', { status: 200 });
+      })
     }
 
-    const { message } = update;
-    const chatId = message.chat.id;
-    const text = message.text;
-    const userName = message.from.first_name;
-    const username = message.from.username;
+    console.log(`Found ${chatIds.size} unique chat IDs:`, Array.from(chatIds))
 
-    console.log(`💬 Message from ${userName} (@${username || 'no_username'}) (${chatId}): ${text}`);
+    if (chatIds.size === 0) {
+      console.log('No chats found. Bot needs to be added to a group or receive a message first.')
+      return new Response('No chats available', { status: 200 })
+    }
 
-    // Only store individual users (not groups/channels) in telegram_users table
-    if (message.chat.type === 'private') {
-      // Store or update user in database EVERY TIME they send a message
+    // Format order message
+    const message = `🛍️ *طلب جديد وصل!*
+
+📋 *رقم الطلب:* ${record.id}
+💰 *المبلغ الإجمالي:* ${record.total_amount.toLocaleString()} د.ع
+📱 *رقم الهاتف:* ${record.phone || 'غير محدد'}
+🏛️ *المحافظة:* ${record.governorate || 'غير محددة'}
+📍 *العنوان:* ${record.shipping_address || 'غير محدد'}
+💳 *طريقة الدفع:* ${record.payment_method || 'غير محددة'}
+📅 *تاريخ الطلب:* ${new Date(record.created_at).toLocaleString('ar-IQ')}
+
+✅ يرجى مراجعة لوحة الإدارة لمعالجة الطلب`
+
+    // Send message to all available chats
+    const sendPromises = Array.from(chatIds).map(async (chatId) => {
       try {
-        console.log('💾 Storing/updating user in database...');
-        console.log(`📊 User data: chat_id=${chatId}, first_name=${userName}, username=${username || 'null'}`);
-        
-        const { data, error: upsertError } = await supabase
-          .from('telegram_users')
-          .upsert({
+        const response = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
             chat_id: chatId,
-            first_name: userName,
-            username: username || null,
-            is_active: true,
-            updated_at: new Date().toISOString()
-          }, {
-            onConflict: 'chat_id'
+            text: message,
+            parse_mode: 'Markdown'
           })
-          .select();
+        })
 
-        if (upsertError) {
-          console.error('❌ Error storing user:', upsertError);
-          console.error('❌ Error details:', JSON.stringify(upsertError, null, 2));
-        } else {
-          console.log('✅ User stored/updated successfully:', data);
-          
-          // Verify the user was actually stored
-          const { data: verifyData, error: verifyError } = await supabase
-            .from('telegram_users')
-            .select('*')
-            .eq('chat_id', chatId);
-            
-          if (verifyError) {
-            console.error('❌ Error verifying user:', verifyError);
-          } else {
-            console.log('✅ User verification result:', verifyData);
-          }
-        }
+        const result = await response.json()
+        console.log(`Message sent to chat ${chatId}:`, result)
+        return { chatId, success: result.ok, result }
       } catch (error) {
-        console.error('❌ Database error:', error);
-        console.error('❌ Full error details:', JSON.stringify(error, null, 2));
+        console.error(`Failed to send message to chat ${chatId}:`, error)
+        return { chatId, success: false, error: error.message }
       }
-    }
+    })
 
-    // Simple bot responses
-    let responseText = '';
-    
-    if (text.toLowerCase().includes('/start')) {
-      if (message.chat.type === 'private') {
-        responseText = `مرحباً ${userName}! 👋\nأهلاً بك في بوت ستايل العامرية. سوف تحصل على إشعارات بالطلبات الجديدة.\n\nتم تسجيلك بنجاح! ✅\n\nكيف يمكنني مساعدتك؟`;
-      } else {
-        responseText = `مرحباً ${userName}! 👋\nبوت ستايل العامرية يعمل الآن في هذه المجموعة!\nسيتم إرسال إشعارات الطلبات الجديدة هنا تلقائياً. 🛍️`;
-      }
-    } else if (text.toLowerCase().includes('hello') || text.toLowerCase().includes('مرحبا')) {
-      responseText = `مرحباً ${userName}! 😊 كيف حالك؟`;
-    } else if (text.toLowerCase().includes('order') || text.toLowerCase().includes('طلب')) {
-      responseText = 'يمكنك تصفح منتجاتنا وتقديم طلبك من خلال موقعنا الإلكتروني. هل تحتاج مساعدة في شيء معين؟ 🛍️';
-    } else if (text.toLowerCase().includes('help') || text.toLowerCase().includes('مساعدة')) {
-      responseText = `${userName}، يمكنني مساعدتك في:\n\n🛍️ معلومات عن المنتجات\n📦 تتبع الطلبات\n📞 التواصل مع خدمة العملاء\n🔔 إشعارات الطلبات الجديدة\n\nما الذي تريد معرفته؟`;
-    } else {
-      if (message.chat.type === 'private') {
-        responseText = `شكراً لك ${userName} على رسالتك! 💐\nفريق خدمة العملاء سيتواصل معك قريباً. أو يمكنك زيارة موقعنا لتصفح المنتجات.\n\nستحصل على إشعارات بالطلبات الجديدة تلقائياً.`;
-      } else {
-        // Don't respond to every message in groups unless it's a command
-        return new Response('OK', { status: 200 });
-      }
-    }
+    const results = await Promise.allSettled(sendPromises)
+    console.log('Send results:', results)
 
-    // Send response back to Telegram
-    const telegramApiUrl = `https://api.telegram.org/bot${telegramToken}/sendMessage`;
+    const successCount = results.filter(r => r.status === 'fulfilled' && r.value.success).length
     
-    console.log('📤 Sending response to Telegram...');
-    const response = await fetch(telegramApiUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        chat_id: chatId,
-        text: responseText,
-        parse_mode: 'HTML',
+    return new Response(
+      JSON.stringify({ 
+        success: true, 
+        message: `Order notification sent to ${successCount}/${chatIds.size} chats`,
+        chatIds: Array.from(chatIds),
+        results: results.map(r => r.status === 'fulfilled' ? r.value : { error: r.reason })
       }),
-    });
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200 
+      }
+    )
 
-    const result = await response.json();
-    
-    if (!response.ok) {
-      console.error('❌ Telegram API Error:', result);
-      throw new Error(`Telegram API Error: ${result.description}`);
-    }
-
-    console.log('✅ Response sent successfully to Telegram');
-
-    return new Response(JSON.stringify({ success: true }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json', ...corsHeaders },
-    });
-
-  } catch (error: any) {
-    console.error('💥 Error in telegram bot:', error);
+  } catch (error) {
+    console.error('Error in telegram-bot function:', error)
     return new Response(
       JSON.stringify({ error: error.message }),
-      {
-        status: 500,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500 
       }
-    );
+    )
   }
-};
-
-serve(handler);
+})
