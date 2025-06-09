@@ -5,12 +5,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { useChangeLogger } from '@/hooks/useChangeLogger';
 import { useAuth } from '@/contexts/AuthContext';
-import { Percent, Trash2 } from 'lucide-react';
+import { Percent, Square } from 'lucide-react';
 
 const SimpleDiscountManagement = () => {
   const { toast } = useToast();
@@ -18,137 +17,81 @@ const SimpleDiscountManagement = () => {
   const { logChange } = useChangeLogger();
   const queryClient = useQueryClient();
   
-  const [discountType, setDiscountType] = useState('all_products');
-  const [targetValue, setTargetValue] = useState('');
   const [discountPercentage, setDiscountPercentage] = useState(0);
 
-  // Fetch categories for dropdown
-  const { data: categories } = useQuery({
-    queryKey: ['categories'],
+  // Check if there are any active discounts
+  const { data: hasActiveDiscount, isLoading } = useQuery({
+    queryKey: ['has-active-discount'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('categories')
-        .select('*');
+        .from('products')
+        .select('discount_percentage')
+        .gt('discount_percentage', 0)
+        .limit(1);
+      
       if (error) throw error;
-      return data;
+      return data && data.length > 0;
     }
   });
 
-  // Fetch subcategories for dropdown
-  const { data: subcategories } = useQuery({
-    queryKey: ['subcategories'],
+  // Get current discount percentage if any
+  const { data: currentDiscountPercentage } = useQuery({
+    queryKey: ['current-discount'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('subcategories')
-        .select('*');
+        .from('products')
+        .select('discount_percentage')
+        .gt('discount_percentage', 0)
+        .limit(1);
+      
       if (error) throw error;
-      return data;
-    }
-  });
-
-  // Fetch active discounts
-  const { data: activeDiscounts, isLoading } = useQuery({
-    queryKey: ['active-discounts'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('active_discounts')
-        .select('*')
-        .eq('is_active', true)
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return data;
-    }
+      return data && data.length > 0 ? data[0].discount_percentage : 0;
+    },
+    enabled: !!hasActiveDiscount
   });
 
   const applyDiscountMutation = useMutation({
-    mutationFn: async ({ discountType, targetValue, discountPercentage }: {
-      discountType: string;
-      targetValue: string;
-      discountPercentage: number;
-    }) => {
-      console.log('Applying discount:', { discountType, targetValue, discountPercentage });
+    mutationFn: async (discount: number) => {
+      console.log('Applying discount to all products:', discount);
       
       if (!user) throw new Error('User not authenticated');
 
-      // Get current user info
-      const { data: userData, error: userError } = await supabase.auth.getUser();
-      if (userError || !userData.user) {
-        throw new Error('المستخدم غير مسجل الدخول');
+      // Call the database function to update all products
+      const { error } = await supabase.rpc('update_all_products_discount', {
+        new_discount: discount
+      });
+
+      if (error) {
+        console.error('Error applying discount:', error);
+        throw new Error(`فشل في تطبيق الخصم: ${error.message}`);
       }
 
-      // Create discount record with explicit field mapping
-      const discountData = {
-        discount_type: discountType,
-        target_value: discountType === 'all_products' ? null : targetValue,
-        discount_percentage: discountPercentage,
-        created_by: userData.user.id,
-        is_active: true
-      };
-
-      console.log('Creating discount record with data:', discountData);
-      
-      // First, deactivate all existing discounts to avoid conflicts
-      const { error: deactivateError } = await supabase
-        .from('active_discounts')
-        .update({ is_active: false })
-        .eq('is_active', true);
-
-      if (deactivateError) {
-        console.error('Error deactivating existing discounts:', deactivateError);
-        // Don't throw here, continue with creating new discount
-      }
-
-      // Insert new discount record
-      const { data: discountRecord, error: discountError } = await supabase
-        .from('active_discounts')
-        .insert([discountData])
-        .select()
-        .single();
-
-      if (discountError) {
-        console.error('Error creating discount record:', discountError);
-        throw new Error(`فشل في إنشاء سجل الخصم: ${discountError.message}`);
-      }
-
-      console.log('Discount record created successfully:', discountRecord);
-
-      // Apply discounts using the database function
-      console.log('Calling apply_active_discounts function...');
-      const { error: applyError } = await supabase.rpc('apply_active_discounts');
-      
-      if (applyError) {
-        console.error('Error applying active discounts:', applyError);
-        throw new Error(`فشل في تطبيق الخصومات: ${applyError.message}`);
-      }
-
-      console.log('Discounts applied successfully');
-      return discountRecord;
+      console.log('Discount applied successfully to all products');
+      return discount;
     },
-    onSuccess: async (discountRecord) => {
-      console.log('Discount applied successfully:', discountRecord);
+    onSuccess: async (discount) => {
+      console.log('Discount applied successfully:', discount);
       
       // Log the change
       try {
-        await logChange('discount_applied', 'discount', discountRecord.id, {
-          discount_type: discountRecord.discount_type,
-          target_value: discountRecord.target_value,
-          discount_percentage: discountRecord.discount_percentage
+        await logChange('global_discount_applied', 'products', 'all_products', {
+          discount_percentage: discount,
+          operation: 'update_all_products'
         });
       } catch (logError) {
         console.error('Error logging change:', logError);
       }
 
-      queryClient.invalidateQueries({ queryKey: ['active-discounts'] });
       queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['has-active-discount'] });
+      queryClient.invalidateQueries({ queryKey: ['current-discount'] });
       
       toast({
         title: 'تم تطبيق الخصم',
-        description: `تم تطبيق خصم ${discountRecord.discount_percentage}% بنجاح`,
+        description: `تم تطبيق خصم ${discount}% على جميع المنتجات بنجاح`,
       });
 
       // Reset form
-      setDiscountType('all_products');
-      setTargetValue('');
       setDiscountPercentage(0);
     },
     onError: (error: any) => {
@@ -161,49 +104,49 @@ const SimpleDiscountManagement = () => {
     }
   });
 
-  const removeDiscountMutation = useMutation({
-    mutationFn: async (discountId: string) => {
-      console.log('Removing discount:', discountId);
+  const stopDiscountMutation = useMutation({
+    mutationFn: async () => {
+      console.log('Stopping all discounts');
       
-      const { error } = await supabase
-        .from('active_discounts')
-        .update({ is_active: false })
-        .eq('id', discountId);
+      if (!user) throw new Error('User not authenticated');
+
+      // Call the database function to reset all products to 0 discount
+      const { error } = await supabase.rpc('reset_all_product_discounts');
 
       if (error) {
-        console.error('Error deactivating discount:', error);
-        throw new Error(`فشل في إلغاء تفعيل الخصم: ${error.message}`);
+        console.error('Error stopping discount:', error);
+        throw new Error(`فشل في إيقاف الخصم: ${error.message}`);
       }
 
-      // Apply remaining active discounts
-      const { error: applyError } = await supabase.rpc('apply_active_discounts');
-      if (applyError) {
-        console.error('Error reapplying discounts:', applyError);
-        throw new Error(`فشل في إعادة تطبيق الخصومات: ${applyError.message}`);
-      }
-
-      return discountId;
+      console.log('All discounts stopped successfully');
+      return true;
     },
-    onSuccess: async (discountId) => {
+    onSuccess: async () => {
+      console.log('Discounts stopped successfully');
+      
+      // Log the change
       try {
-        await logChange('discount_removed', 'discount', discountId, {});
+        await logChange('global_discount_stopped', 'products', 'all_products', {
+          operation: 'reset_all_discounts'
+        });
       } catch (logError) {
         console.error('Error logging change:', logError);
       }
-      
-      queryClient.invalidateQueries({ queryKey: ['active-discounts'] });
+
       queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['has-active-discount'] });
+      queryClient.invalidateQueries({ queryKey: ['current-discount'] });
       
       toast({
-        title: 'تم إزالة الخصم',
-        description: 'تم إزالة الخصم بنجاح',
+        title: 'تم إيقاف الخصم',
+        description: 'تم إيقاف جميع الخصومات بنجاح',
       });
     },
     onError: (error: any) => {
-      console.error('Error removing discount:', error);
+      console.error('Error stopping discount:', error);
       toast({
         title: 'خطأ',
-        description: error.message || 'فشل في إزالة الخصم',
+        description: error.message || 'فشل في إيقاف الخصم',
         variant: 'destructive',
       });
     }
@@ -219,41 +162,13 @@ const SimpleDiscountManagement = () => {
       return;
     }
 
-    if (discountType !== 'all_products' && !targetValue) {
-      toast({
-        title: 'خطأ',
-        description: 'يرجى تحديد القيمة المستهدفة',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    console.log('Starting discount application with:', {
-      discountType,
-      targetValue,
-      discountPercentage
-    });
-
-    applyDiscountMutation.mutate({
-      discountType,
-      targetValue,
-      discountPercentage
-    });
+    console.log('Starting discount application with:', discountPercentage);
+    applyDiscountMutation.mutate(discountPercentage);
   };
 
-  const getDiscountDescription = (discount: any) => {
-    switch (discount.discount_type) {
-      case 'all_products':
-        return 'جميع المنتجات';
-      case 'category':
-        const category = categories?.find(c => c.id === discount.target_value);
-        return `فئة: ${category?.name || discount.target_value}`;
-      case 'subcategory':
-        const subcategory = subcategories?.find(s => s.id === discount.target_value);
-        return `فئة فرعية: ${subcategory?.name || discount.target_value}`;
-      default:
-        return discount.target_value || 'غير محدد';
-    }
+  const handleStopDiscount = () => {
+    console.log('Starting discount stop');
+    stopDiscountMutation.mutate();
   };
 
   if (isLoading) {
@@ -262,66 +177,16 @@ const SimpleDiscountManagement = () => {
 
   return (
     <div className="space-y-6">
-      {/* Apply New Discount */}
+      {/* Apply Global Discount */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Percent className="w-5 h-5" />
-            تطبيق خصم جديد
+            تطبيق خصم على جميع المنتجات
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <Label>نوع الخصم</Label>
-              <Select value={discountType} onValueChange={setDiscountType}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all_products">جميع المنتجات</SelectItem>
-                  <SelectItem value="category">فئة محددة</SelectItem>
-                  <SelectItem value="subcategory">فئة فرعية محددة</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {discountType === 'category' && (
-              <div>
-                <Label>الفئة</Label>
-                <Select value={targetValue} onValueChange={setTargetValue}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="اختر الفئة" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories?.map((category) => (
-                      <SelectItem key={category.id} value={category.id}>
-                        {category.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            {discountType === 'subcategory' && (
-              <div>
-                <Label>الفئة الفرعية</Label>
-                <Select value={targetValue} onValueChange={setTargetValue}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="اختر الفئة الفرعية" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {subcategories?.map((subcategory) => (
-                      <SelectItem key={subcategory.id} value={subcategory.id}>
-                        {subcategory.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label>نسبة الخصم (%)</Label>
               <Input
@@ -335,55 +200,33 @@ const SimpleDiscountManagement = () => {
             </div>
           </div>
 
-          <Button
-            onClick={handleApplyDiscount}
-            disabled={applyDiscountMutation.isPending}
-            className="w-full"
-          >
-            {applyDiscountMutation.isPending ? 'جاري التطبيق...' : 'تطبيق الخصم'}
-          </Button>
-        </CardContent>
-      </Card>
+          <div className="flex gap-3">
+            <Button
+              onClick={handleApplyDiscount}
+              disabled={applyDiscountMutation.isPending}
+              className="flex-1"
+            >
+              {applyDiscountMutation.isPending ? 'جاري التطبيق...' : 'تطبيق الخصم على جميع المنتجات'}
+            </Button>
+            
+            {hasActiveDiscount && (
+              <Button
+                variant="outline"
+                onClick={handleStopDiscount}
+                disabled={stopDiscountMutation.isPending}
+                className="text-red-600 border-red-300 hover:bg-red-50"
+              >
+                <Square className="w-4 h-4 mr-2" />
+                {stopDiscountMutation.isPending ? 'جاري الإيقاف...' : 'إيقاف الخصم'}
+              </Button>
+            )}
+          </div>
 
-      {/* Active Discounts */}
-      <Card>
-        <CardHeader>
-          <CardTitle>الخصومات النشطة</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {activeDiscounts && activeDiscounts.length > 0 ? (
-            <div className="space-y-3">
-              {activeDiscounts.map((discount) => (
-                <div
-                  key={discount.id}
-                  className="flex items-center justify-between p-4 border rounded-lg"
-                >
-                  <div>
-                    <div className="font-medium">
-                      {getDiscountDescription(discount)}
-                    </div>
-                    <div className="text-sm text-gray-600">
-                      خصم {discount.discount_percentage}%
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      تم الإنشاء: {new Date(discount.created_at).toLocaleDateString('ar-EG')}
-                    </div>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => removeDiscountMutation.mutate(discount.id)}
-                    disabled={removeDiscountMutation.isPending}
-                    className="text-red-600 border-red-300 hover:bg-red-50"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-8 text-gray-500">
-              لا توجد خصومات نشطة حالياً
+          {hasActiveDiscount && currentDiscountPercentage && (
+            <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+              <p className="text-green-800 font-medium">
+                يوجد حالياً خصم {currentDiscountPercentage}% مطبق على جميع المنتجات
+              </p>
             </div>
           )}
         </CardContent>
