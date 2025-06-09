@@ -65,40 +65,48 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       console.log('Theme settings fetched:', data);
       return data;
     },
-    refetchInterval: 5000, // Check for updates every 5 seconds
-    staleTime: 0, // Always consider data stale
+    refetchInterval: 2000, // Reduce frequency
+    staleTime: 1000, // Cache for 1 second
   });
 
   const themeConfig: ThemeConfig = parseThemeConfig(settings?.theme_config);
 
+  // Determine and apply active theme
   useEffect(() => {
-    console.log('Theme config changed:', themeConfig);
+    console.log('Theme config in context:', themeConfig);
+    
+    let newActiveTheme: 'christmas' | 'valentine' | 'halloween' | 'default' = 'default';
     
     // Determine active theme based on priority
     if (themeConfig.christmas) {
-      setActiveTheme('christmas');
+      newActiveTheme = 'christmas';
     } else if (themeConfig.valentine) {
-      setActiveTheme('valentine');
+      newActiveTheme = 'valentine';
     } else if (themeConfig.halloween) {
-      setActiveTheme('halloween');
-    } else {
-      setActiveTheme('default');
+      newActiveTheme = 'halloween';
     }
-  }, [themeConfig]);
 
+    console.log('Setting active theme to:', newActiveTheme);
+    setActiveTheme(newActiveTheme);
+  }, [themeConfig.christmas, themeConfig.valentine, themeConfig.halloween]);
+
+  // Apply theme classes to body
   useEffect(() => {
-    console.log('Active theme changed to:', activeTheme);
+    console.log('Applying theme classes for:', activeTheme);
     
-    // Apply theme classes to body
     const body = document.body;
     
     // Remove all theme classes
     body.classList.remove('theme-christmas', 'theme-valentine', 'theme-halloween');
     
-    // Add active theme class
+    // Add active theme class if not default
     if (activeTheme !== 'default') {
-      body.classList.add(`theme-${activeTheme}`);
-      console.log(`Applied theme class: theme-${activeTheme}`);
+      const themeClass = `theme-${activeTheme}`;
+      body.classList.add(themeClass);
+      console.log(`Applied theme class: ${themeClass}`);
+      console.log('Current body classes:', body.className);
+    } else {
+      console.log('Applied default theme (no classes)');
     }
 
     return () => {
@@ -107,8 +115,10 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
   }, [activeTheme]);
 
-  // Listen for real-time updates to admin_settings
+  // Listen for real-time updates to admin_settings with debouncing
   useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+
     const channel = supabase
       .channel('admin-settings-changes')
       .on(
@@ -120,14 +130,19 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         },
         (payload) => {
           console.log('Admin settings updated via realtime:', payload);
-          // Invalidate the query to refetch fresh data
-          queryClient.invalidateQueries({ queryKey: ['admin-settings-theme'] });
-          queryClient.invalidateQueries({ queryKey: ['admin-settings'] });
+          
+          // Debounce the query invalidation to prevent rapid updates
+          clearTimeout(timeoutId);
+          timeoutId = setTimeout(() => {
+            queryClient.invalidateQueries({ queryKey: ['admin-settings-theme'] });
+            queryClient.invalidateQueries({ queryKey: ['admin-settings'] });
+          }, 500);
         }
       )
       .subscribe();
 
     return () => {
+      clearTimeout(timeoutId);
       supabase.removeChannel(channel);
     };
   }, [queryClient]);

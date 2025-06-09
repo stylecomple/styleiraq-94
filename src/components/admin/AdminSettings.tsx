@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -60,11 +59,8 @@ const AdminSettings = () => {
   const [zainApiKey, setZainApiKey] = useState(zainConfig.api_key ?? '');
   const [zainSecretKey, setZainSecretKey] = useState(zainConfig.secret_key ?? '');
 
-  // Theme Configuration - get current values from database
-  const currentThemeConfig = getThemeConfig();
-  const [christmasTheme, setChristmasTheme] = useState(currentThemeConfig.christmas);
-  const [valentineTheme, setValentineTheme] = useState(currentThemeConfig.valentine);
-  const [halloweenTheme, setHalloweenTheme] = useState(currentThemeConfig.halloween);
+  // Theme Configuration - using database values directly
+  const themeConfig = getThemeConfig();
 
   // Update local state when settings change
   React.useEffect(() => {
@@ -84,43 +80,31 @@ const AdminSettings = () => {
       setZainMerchantId(zain.merchant_id ?? '');
       setZainApiKey(zain.api_key ?? '');
       setZainSecretKey(zain.secret_key ?? '');
-
-      // Theme settings - sync with database
-      const theme = getThemeConfig();
-      setChristmasTheme(theme.christmas);
-      setValentineTheme(theme.valentine);
-      setHalloweenTheme(theme.halloween);
     }
   }, [settings]);
 
-  // Handle individual theme toggle with immediate save
+  // Handle individual theme toggle with optimistic updates
   const handleThemeToggle = async (themeType: 'christmas' | 'valentine' | 'halloween', newValue: boolean) => {
+    console.log(`Toggling ${themeType} to ${newValue}`);
+    
     const updatedThemeConfig = {
-      christmas: themeType === 'christmas' ? newValue : christmasTheme,
-      valentine: themeType === 'valentine' ? newValue : valentineTheme,
-      halloween: themeType === 'halloween' ? newValue : halloweenTheme,
+      christmas: themeType === 'christmas' ? newValue : themeConfig.christmas,
+      valentine: themeType === 'valentine' ? newValue : themeConfig.valentine,
+      halloween: themeType === 'halloween' ? newValue : themeConfig.halloween,
     };
-
-    // Update local state immediately
-    if (themeType === 'christmas') setChristmasTheme(newValue);
-    if (themeType === 'valentine') setValentineTheme(newValue);
-    if (themeType === 'halloween') setHalloweenTheme(newValue);
 
     try {
       await updateSettings({
         theme_config: updatedThemeConfig
       });
       
+      console.log(`Successfully updated ${themeType} theme to ${newValue}`);
       toast({
         title: "تم التحديث",
         description: `تم ${newValue ? 'تفعيل' : 'إلغاء'} ثيم ${themeType === 'christmas' ? 'الكريسماس' : themeType === 'valentine' ? 'عيد الحب' : 'الهالووين'}`,
       });
     } catch (error) {
-      // Revert local state on error
-      if (themeType === 'christmas') setChristmasTheme(!newValue);
-      if (themeType === 'valentine') setValentineTheme(!newValue);
-      if (themeType === 'halloween') setHalloweenTheme(!newValue);
-      
+      console.error(`Error updating ${themeType} theme:`, error);
       toast({
         title: "خطأ",
         description: "حدث خطأ أثناء تحديث الثيم",
@@ -209,7 +193,7 @@ const AdminSettings = () => {
             </div>
             <Switch
               id="christmas-theme"
-              checked={christmasTheme}
+              checked={themeConfig.christmas}
               onCheckedChange={(checked) => handleThemeToggle('christmas', checked)}
             />
           </div>
@@ -225,7 +209,7 @@ const AdminSettings = () => {
             </div>
             <Switch
               id="valentine-theme"
-              checked={valentineTheme}
+              checked={themeConfig.valentine}
               onCheckedChange={(checked) => handleThemeToggle('valentine', checked)}
             />
           </div>
@@ -241,7 +225,7 @@ const AdminSettings = () => {
             </div>
             <Switch
               id="halloween-theme"
-              checked={halloweenTheme}
+              checked={themeConfig.halloween}
               onCheckedChange={(checked) => handleThemeToggle('halloween', checked)}
             />
           </div>
