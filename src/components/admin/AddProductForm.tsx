@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { X } from 'lucide-react';
+import { X, Sparkles } from 'lucide-react';
 import ImageUploadCrop from './ImageUploadCrop';
 import MultiImageUpload from './MultiImageUpload';
 import CategoryManager from './CategoryManager';
@@ -45,6 +45,7 @@ const AddProductForm = ({ onClose }: AddProductFormProps) => {
   });
 
   const [showCategoryManager, setShowCategoryManager] = useState(false);
+  const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
 
   // Fetch categories from database
   const { data: availableCategories = [] } = useQuery({
@@ -122,6 +123,45 @@ const AddProductForm = ({ onClose }: AddProductFormProps) => {
       });
     }
   });
+
+  const generateDescription = async () => {
+    if (!formData.name) {
+      toast({
+        title: 'خطأ',
+        description: 'يرجى إدخال اسم المنتج أولاً',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsGeneratingDescription(true);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-product-description', {
+        body: {
+          productName: formData.name,
+          currentDescription: formData.description
+        }
+      });
+
+      if (error) throw error;
+
+      setFormData(prev => ({ ...prev, description: data.description }));
+      toast({
+        title: 'تم إنشاء الوصف',
+        description: 'تم إنشاء وصف تسويقي للمنتج بنجاح',
+      });
+    } catch (error) {
+      console.error('Error generating description:', error);
+      toast({
+        title: 'خطأ',
+        description: 'فشل في إنشاء الوصف. تأكد من إعداد مفتاح Gemini AI',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsGeneratingDescription(false);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -294,12 +334,25 @@ const AddProductForm = ({ onClose }: AddProductFormProps) => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="description">الوصف</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="description">الوصف</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={generateDescription}
+                  disabled={isGeneratingDescription || !formData.name}
+                  className="flex items-center gap-2"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  {isGeneratingDescription ? 'جاري الإنشاء...' : 'إنشاء وصف بالذكاء الاصطناعي'}
+                </Button>
+              </div>
               <Textarea
                 id="description"
                 value={formData.description}
                 onChange={(e) => handleInputChange('description', e.target.value)}
-                placeholder="أدخل وصف المنتج"
+                placeholder="أدخل وصف المنتج أو استخدم الذكاء الاصطناعي لإنشاء وصف تسويقي"
                 rows={3}
               />
             </div>
