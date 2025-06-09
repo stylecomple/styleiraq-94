@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -206,7 +207,7 @@ const EnhancedDiscountManagement = () => {
         description: `تم تطبيق خصم ${discountPercentage}% بشروط متقدمة بنجاح`,
       });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       console.error('Complex discount application failed:', error);
       toast({
         title: 'خطأ',

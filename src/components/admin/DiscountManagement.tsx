@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -81,168 +82,7 @@ const DiscountManagement = () => {
     }
   });
 
-  // Apply discounts manually to products with enhanced WHERE clause support
-  const applyDiscountsToProducts = async (whereConditions?: any[]) => {
-    try {
-      console.log('Starting to apply discounts to products with WHERE conditions...', whereConditions);
-      
-      // Enhanced WHERE clause handling
-      let targetProducts = null;
-      
-      if (whereConditions && whereConditions.length > 0) {
-        console.log('Building complex WHERE clause for product filtering');
-        
-        // Build a complex query based on WHERE conditions
-        let query = supabase.from('products').select('id');
-        
-        whereConditions.forEach((condition, index) => {
-          console.log(`Applying WHERE condition ${index + 1}:`, condition);
-          
-          // Apply condition based on operator type
-          switch (condition.operator) {
-            case '=':
-              query = query.eq(condition.field, condition.value);
-              break;
-            case '!=':
-              query = query.neq(condition.field, condition.value);
-              break;
-            case '>':
-              query = query.gt(condition.field, condition.value);
-              break;
-            case '>=':
-              query = query.gte(condition.field, condition.value);
-              break;
-            case '<':
-              query = query.lt(condition.field, condition.value);
-              break;
-            case '<=':
-              query = query.lte(condition.field, condition.value);
-              break;
-            case 'LIKE':
-              query = query.ilike(condition.field, `%${condition.value}%`);
-              break;
-            case 'NOT LIKE':
-              query = query.not(condition.field, 'ilike', `%${condition.value}%`);
-              break;
-            case 'IN':
-              const inValues = condition.value.split(',').map((v: string) => v.trim());
-              query = query.in(condition.field, inValues);
-              break;
-            case 'NOT IN':
-              const notInValues = condition.value.split(',').map((v: string) => v.trim());
-              query = query.not(condition.field, 'in', notInValues);
-              break;
-            case 'IS NULL':
-              query = query.is(condition.field, null);
-              break;
-            case 'IS NOT NULL':
-              query = query.not(condition.field, 'is', null);
-              break;
-            case 'ANY':
-            case '@>':
-              query = query.contains(condition.field, [condition.value]);
-              break;
-            case '<@':
-              query = query.containedBy(condition.field, condition.value.split(','));
-              break;
-            case '&&':
-              query = query.overlaps(condition.field, condition.value.split(','));
-              break;
-            case 'BETWEEN':
-              const [min, max] = condition.value.split(',').map((v: string) => v.trim());
-              if (min && max) {
-                query = query.gte(condition.field, min).lte(condition.field, max);
-              }
-              break;
-            case '= ARRAY[]':
-              query = query.eq(condition.field, []);
-              break;
-            case '!= ARRAY[]':
-              query = query.not(condition.field, 'eq', []);
-              break;
-            default:
-              console.warn(`Unsupported operator: ${condition.operator}`);
-              query = query.eq(condition.field, condition.value);
-          }
-          
-          // Handle logical operators (AND is default, OR needs special handling)
-          if (condition.logicalOperator === 'OR' && index > 0) {
-            // For OR conditions, we need to handle them differently
-            console.log('Applying OR logical operator');
-          }
-        });
-        
-        const { data: filteredProducts, error: filterError } = await query;
-        
-        if (filterError) {
-          console.error('Error filtering products with WHERE clause:', filterError);
-          throw filterError;
-        }
-        
-        targetProducts = filteredProducts;
-        console.log(`Filtered ${targetProducts.length} products using complex WHERE clause`);
-      }
-
-      console.log('Resetting discounts for all products...');
-      
-      // Reset all products to 0 discount using RPC call
-      const { error: resetError } = await supabase.rpc('reset_all_product_discounts');
-      
-      if (resetError) {
-        console.error('Error resetting discounts:', resetError);
-        throw resetError;
-      }
-
-      console.log('Reset all product discounts to 0');
-
-      // Get all active discounts
-      const { data: activeDiscounts, error: discountsError } = await supabase
-        .from('active_discounts')
-        .select('*')
-        .eq('is_active', true);
-
-      if (discountsError) {
-        console.error('Error fetching discounts:', discountsError);
-        throw discountsError;
-      }
-
-      console.log('Active discounts:', activeDiscounts);
-
-      if (activeDiscounts && activeDiscounts.length > 0) {
-        // Apply discounts using RPC call with optional product filtering
-        if (targetProducts && targetProducts.length > 0) {
-          const productIds = targetProducts.map(p => p.id);
-          console.log(`Applying discounts to ${productIds.length} filtered products`);
-          
-          const { error: applyError } = await supabase.rpc('apply_active_discounts', {
-            product_ids: productIds
-          });
-          
-          if (applyError) {
-            console.error('Error applying discounts to filtered products:', applyError);
-            throw applyError;
-          }
-        } else {
-          // Apply to all products
-          const { error: applyError } = await supabase.rpc('apply_active_discounts');
-          
-          if (applyError) {
-            console.error('Error applying discounts:', applyError);
-            throw applyError;
-          }
-        }
-
-        console.log('Successfully applied all discounts with WHERE clause filtering');
-      }
-
-      console.log('Enhanced discount application completed');
-    } catch (error) {
-      console.error('Error in enhanced applyDiscountsToProducts:', error);
-      throw error;
-    }
-  };
-
-  // Create discount mutation - using improved RPC function
+  // Create discount mutation
   const createDiscountMutation = useMutation({
     mutationFn: async () => {
       console.log('Creating discount with:', {
@@ -280,7 +120,7 @@ const DiscountManagement = () => {
       
       console.log('Discount created successfully:', data);
 
-      // Apply discounts using the improved RPC function with proper error handling
+      // Apply discounts using the improved RPC function
       console.log('Applying discounts using improved RPC function...');
       const { error: rpcError } = await supabase.rpc('apply_active_discounts');
       
@@ -308,7 +148,7 @@ const DiscountManagement = () => {
         description: 'تم تطبيق الخصم على المنتجات بنجاح',
       });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       console.error('Discount creation failed:', error);
       toast({
         title: 'خطأ',
@@ -318,7 +158,7 @@ const DiscountManagement = () => {
     }
   });
 
-  // Delete discount mutation - using improved RPC function
+  // Delete discount mutation
   const deleteDiscountMutation = useMutation({
     mutationFn: async (discountId: string) => {
       const { error } = await supabase
@@ -328,8 +168,8 @@ const DiscountManagement = () => {
       
       if (error) throw error;
 
-      // Reapply remaining discounts using the improved RPC function
-      console.log('Reapplying remaining discounts using improved RPC function...');
+      // Reapply remaining discounts
+      console.log('Reapplying remaining discounts...');
       const { error: rpcError } = await supabase.rpc('apply_active_discounts');
       
       if (rpcError) {
@@ -349,7 +189,7 @@ const DiscountManagement = () => {
         description: 'تم إزالة الخصم وإعادة تطبيق الخصومات المتبقية',
       });
     },
-    onError: (error: any) => {
+    onError: () => {
       toast({
         title: 'خطأ',
         description: 'فشل في حذف الخصم',
