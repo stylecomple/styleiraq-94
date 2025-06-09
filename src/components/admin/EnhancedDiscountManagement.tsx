@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -164,7 +165,7 @@ const EnhancedDiscountManagement = () => {
       if (whereConditions.length > 0 && filteredProducts && !productsError && Array.isArray(filteredProducts)) {
         console.log(`Applying discount to ${filteredProducts.length} filtered products`);
         
-        const productIds = (filteredProducts as Product[]).map(p => p.id);
+        const productIds = filteredProducts.map((p: any) => p.id);
         
         // Apply discounts to specific products using the improved RPC function
         const { error: rpcError } = await supabase.rpc('apply_active_discounts', {

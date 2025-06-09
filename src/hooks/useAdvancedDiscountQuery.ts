@@ -23,9 +23,9 @@ interface AdvancedQueryOptions {
 export const useAdvancedDiscountQuery = (options: AdvancedQueryOptions) => {
   return useQuery({
     queryKey: ['advanced-discount-query', options],
-    queryFn: async () => {
+    queryFn: async (): Promise<any[]> => {
       try {
-        let query = supabase.from(options.table).select(options.select || '*');
+        let query = supabase.from(options.table as any).select(options.select || '*');
         
         // Build complex WHERE clause
         if (options.whereConditions.length > 0) {
