@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -64,14 +65,29 @@ const UserManagement = () => {
   // Add role mutation
   const addRoleMutation = useMutation({
     mutationFn: async ({ userEmail, role }: { userEmail: string; role: 'admin' | 'order_manager' }) => {
-      // First get user by email from profiles
+      console.log('Looking for user with email:', userEmail);
+      
+      // First get user by email from profiles - using ilike for case-insensitive search
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
-        .select('id, full_name')
-        .eq('email', userEmail)
+        .select('id, full_name, email')
+        .ilike('email', userEmail.trim())
         .single();
       
-      if (profileError) throw new Error('المستخدم غير موجود');
+      console.log('Profile query result:', { profile, profileError });
+      
+      if (profileError || !profile) {
+        console.error('Profile error:', profileError);
+        
+        // Let's also try to get all profiles to debug
+        const { data: allProfiles } = await supabase
+          .from('profiles')
+          .select('email');
+        
+        console.log('All profiles emails:', allProfiles?.map(p => p.email));
+        
+        throw new Error(`المستخدم بالبريد الإلكتروني "${userEmail}" غير موجود في النظام. تأكد من أن المستخدم قد سجل دخوله مرة واحدة على الأقل.`);
+      }
 
       // Check if user already has this role
       const { data: existingRole } = await supabase
@@ -97,7 +113,10 @@ const UserManagement = () => {
           role: role
         });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Insert role error:', error);
+        throw error;
+      }
 
       // Log the change
       await logChange(`${role}_role_added`, 'user', profile.id, {
@@ -121,6 +140,7 @@ const UserManagement = () => {
       setEmail('');
     },
     onError: (error: any) => {
+      console.error('Add role mutation error:', error);
       toast({
         title: 'خطأ',
         description: error.message || 'فشل في إضافة الدور',
@@ -201,7 +221,7 @@ const UserManagement = () => {
             إضافة دور جديد
           </CardTitle>
           <CardDescription>
-            أدخل البريد الإلكتروني للمستخدم لمنحه الدور المحدد
+            أدخل البريد الإلكتروني للمستخدم لمنحه الدور المحدد. تأكد من أن المستخدم قد سجل دخوله مرة واحدة على الأقل.
           </CardDescription>
         </CardHeader>
         <CardContent>
