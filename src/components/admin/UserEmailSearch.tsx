@@ -31,16 +31,35 @@ const UserEmailSearch = ({ value, onChange, placeholder = "البحث عن ال�
   const [searchTerm, setSearchTerm] = useState('');
 
   // Fetch users based on search term
-  const { data: users } = useQuery({
+  const { data: users, isLoading } = useQuery({
     queryKey: ['user-search', searchTerm],
     queryFn: async () => {
-      if (!searchTerm || searchTerm.length < 2) return [];
+      console.log('Searching for users with term:', searchTerm);
+      
+      if (!searchTerm || searchTerm.length < 1) {
+        // Show all users if no search term
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id, email, full_name')
+          .limit(20);
+        
+        console.log('All users query result:', { data, error });
+        
+        if (error) {
+          console.error('Error fetching all users:', error);
+          return [];
+        }
+        
+        return data || [];
+      }
       
       const { data, error } = await supabase
         .from('profiles')
         .select('id, email, full_name')
-        .ilike('email', `%${searchTerm}%`)
+        .or(`email.ilike.%${searchTerm}%,full_name.ilike.%${searchTerm}%`)
         .limit(10);
+      
+      console.log('Search query result:', { data, error, searchTerm });
       
       if (error) {
         console.error('Error fetching users:', error);
@@ -49,7 +68,7 @@ const UserEmailSearch = ({ value, onChange, placeholder = "البحث عن ال�
       
       return data || [];
     },
-    enabled: searchTerm.length >= 2,
+    enabled: true, // Always enabled to show initial results
   });
 
   const handleSelect = (userEmail: string) => {
@@ -74,14 +93,14 @@ const UserEmailSearch = ({ value, onChange, placeholder = "البحث عن ال�
       <PopoverContent className="w-full p-0">
         <Command>
           <CommandInput
-            placeholder="ابحث عن البريد الإلكتروني..."
+            placeholder="ابحث عن البريد الإلكتروني أو الاسم..."
             value={searchTerm}
             onValueChange={setSearchTerm}
           />
           <CommandList>
             <CommandEmpty>
-              {searchTerm.length < 2 
-                ? "أدخل حرفين على الأقل للبحث" 
+              {isLoading 
+                ? "جاري البحث..." 
                 : "لم يتم العثور على مستخدمين"}
             </CommandEmpty>
             {users && users.length > 0 && (

@@ -1,8 +1,10 @@
+
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useChangeLogger } from '@/hooks/useChangeLogger';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -31,6 +33,7 @@ const UserManagement = () => {
   const { logChange } = useChangeLogger();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { isOwner, isAdmin } = useAuth();
 
   // Fetch all user roles with profile information
   const { data: userRoles, isLoading } = useQuery({
@@ -198,10 +201,49 @@ const UserManagement = () => {
   };
 
   const handleRemoveRole = (userId: string, role: string) => {
-    // Only allow removing admin and order_manager roles
+    // Check permissions for removing roles
+    if (role === 'owner') {
+      toast({
+        title: 'خطأ',
+        description: 'لا يمكن إزالة صلاحيات المالك',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (role === 'admin' && !isOwner) {
+      toast({
+        title: 'خطأ',
+        description: 'فقط المالك يمكنه إزالة صلاحيات المدير',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Only allow removing admin and order_manager roles with proper permissions
     if (role === 'admin' || role === 'order_manager') {
       removeRoleMutation.mutate({ userId, role: role as 'admin' | 'order_manager' });
     }
+  };
+
+  const canRemoveRole = (role: string) => {
+    if (role === 'owner') return false;
+    if (role === 'admin' && !isOwner) return false;
+    return true;
+  };
+
+  const getAvailableRoles = () => {
+    if (isOwner) {
+      return [
+        { value: 'admin', label: 'مدير' },
+        { value: 'order_manager', label: 'مدير طلبات' }
+      ];
+    } else if (isAdmin) {
+      return [
+        { value: 'order_manager', label: 'مدير طلبات' }
+      ];
+    }
+    return [];
   };
 
   if (isLoading) {
@@ -211,48 +253,54 @@ const UserManagement = () => {
   const adminUsers = userRoles?.filter(role => role.role === 'admin') || [];
   const orderManagerUsers = userRoles?.filter(role => role.role === 'order_manager') || [];
   const ownerUsers = userRoles?.filter(role => role.role === 'owner') || [];
+  const availableRoles = getAvailableRoles();
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <UserPlus className="w-5 h-5" />
-            إضافة دور جديد
-          </CardTitle>
-          <CardDescription>
-            ابحث عن البريد الإلكتروني للمستخدم لمنحه الدور المحدد. تأكد من أن المستخدم قد سجل دخوله مرة واحدة على الأقل.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex gap-3">
-            <div className="flex-1">
-              <UserEmailSearch
-                value={email}
-                onChange={setEmail}
-                placeholder="ابحث عن البريد الإلكتروني للمستخدم"
-              />
+      {availableRoles.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <UserPlus className="w-5 h-5" />
+              إضافة دور جديد
+            </CardTitle>
+            <CardDescription>
+              ابحث عن البريد الإلكتروني للمستخدم لمنحه الدور المحدد. تأكد من أن المستخدم قد سجل دخوله مرة واحدة على الأقل.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex gap-3">
+              <div className="flex-1">
+                <UserEmailSearch
+                  value={email}
+                  onChange={setEmail}
+                  placeholder="ابحث عن البريد الإلكتروني للمستخدم"
+                />
+              </div>
+              <Select value={selectedRole} onValueChange={(value: 'admin' | 'order_manager') => setSelectedRole(value)}>
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder="اختر الدور" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableRoles.map(role => (
+                    <SelectItem key={role.value} value={role.value}>
+                      {role.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button 
+                onClick={handleAddRole}
+                disabled={addRoleMutation.isPending}
+                className="bg-pink-600 hover:bg-pink-700"
+              >
+                <Mail className="w-4 h-4 mr-2" />
+                إضافة الدور
+              </Button>
             </div>
-            <Select value={selectedRole} onValueChange={(value: 'admin' | 'order_manager') => setSelectedRole(value)}>
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="اختر الدور" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="admin">مدير</SelectItem>
-                <SelectItem value="order_manager">مدير طلبات</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button 
-              onClick={handleAddRole}
-              disabled={addRoleMutation.isPending}
-              className="bg-pink-600 hover:bg-pink-700"
-            >
-              <Mail className="w-4 h-4 mr-2" />
-              إضافة الدور
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>
@@ -301,16 +349,22 @@ const UserManagement = () => {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleRemoveRole(user.user_id, user.role)}
-                      disabled={removeRoleMutation.isPending}
-                      className="text-red-600 border-red-300 hover:bg-red-50"
-                    >
-                      <UserMinus className="w-4 h-4 mr-1" />
-                      إزالة صلاحيات
-                    </Button>
+                    {canRemoveRole(user.role) ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleRemoveRole(user.user_id, user.role)}
+                        disabled={removeRoleMutation.isPending}
+                        className="text-red-600 border-red-300 hover:bg-red-50"
+                      >
+                        <UserMinus className="w-4 h-4 mr-1" />
+                        إزالة صلاحيات
+                      </Button>
+                    ) : (
+                      <span className="text-muted-foreground text-sm">
+                        {isAdmin && !isOwner ? 'فقط المالك يمكنه الإزالة' : 'لا يمكن تعديل'}
+                      </span>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}
