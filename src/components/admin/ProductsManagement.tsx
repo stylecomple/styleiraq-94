@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -11,7 +12,20 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Trash2, Edit, Eye } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { Trash2, Edit, Eye, Percent, EyeOff } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useChangeLogger } from '@/hooks/useChangeLogger';
 import EditProductForm from './EditProductForm';
@@ -22,6 +36,8 @@ const ProductsManagement = () => {
   const queryClient = useQueryClient();
   const { logChange } = useChangeLogger();
   const [editingProduct, setEditingProduct] = useState<any>(null);
+  const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
+  const [discountPercentage, setDiscountPercentage] = useState<string>('');
 
   const { data: products, isLoading } = useQuery({
     queryKey: ['admin-products'],
@@ -51,37 +67,176 @@ const ProductsManagement = () => {
     }
   });
 
+  // Bulk discount mutation
+  const bulkDiscountMutation = useMutation({
+    mutationFn: async ({ productIds, discount }: { productIds: string[], discount: number }) => {
+      const { error } = await supabase
+        .from('products')
+        .update({ discount_percentage: discount })
+        .in('id', productIds);
+      
+      if (error) throw error;
+      return { productIds, discount };
+    },
+    onSuccess: ({ productIds, discount }) => {
+      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+      logChange('bulk_discount_applied', 'products', undefined, {
+        product_count: productIds.length,
+        discount_percentage: discount,
+        product_ids: productIds
+      });
+      toast({
+        title: 'تم تطبيق الخصم',
+        description: `تم تطبيق خصم ${discount}% على ${productIds.length} منتج`,
+      });
+      setSelectedProducts([]);
+      setDiscountPercentage('');
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'خطأ',
+        description: 'فشل في تطبيق الخصم',
+        variant: 'destructive',
+      });
+    }
+  });
+
+  // Bulk inactive mutation
+  const bulkInactiveMutation = useMutation({
+    mutationFn: async (productIds: string[]) => {
+      const { error } = await supabase
+        .from('products')
+        .update({ is_active: false })
+        .in('id', productIds);
+      
+      if (error) throw error;
+      return productIds;
+    },
+    onSuccess: (productIds) => {
+      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+      logChange('bulk_products_deactivated', 'products', undefined, {
+        product_count: productIds.length,
+        product_ids: productIds
+      });
+      toast({
+        title: 'تم إلغاء تفعيل المنتجات',
+        description: `تم إلغاء تفعيل ${productIds.length} منتج`,
+      });
+      setSelectedProducts([]);
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'خطأ',
+        description: 'فشل في إلغاء تفعيل المنتجات',
+        variant: 'destructive',
+      });
+    }
+  });
+
+  // Bulk delete mutation
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async (productIds: string[]) => {
+      // Check if any products have orders
+      const { data: orderItems, error: checkError } = await supabase
+        .from('order_items')
+        .select('product_id')
+        .in('product_id', productIds);
+      
+      if (checkError) throw new Error('فشل في التحقق من الطلبات المرتبطة');
+
+      const productsWithOrders = orderItems?.map(item => item.product_id) || [];
+      const productsToDelete = productIds.filter(id => !productsWithOrders.includes(id));
+      const productsToDeactivate = productIds.filter(id => productsWithOrders.includes(id));
+
+      // Delete products without orders
+      if (productsToDelete.length > 0) {
+        const { error: deleteError } = await supabase
+          .from('products')
+          .delete()
+          .in('id', productsToDelete);
+        
+        if (deleteError) throw new Error('فشل في حذف بعض المنتجات');
+      }
+
+      // Deactivate products with orders
+      if (productsToDeactivate.length > 0) {
+        const { error: deactivateError } = await supabase
+          .from('products')
+          .update({ is_active: false })
+          .in('id', productsToDeactivate);
+        
+        if (deactivateError) throw new Error('فشل في إلغاء تفعيل بعض المنتجات');
+      }
+
+      return { deleted: productsToDelete, deactivated: productsToDeactivate };
+    },
+    onSuccess: ({ deleted, deactivated }) => {
+      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+      
+      if (deleted.length > 0) {
+        logChange('bulk_products_deleted', 'products', undefined, {
+          product_count: deleted.length,
+          product_ids: deleted
+        });
+      }
+      
+      if (deactivated.length > 0) {
+        logChange('bulk_products_deactivated', 'products', undefined, {
+          product_count: deactivated.length,
+          product_ids: deactivated,
+          reason: 'Products had existing orders'
+        });
+      }
+
+      let message = '';
+      if (deleted.length > 0 && deactivated.length > 0) {
+        message = `تم حذف ${deleted.length} منتج وإلغاء تفعيل ${deactivated.length} منتج (مرتبط بطلبات)`;
+      } else if (deleted.length > 0) {
+        message = `تم حذف ${deleted.length} منتج`;
+      } else if (deactivated.length > 0) {
+        message = `تم إلغاء تفعيل ${deactivated.length} منتج (مرتبط بطلبات)`;
+      }
+
+      toast({
+        title: 'تمت العملية',
+        description: message,
+      });
+      setSelectedProducts([]);
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'خطأ',
+        description: error.message || 'فشل في حذف المنتجات',
+        variant: 'destructive',
+      });
+    }
+  });
+
+  // Handle individual product operations
   const deleteProductMutation = useMutation({
     mutationFn: async (product: any) => {
       console.log('Starting product deletion process for:', product.id);
       
       try {
-        // First, check if product exists in any orders
         const { data: orderItems, error: checkError } = await supabase
           .from('order_items')
           .select('id')
           .eq('product_id', product.id);
         
         if (checkError) {
-          console.error('Error checking order items:', checkError);
           throw new Error('فشل في التحقق من الطلبات المرتبطة بالمنتج');
         }
 
-        // If product has order items, we can't delete it physically
         if (orderItems && orderItems.length > 0) {
-          console.log('Product has existing orders, deactivating instead of deleting');
-          // Instead of deleting, we'll deactivate the product
           const { error: deactivateError } = await supabase
             .from('products')
             .update({ is_active: false })
             .eq('id', product.id);
           
           if (deactivateError) {
-            console.error('Error deactivating product:', deactivateError);
             throw new Error('فشل في إلغاء تفعيل المنتج');
           }
 
-          // Log the change as deactivation instead of deletion
           await logChange('product_deactivated', 'product', product.id, {
             product_name: product.name,
             product_price: product.price,
@@ -91,19 +246,15 @@ const ProductsManagement = () => {
           return { ...product, deleted: false, deactivated: true };
         }
 
-        // If no order items exist, we can safely delete the product
-        console.log('No orders found, proceeding with deletion');
         const { error: deleteError } = await supabase
           .from('products')
           .delete()
           .eq('id', product.id);
         
         if (deleteError) {
-          console.error('Error deleting product:', deleteError);
           throw new Error('فشل في حذف المنتج من قاعدة البيانات');
         }
 
-        // Log the change
         await logChange('product_deleted', 'product', product.id, {
           product_name: product.name,
           product_price: product.price
@@ -111,12 +262,10 @@ const ProductsManagement = () => {
 
         return { ...product, deleted: true, deactivated: false };
       } catch (error) {
-        console.error('Error in deleteProductMutation:', error);
         throw error;
       }
     },
     onSuccess: (result) => {
-      // Force refresh the products list
       queryClient.invalidateQueries({ queryKey: ['admin-products'] });
       queryClient.refetchQueries({ queryKey: ['admin-products'] });
       
@@ -133,7 +282,6 @@ const ProductsManagement = () => {
       }
     },
     onError: (error: any) => {
-      console.error('Error in deleteProductMutation onError:', error);
       const errorMessage = error.message || 'فشل في حذف المنتج';
       toast({
         title: 'خطأ',
@@ -153,7 +301,6 @@ const ProductsManagement = () => {
       
       if (error) throw error;
 
-      // Log the change
       await logChange(
         newStatus ? 'product_activated' : 'product_deactivated',
         'product',
@@ -171,7 +318,6 @@ const ProductsManagement = () => {
       });
     },
     onError: (error: any) => {
-      console.error('Error toggling product status:', error);
       toast({
         title: 'خطأ',
         description: 'فشل في تحديث حالة المنتج',
@@ -179,6 +325,36 @@ const ProductsManagement = () => {
       });
     }
   });
+
+  const handleSelectAll = () => {
+    if (selectedProducts.length === products?.length) {
+      setSelectedProducts([]);
+    } else {
+      setSelectedProducts(products?.map(p => p.id) || []);
+    }
+  };
+
+  const handleSelectProduct = (productId: string) => {
+    setSelectedProducts(prev => 
+      prev.includes(productId) 
+        ? prev.filter(id => id !== productId)
+        : [...prev, productId]
+    );
+  };
+
+  const handleBulkDiscount = () => {
+    const discount = parseInt(discountPercentage);
+    if (isNaN(discount) || discount < 0 || discount > 100) {
+      toast({
+        title: 'خطأ',
+        description: 'يرجى إدخال نسبة خصم صحيحة (0-100)',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    bulkDiscountMutation.mutate({ productIds: selectedProducts, discount });
+  };
 
   const categoryLabels = {
     makeup: 'مكياج',
@@ -196,23 +372,16 @@ const ProductsManagement = () => {
   const formatOptions = (options: ProductOption[] | string[] | null, mainPrice: number) => {
     if (!options || !Array.isArray(options)) return 'لا توجد خيارات';
     
-    // Handle old colors format (array of strings)
     if (options.length > 0 && typeof options[0] === 'string') {
       return (options as string[]).slice(0, 3).join(', ') + (options.length > 3 ? '...' : '');
     }
     
-    // Handle new options format (array of objects)
     const optionStrings = (options as ProductOption[]).slice(0, 3).map(option => {
       const price = option.price || mainPrice;
       return `${option.name} (${formatPrice(price)})`;
     });
     
     return optionStrings.join(', ') + (options.length > 3 ? '...' : '');
-  };
-
-  const handleDeleteProduct = (product: any) => {
-    console.log('Delete button clicked for product:', product.id);
-    deleteProductMutation.mutate(product);
   };
 
   if (isLoading) {
@@ -228,10 +397,104 @@ const ProductsManagement = () => {
         />
       )}
 
+      {/* Bulk Actions */}
+      {selectedProducts.length > 0 && (
+        <div className="bg-muted p-4 rounded-lg space-y-4">
+          <div className="flex items-center justify-between">
+            <span className="font-medium">
+              تم تحديد {selectedProducts.length} منتج
+            </span>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => setSelectedProducts([])}
+            >
+              إلغاء التحديد
+            </Button>
+          </div>
+          
+          <div className="flex flex-wrap gap-3">
+            {/* Bulk Discount */}
+            <div className="flex items-center gap-2">
+              <Input
+                type="number"
+                placeholder="نسبة الخصم %"
+                value={discountPercentage}
+                onChange={(e) => setDiscountPercentage(e.target.value)}
+                className="w-32"
+                min="0"
+                max="100"
+              />
+              <Button
+                onClick={handleBulkDiscount}
+                disabled={!discountPercentage || bulkDiscountMutation.isPending}
+                size="sm"
+                className="flex items-center gap-2"
+              >
+                <Percent className="w-4 h-4" />
+                تطبيق خصم
+              </Button>
+            </div>
+
+            {/* Bulk Inactive */}
+            <Button
+              onClick={() => bulkInactiveMutation.mutate(selectedProducts)}
+              disabled={bulkInactiveMutation.isPending}
+              variant="secondary"
+              size="sm"
+              className="flex items-center gap-2"
+            >
+              <EyeOff className="w-4 h-4" />
+              إلغاء التفعيل
+            </Button>
+
+            {/* Bulk Delete */}
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  className="flex items-center gap-2"
+                  disabled={bulkDeleteMutation.isPending}
+                >
+                  <Trash2 className="w-4 h-4" />
+                  حذف المحددة
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>تأكيد الحذف</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    هل أنت متأكد من حذف {selectedProducts.length} منتج؟ 
+                    المنتجات المرتبطة بطلبات سيتم إلغاء تفعيلها بدلاً من حذفها.
+                    هذا الإجراء لا يمكن التراجع عنه.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => bulkDeleteMutation.mutate(selectedProducts)}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    حذف
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        </div>
+      )}
+
       <div className="border rounded-lg">
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="text-right w-12">
+                <Checkbox
+                  checked={selectedProducts.length === products?.length && products?.length > 0}
+                  onCheckedChange={handleSelectAll}
+                />
+              </TableHead>
               <TableHead className="text-right">الصورة</TableHead>
               <TableHead className="text-right">اسم المنتج</TableHead>
               <TableHead className="text-right">الفئات</TableHead>
@@ -245,6 +508,12 @@ const ProductsManagement = () => {
           <TableBody>
             {products?.map((product) => (
               <TableRow key={product.id}>
+                <TableCell>
+                  <Checkbox
+                    checked={selectedProducts.includes(product.id)}
+                    onCheckedChange={() => handleSelectProduct(product.id)}
+                  />
+                </TableCell>
                 <TableCell>
                   <img
                     src={product.cover_image || '/placeholder.svg'}
@@ -289,14 +558,36 @@ const ProductsManagement = () => {
                     >
                       <Edit className="w-4 h-4" />
                     </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDeleteProduct(product)}
-                      disabled={deleteProductMutation.isPending}
-                    >
-                      <Trash2 className="w-4 h-4 text-red-500" />
-                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={deleteProductMutation.isPending}
+                        >
+                          <Trash2 className="w-4 h-4 text-red-500" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>تأكيد الحذف</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            هل أنت متأكد من حذف منتج "{product.name}"؟ 
+                            إذا كان هذا المنتج مرتبط بطلبات، سيتم إلغاء تفعيله بدلاً من حذفه.
+                            هذا الإجراء لا يمكن التراجع عنه.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => deleteProductMutation.mutate(product)}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            حذف
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </div>
                 </TableCell>
               </TableRow>
