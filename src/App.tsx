@@ -33,7 +33,10 @@ const LovableBadgeRemover: React.FC = () => {
         .select('hide_lovable_banner, favicon_url')
         .single();
       
-      if (error && error.code !== 'PGRST116') throw error;
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error fetching admin settings:', error);
+        return null;
+      }
       return data;
     }
   });
