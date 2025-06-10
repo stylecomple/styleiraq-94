@@ -444,7 +444,7 @@ const ProductsManagement = () => {
 
   const handleCategorySelect = (categoryId: string | null) => {
     setSelectedCategory(categoryId);
-    setSelectedSubcategory(null); // Reset subcategory when category changes
+    setSelectedSubcategory(null);
   };
 
   const handleSubcategorySelect = (subcategoryId: string | null) => {
@@ -742,5 +742,3 @@ const ProductsManagement = () => {
 };
 
 export default ProductsManagement;
-
-</edits_to_apply>
