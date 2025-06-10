@@ -70,7 +70,7 @@ const ProductCard = ({ product }: ProductCardProps) => {
           className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-300"
         />
         
-        {/* Discount badge */}
+        {/* Discount badge - only show if there's a valid discount */}
         {hasValidDiscount && (
           <Badge className="absolute top-3 right-3 bg-red-500 hover:bg-red-600 text-white font-bold">
             خصم {product.discount_percentage}%
