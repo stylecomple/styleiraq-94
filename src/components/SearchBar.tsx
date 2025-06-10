@@ -6,9 +6,11 @@ import { Search } from 'lucide-react';
 interface SearchBarProps {
   searchQuery: string;
   onSearchChange: (query: string) => void;
+  onFocus?: () => void;
+  onBlur?: () => void;
 }
 
-const SearchBar = ({ searchQuery, onSearchChange }: SearchBarProps) => {
+const SearchBar = ({ searchQuery, onSearchChange, onFocus, onBlur }: SearchBarProps) => {
   return (
     <div className="max-w-2xl mx-auto">
       <div className="relative">
@@ -18,6 +20,8 @@ const SearchBar = ({ searchQuery, onSearchChange }: SearchBarProps) => {
           placeholder="ابحث عن المنتجات..."
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
+          onFocus={onFocus}
+          onBlur={onBlur}
           className="w-full pr-12 pl-4 py-3 text-right rounded-full border-2 border-gray-200 focus:border-pink-500 focus:ring-pink-500 text-lg"
         />
       </div>
