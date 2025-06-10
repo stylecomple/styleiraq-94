@@ -1,18 +1,15 @@
+
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Product, CategoryType } from '@/types';
+import { CategoryType } from '@/types';
 import ProductCard from '@/components/ProductCard';
 import CategorySection from '@/components/CategorySection';
 import SubCategorySection from '@/components/SubCategorySection';
 import SearchBar from '@/components/SearchBar';
 import { useAuth } from '@/contexts/AuthContext';
-
-interface ProductsData {
-  products: Product[];
-  totalCount: number;
-}
+import { useProductSearch } from '@/hooks/useProductSearch';
 
 const Products = () => {
   const [selectedCategory, setSelectedCategory] = useState<CategoryType>('all');
@@ -28,7 +25,7 @@ const Products = () => {
     if (categoryParam && categoryParam !== selectedCategory) {
       console.log('URL category param changed:', categoryParam);
       setSelectedCategory(categoryParam);
-      setSelectedSubcategory(null); // Reset subcategory when category changes
+      setSelectedSubcategory(null);
     }
   }, [categoryParam, selectedCategory]);
 
@@ -67,73 +64,23 @@ const Products = () => {
     }
   }, [categoryData, selectedCategory]);
 
-  const { data: productsData, isLoading: productsLoading, isError, error } = useQuery<ProductsData>({
-    queryKey: ['products', selectedCategory, selectedSubcategory, searchQuery],
-    queryFn: async () => {
-      let query = supabase
-        .from('products')
-        .select('*', { count: 'exact' });
-
-      if (selectedCategory !== 'all') {
-        query = query.contains('categories', [selectedCategory]);
-      }
-
-      if (searchQuery) {
-        query = query.ilike('name', `%${searchQuery}%`);
-      }
-
-      const { data, error, count } = await query;
-
-      if (error) {
-        throw new Error(error.message);
-      }
-
-      // Transform raw database data to match Product interface
-      let filteredProducts = (data || []).map(rawProduct => {
-        // Handle legacy colors field - convert to options format
-        const options = (rawProduct as any).options || 
-          ((rawProduct as any).colors ? (rawProduct as any).colors.map((color: string) => ({ name: color, price: undefined })) : []);
-        
-        // Ensure subcategories field exists
-        const subcategories = (rawProduct as any).subcategories || [];
-
-        return {
-          ...rawProduct,
-          options,
-          subcategories
-        } as Product;
-      });
-
-      // Filter by subcategory if selected - now using subcategory IDs
-      if (selectedSubcategory && filteredProducts.length > 0) {
-        console.log('Filtering by subcategory ID:', selectedSubcategory);
-        filteredProducts = filteredProducts.filter(product => {
-          const hasSubcategory = product.subcategories && 
-            Array.isArray(product.subcategories) && 
-            product.subcategories.includes(selectedSubcategory);
-          console.log(`Product ${product.name} has subcategory ${selectedSubcategory}:`, hasSubcategory);
-          return hasSubcategory;
-        });
-      }
-
-      return {
-        products: filteredProducts,
-        totalCount: filteredProducts.length,
-      };
-    },
-    enabled: !authLoading, // Only run query when auth is not loading
+  // Use the new search hook
+  const { data: productsData, isLoading: productsLoading, isError, error } = useProductSearch({
+    searchQuery,
+    selectedCategory: selectedCategory === 'all' ? null : selectedCategory,
+    selectedSubcategory
   });
 
   const handleCategorySelect = (categoryId: CategoryType) => {
     console.log('Category selected:', categoryId);
     setSelectedCategory(categoryId);
-    setSelectedSubcategory(null); // Reset subcategory when changing main category
+    setSelectedSubcategory(null);
   };
 
   const handleSubcategoriesChange = (subcategories: any[]) => {
     console.log('Subcategories changed:', subcategories);
     setAvailableSubcategories(subcategories);
-    setSelectedSubcategory(null); // Reset selected subcategory
+    setSelectedSubcategory(null);
   };
 
   const handleSubcategorySelect = (subcategory: string | null) => {
@@ -177,7 +124,7 @@ const Products = () => {
             </div>
           ) : filteredProducts.length === 0 ? (
             <div className="col-span-1 sm:col-span-2 md:col-span-3 lg:col-span-4 text-center py-8">
-              لا توجد منتجات في هذه الفئة.
+              {searchQuery ? 'لم يتم العثور على منتجات تطابق البحث.' : 'لا توجد منتجات في هذه الفئة.'}
             </div>
           ) : (
             filteredProducts.map((product) => (

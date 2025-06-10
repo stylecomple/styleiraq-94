@@ -30,7 +30,6 @@ const Index = () => {
       
       if (error) throw error;
       
-      // Type the data correctly for the DiscountBanner component
       return (data || []).map(discount => ({
         id: discount.id,
         discount_type: discount.discount_type as 'all_products' | 'category' | 'subcategory',

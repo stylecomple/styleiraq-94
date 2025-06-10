@@ -36,7 +36,6 @@ import { useToast } from '@/hooks/use-toast';
 import { useChangeLogger } from '@/hooks/useChangeLogger';
 import EditProductForm from './EditProductForm';
 import SearchBar from '@/components/SearchBar';
-import CategorySection from '@/components/CategorySection';
 import SubCategorySection from '@/components/SubCategorySection';
 import { ProductOption, Product } from '@/types';
 
@@ -92,9 +91,36 @@ const ProductsManagement = () => {
         .select('*')
         .order('created_at', { ascending: false });
       
-      // Apply search filter
+      // Apply search filter - enhanced search through name and description
       if (searchQuery) {
-        query = query.ilike('name', `%${searchQuery}%`);
+        const searchTerms = searchQuery.toLowerCase().trim().split(/\s+/);
+        const { data: allProducts, error } = await query;
+        
+        if (error) throw error;
+        
+        const filteredProducts = (allProducts || []).filter(product => {
+          const searchableText = [
+            product.name || '',
+            product.description || '',
+            ...(product.categories || []),
+            ...(product.options?.map((opt: any) => opt.name) || [])
+          ].join(' ').toLowerCase();
+          
+          return searchTerms.every(term => searchableText.includes(term));
+        });
+        
+        return filteredProducts.map(rawProduct => {
+          const options = (rawProduct as any).options || 
+            ((rawProduct as any).colors ? (rawProduct as any).colors.map((color: string) => ({ name: color, price: undefined })) : []);
+          
+          const subcategories = (rawProduct as any).subcategories || [];
+
+          return {
+            ...rawProduct,
+            options,
+            subcategories
+          } as Product;
+        });
       }
       
       // Apply category filter
@@ -113,11 +139,9 @@ const ProductsManagement = () => {
       
       // Transform raw database data to match Product interface
       return data.map(rawProduct => {
-        // Handle legacy colors field - convert to options format
         const options = (rawProduct as any).options || 
           ((rawProduct as any).colors ? (rawProduct as any).colors.map((color: string) => ({ name: color, price: undefined })) : []);
         
-        // Ensure subcategories field exists
         const subcategories = (rawProduct as any).subcategories || [];
 
         return {
@@ -486,11 +510,23 @@ const ProductsManagement = () => {
 
         {showFilters && (
           <div className="bg-muted p-4 rounded-lg space-y-4">
-            <CategorySection
-              categories={categories || []}
-              selectedCategory={selectedCategory}
-              onCategorySelect={handleCategorySelect}
-            />
+            {/* Category Filter */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">الفئة</label>
+              <Select value={selectedCategory || ''} onValueChange={(value) => handleCategorySelect(value || null)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="اختر الفئة" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">جميع الفئات</SelectItem>
+                  {categories?.map((category) => (
+                    <SelectItem key={category.id} value={category.id}>
+                      {category.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             
             {selectedCategory && subcategories && subcategories.length > 0 && (
               <SubCategorySection
@@ -706,3 +742,5 @@ const ProductsManagement = () => {
 };
 
 export default ProductsManagement;
+
+</edits_to_apply>
