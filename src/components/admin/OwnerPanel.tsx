@@ -23,7 +23,12 @@ const OwnerPanel = () => {
     );
   }
 
-  if (!user || !isOwner) {
+  if (!user) {
+    navigate('/auth');
+    return null;
+  }
+
+  if (!isOwner) {
     navigate('/admin');
     return null;
   }

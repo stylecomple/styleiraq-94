@@ -8,7 +8,7 @@ import { useCart } from '@/contexts/CartContext';
 import { useNavigate } from 'react-router-dom';
 
 const Header = () => {
-  const { user, isAdmin, isOwner, loading, signOut } = useAuth();
+  const { user, isAdmin, isOwner, isOrderManager, loading, signOut } = useAuth();
   const { getTotalItems } = useCart();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -46,10 +46,10 @@ const Header = () => {
   };
 
   // Debug logging
-  console.log('Header render - User:', user?.id, 'isAdmin:', isAdmin, 'isOwner:', isOwner, 'loading:', loading);
+  console.log('Header render - User:', user?.id, 'isAdmin:', isAdmin, 'isOwner:', isOwner, 'isOrderManager:', isOrderManager, 'loading:', loading);
   
-  // Show admin panel button only when not loading and user has admin/owner role
-  const showAdminPanel = !loading && user && (isAdmin || isOwner);
+  // Show admin panel button for any user with admin privileges (admin, owner, or order manager)
+  const showAdminPanel = !loading && user && (isAdmin || isOwner || isOrderManager);
 
   return (
     <header className="bg-white/95 backdrop-blur-md shadow-lg sticky top-0 z-50 border-b border-pink-100">
@@ -86,7 +86,7 @@ const Header = () => {
               )}
             </Button>
             
-            {/* Admin Button - Only show when not loading and user has proper role */}
+            {/* Admin Button - Show for admin, owner, or order manager */}
             {showAdminPanel && (
               <Button
                 variant="outline"
