@@ -132,7 +132,7 @@ const UserManagement = () => {
 
   // Remove role mutation
   const removeRoleMutation = useMutation({
-    mutationFn: async ({ userId, role }: { userId: string; role: string }) => {
+    mutationFn: async ({ userId, role }: { userId: string; role: 'admin' | 'order_manager' }) => {
       const { error } = await supabase
         .from('user_roles')
         .delete()
@@ -179,7 +179,10 @@ const UserManagement = () => {
   };
 
   const handleRemoveRole = (userId: string, role: string) => {
-    removeRoleMutation.mutate({ userId, role });
+    // Only allow removing admin and order_manager roles
+    if (role === 'admin' || role === 'order_manager') {
+      removeRoleMutation.mutate({ userId, role: role as 'admin' | 'order_manager' });
+    }
   };
 
   if (isLoading) {
@@ -282,7 +285,7 @@ const UserManagement = () => {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleRemoveRole(user.user_id, 'admin')}
+                      onClick={() => handleRemoveRole(user.user_id, user.role)}
                       disabled={removeRoleMutation.isPending}
                       className="text-red-600 border-red-300 hover:bg-red-50"
                     >
@@ -306,7 +309,7 @@ const UserManagement = () => {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleRemoveRole(user.user_id, 'order_manager')}
+                      onClick={() => handleRemoveRole(user.user_id, user.role)}
                       disabled={removeRoleMutation.isPending}
                       className="text-red-600 border-red-300 hover:bg-red-50"
                     >
