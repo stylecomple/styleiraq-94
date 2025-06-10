@@ -11,6 +11,15 @@ interface SearchBarProps {
 }
 
 const SearchBar = ({ searchQuery, onSearchChange, onFocus, onBlur }: SearchBarProps) => {
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    // Only call onBlur if the blur is not caused by clicking on the input itself
+    // This prevents the focus loss issue in admin panel
+    const relatedTarget = e.relatedTarget;
+    if (relatedTarget && relatedTarget !== e.currentTarget) {
+      onBlur?.();
+    }
+  };
+
   return (
     <div className="max-w-2xl mx-auto">
       <div className="relative">
@@ -21,7 +30,7 @@ const SearchBar = ({ searchQuery, onSearchChange, onFocus, onBlur }: SearchBarPr
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
           onFocus={onFocus}
-          onBlur={onBlur}
+          onBlur={handleBlur}
           className="w-full pr-12 pl-4 py-3 text-right rounded-full border-2 border-gray-200 focus:border-pink-500 focus:ring-pink-500 text-lg"
         />
       </div>

@@ -16,8 +16,7 @@ export const useProductSearch = ({ searchQuery, selectedCategory, selectedSubcat
       let query = supabase
         .from('products')
         .select('*')
-        .eq('is_active', true)
-        .order('created_at', { ascending: false });
+        .eq('is_active', true);
       
       // Apply category filter
       if (selectedCategory && selectedCategory !== 'all') {
@@ -63,6 +62,9 @@ export const useProductSearch = ({ searchQuery, selectedCategory, selectedSubcat
           return searchTerms.every(term => searchableText.includes(term));
         });
       }
+
+      // Randomize the products array instead of sorting by created_at
+      products = products.sort(() => Math.random() - 0.5);
 
       return {
         products,
