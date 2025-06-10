@@ -482,7 +482,12 @@ const ProductsManagement = () => {
   };
 
   const handleCategorySelect = (categoryId: string | null) => {
-    setSelectedCategory(categoryId);
+    // Handle the special "all" value
+    if (categoryId === 'all') {
+      setSelectedCategory(null);
+    } else {
+      setSelectedCategory(categoryId);
+    }
     setSelectedSubcategory(null);
   };
 
@@ -542,12 +547,12 @@ const ProductsManagement = () => {
           <div className="bg-muted p-4 rounded-lg space-y-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">الفئة</label>
-              <Select value={selectedCategory || ''} onValueChange={(value) => handleCategorySelect(value || null)}>
+              <Select value={selectedCategory || 'all'} onValueChange={handleCategorySelect}>
                 <SelectTrigger>
                   <SelectValue placeholder="اختر الفئة" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">جميع الفئات</SelectItem>
+                  <SelectItem value="all">جميع الفئات</SelectItem>
                   {categories?.map((category) => (
                     <SelectItem key={category.id} value={category.id}>
                       {category.name}
@@ -781,3 +786,5 @@ const ProductsManagement = () => {
 };
 
 export default ProductsManagement;
+
+}
