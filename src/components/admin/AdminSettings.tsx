@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { useAdminSettings } from '@/hooks/useAdminSettings';
 import { Separator } from '@/components/ui/separator';
+import { Upload, Image } from 'lucide-react';
 
 interface PaymentConfig {
   enabled: boolean;
@@ -22,6 +23,7 @@ const AdminSettings = () => {
   const { data: settings, isLoading, updateSettings } = useAdminSettings();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUpdatingTheme, setIsUpdatingTheme] = useState(false);
+  const [faviconFile, setFaviconFile] = useState<File | null>(null);
 
   // Helper functions to safely cast payment configs
   const getVisaConfig = (): PaymentConfig => {
@@ -46,6 +48,7 @@ const AdminSettings = () => {
 
   // Local state for form data
   const [storeOpen, setStoreOpen] = useState(settings?.is_store_open ?? true);
+  const [hideLovableBanner, setHideLovableBanner] = useState(settings?.hide_lovable_banner ?? false);
   
   // Visa Card Configuration
   const visaConfig = getVisaConfig();
@@ -65,6 +68,7 @@ const AdminSettings = () => {
   React.useEffect(() => {
     if (settings) {
       setStoreOpen(settings.is_store_open ?? true);
+      setHideLovableBanner(settings.hide_lovable_banner ?? false);
       
       // Visa Card settings
       const visa = getVisaConfig();
@@ -84,7 +88,7 @@ const AdminSettings = () => {
 
   // Handle theme change
   const handleThemeChange = async (newTheme: string) => {
-    if (isUpdatingTheme) return; // Prevent multiple simultaneous updates
+    if (isUpdatingTheme) return;
     
     console.log(`Changing theme to: ${newTheme}`);
     setIsUpdatingTheme(true);
@@ -117,6 +121,50 @@ const AdminSettings = () => {
     }
   };
 
+  const handleFaviconUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      if (!file.type.startsWith('image/')) {
+        toast({
+          title: "خطأ",
+          description: "يرجى اختيار ملف صورة صالح",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      setFaviconFile(file);
+      
+      // Update favicon immediately
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const result = e.target?.result as string;
+        updateFavicon(result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const updateFavicon = (iconUrl: string) => {
+    // Remove existing favicon
+    const existingFavicon = document.querySelector('link[rel="icon"]');
+    if (existingFavicon) {
+      existingFavicon.remove();
+    }
+
+    // Add new favicon
+    const link = document.createElement('link');
+    link.rel = 'icon';
+    link.type = 'image/png';
+    link.href = iconUrl;
+    document.head.appendChild(link);
+
+    toast({
+      title: "تم التحديث",
+      description: "تم تحديث أيقونة المتجر بنجاح",
+    });
+  };
+
   const getThemeLabel = (theme: string) => {
     switch (theme) {
       case 'christmas': return 'الكريسماس 🎄';
@@ -132,6 +180,7 @@ const AdminSettings = () => {
     try {
       const updatedSettings = {
         is_store_open: storeOpen,
+        hide_lovable_banner: hideLovableBanner,
         visa_card_config: {
           enabled: visaEnabled,
           merchant_id: visaMerchantId,
@@ -188,6 +237,66 @@ const AdminSettings = () => {
               id="store-status"
               checked={storeOpen}
               onCheckedChange={setStoreOpen}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Lovable Banner Toggle */}
+      <Card>
+        <CardHeader>
+          <CardTitle>إعدادات العرض</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between">
+            <div>
+              <Label htmlFor="hide-banner">إخفاء شعار Lovable</Label>
+              <p className="text-sm text-muted-foreground">
+                إخفاء شعار "Edit in Lovable" من الموقع
+              </p>
+            </div>
+            <Switch
+              id="hide-banner"
+              checked={hideLovableBanner}
+              onCheckedChange={setHideLovableBanner}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Favicon Upload */}
+      <Card>
+        <CardHeader>
+          <CardTitle>أيقونة المتجر</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="favicon-upload">رفع أيقونة المتجر (Favicon)</Label>
+            <p className="text-sm text-muted-foreground">
+              اختر صورة لتظهر في تبويب المتصفح. يُفضل استخدام صور مربعة (PNG/JPG)
+            </p>
+            <div className="flex items-center gap-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => document.getElementById('favicon-input')?.click()}
+                className="flex items-center gap-2"
+              >
+                <Upload className="w-4 h-4" />
+                اختر صورة
+              </Button>
+              {faviconFile && (
+                <span className="text-sm text-muted-foreground">
+                  {faviconFile.name}
+                </span>
+              )}
+            </div>
+            <input
+              id="favicon-input"
+              type="file"
+              accept="image/*"
+              onChange={handleFaviconUpload}
+              className="hidden"
             />
           </div>
         </CardContent>

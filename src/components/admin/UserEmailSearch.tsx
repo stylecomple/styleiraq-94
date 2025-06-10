@@ -41,7 +41,8 @@ const UserEmailSearch = ({ value, onChange, placeholder = "البحث عن ال�
         const { data, error } = await supabase
           .from('profiles')
           .select('id, email, full_name')
-          .limit(20);
+          .order('email')
+          .limit(50);
         
         console.log('All users query result:', { data, error });
         
@@ -57,7 +58,8 @@ const UserEmailSearch = ({ value, onChange, placeholder = "البحث عن ال�
         .from('profiles')
         .select('id, email, full_name')
         .or(`email.ilike.%${searchTerm}%,full_name.ilike.%${searchTerm}%`)
-        .limit(10);
+        .order('email')
+        .limit(20);
       
       console.log('Search query result:', { data, error, searchTerm });
       

@@ -5,6 +5,7 @@ import { useChangeLogger } from './useChangeLogger';
 
 interface AdminSettings {
   is_store_open: boolean;
+  hide_lovable_banner: boolean;
   visa_card_config: {
     enabled: boolean;
     merchant_id?: string;
@@ -41,6 +42,7 @@ export const useAdminSettings = () => {
           // No settings exist, create default ones
           const defaultSettings = {
             is_store_open: true,
+            hide_lovable_banner: false,
             visa_card_config: { enabled: false },
             zain_cash_config: { enabled: false },
             theme_config: { christmas: false, valentine: false, halloween: false }
@@ -83,6 +85,14 @@ export const useAdminSettings = () => {
         await logChange(actionType, 'store', 'main_store', {
           previous_status: previousSettings.is_store_open,
           new_status: newSettings.is_store_open
+        });
+      }
+
+      // Log banner visibility changes
+      if (newSettings.hide_lovable_banner !== undefined && previousSettings) {
+        await logChange('banner_visibility_updated', 'settings', 'lovable_banner', {
+          previous_hidden: previousSettings.hide_lovable_banner,
+          new_hidden: newSettings.hide_lovable_banner
         });
       }
 
