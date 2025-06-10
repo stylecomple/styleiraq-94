@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -242,7 +241,7 @@ const AdminSettings = () => {
         </CardContent>
       </Card>
 
-      {/* Lovable Banner Toggle */}
+      {/* Engineer Badge Toggle */}
       <Card>
         <CardHeader>
           <CardTitle>إعدادات العرض</CardTitle>
@@ -250,9 +249,9 @@ const AdminSettings = () => {
         <CardContent>
           <div className="flex items-center justify-between">
             <div>
-              <Label htmlFor="hide-banner">إخفاء شعار Lovable</Label>
+              <Label htmlFor="hide-banner">إخفاء شارة المطور</Label>
               <p className="text-sm text-muted-foreground">
-                إخفاء شعار "Edit in Lovable" من الموقع
+                إخفاء شارة "Edit in Lovable" من الموقع
               </p>
             </div>
             <Switch
