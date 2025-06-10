@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -8,6 +8,8 @@ import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { CartProvider } from "@/contexts/CartContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import Index from "@/pages/Index";
@@ -22,6 +24,67 @@ import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
 
+const LovableBadgeRemover: React.FC = () => {
+  const { data: settings } = useQuery({
+    queryKey: ['admin-settings-badge'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('admin_settings')
+        .select('hide_lovable_banner, favicon_url')
+        .single();
+      
+      if (error && error.code !== 'PGRST116') throw error;
+      return data;
+    }
+  });
+
+  useEffect(() => {
+    const removeLovableBadge = () => {
+      const badge = document.getElementById('lovable-badge');
+      if (badge && settings?.hide_lovable_banner) {
+        badge.remove();
+      }
+    };
+
+    // Initial check
+    removeLovableBadge();
+
+    // Set up a mutation observer to watch for the badge being added
+    const observer = new MutationObserver(() => {
+      if (settings?.hide_lovable_banner) {
+        removeLovableBadge();
+      }
+    });
+
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
+
+    return () => observer.disconnect();
+  }, [settings?.hide_lovable_banner]);
+
+  // Update favicon if stored in database
+  useEffect(() => {
+    if (settings?.favicon_url) {
+      // Remove existing favicon
+      const existingFavicon = document.querySelector('link[rel="icon"]');
+      if (existingFavicon) {
+        existingFavicon.remove();
+      }
+
+      // Add new favicon
+      const link = document.createElement('link');
+      link.rel = 'icon';
+      link.type = 'image/png';
+      link.href = settings.favicon_url;
+      document.head.appendChild(link);
+    }
+  }, [settings?.favicon_url]);
+
+  return null;
+};
+
 const AppContent: React.FC = () => {
   const location = useLocation();
   const isAdminPanel = location.pathname === '/admin';
@@ -30,6 +93,7 @@ const AppContent: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col">
+      <LovableBadgeRemover />
       <Header />
       <main className="flex-1">
         <Routes>

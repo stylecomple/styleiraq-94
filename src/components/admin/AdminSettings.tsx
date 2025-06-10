@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -47,7 +48,6 @@ const AdminSettings = () => {
 
   // Local state for form data
   const [storeOpen, setStoreOpen] = useState(settings?.is_store_open ?? true);
-  const [hideLovableBanner, setHideLovableBanner] = useState(settings?.hide_lovable_banner ?? false);
   
   // Visa Card Configuration
   const visaConfig = getVisaConfig();
@@ -67,7 +67,6 @@ const AdminSettings = () => {
   React.useEffect(() => {
     if (settings) {
       setStoreOpen(settings.is_store_open ?? true);
-      setHideLovableBanner(settings.hide_lovable_banner ?? false);
       
       // Visa Card settings
       const visa = getVisaConfig();
@@ -120,7 +119,7 @@ const AdminSettings = () => {
     }
   };
 
-  const handleFaviconUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFaviconUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
       if (!file.type.startsWith('image/')) {
@@ -134,11 +133,31 @@ const AdminSettings = () => {
       
       setFaviconFile(file);
       
-      // Update favicon immediately
+      // Convert file to base64 data URL
       const reader = new FileReader();
-      reader.onload = (e) => {
+      reader.onload = async (e) => {
         const result = e.target?.result as string;
-        updateFavicon(result);
+        
+        try {
+          // Save favicon URL to database
+          await updateSettings({
+            favicon_url: result
+          });
+          
+          // Update favicon immediately
+          updateFavicon(result);
+          
+          toast({
+            title: "تم التحديث",
+            description: "تم تحديث أيقونة المتجر وحفظها في قاعدة البيانات",
+          });
+        } catch (error) {
+          toast({
+            title: "خطأ",
+            description: "حدث خطأ أثناء حفظ أيقونة المتجر",
+            variant: "destructive",
+          });
+        }
       };
       reader.readAsDataURL(file);
     }
@@ -157,11 +176,6 @@ const AdminSettings = () => {
     link.type = 'image/png';
     link.href = iconUrl;
     document.head.appendChild(link);
-
-    toast({
-      title: "تم التحديث",
-      description: "تم تحديث أيقونة المتجر بنجاح",
-    });
   };
 
   const getThemeLabel = (theme: string) => {
@@ -179,7 +193,6 @@ const AdminSettings = () => {
     try {
       const updatedSettings = {
         is_store_open: storeOpen,
-        hide_lovable_banner: hideLovableBanner,
         visa_card_config: {
           enabled: visaEnabled,
           merchant_id: visaMerchantId,
@@ -241,28 +254,6 @@ const AdminSettings = () => {
         </CardContent>
       </Card>
 
-      {/* Engineer Badge Toggle */}
-      <Card>
-        <CardHeader>
-          <CardTitle>إعدادات العرض</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-between">
-            <div>
-              <Label htmlFor="hide-banner">إخفاء شارة المطور</Label>
-              <p className="text-sm text-muted-foreground">
-                إخفاء شارة "Edit in Lovable" من الموقع
-              </p>
-            </div>
-            <Switch
-              id="hide-banner"
-              checked={hideLovableBanner}
-              onCheckedChange={setHideLovableBanner}
-            />
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Favicon Upload */}
       <Card>
         <CardHeader>
@@ -272,7 +263,7 @@ const AdminSettings = () => {
           <div className="space-y-2">
             <Label htmlFor="favicon-upload">رفع أيقونة المتجر (Favicon)</Label>
             <p className="text-sm text-muted-foreground">
-              اختر صورة لتظهر في تبويب المتصفح. يُفضل استخدام صور مربعة (PNG/JPG)
+              اختر صورة لتظهر في تبويب المتصفح. يُفضل استخدام صور مربعة (PNG/JPG). سيتم حفظ الأيقونة في قاعدة البيانات وتطبيقها على جميع المستخدمين.
             </p>
             <div className="flex items-center gap-4">
               <Button
