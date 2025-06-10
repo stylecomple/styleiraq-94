@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -24,6 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import UserEmailSearch from './UserEmailSearch';
 
 const UserManagement = () => {
   const [email, setEmail] = useState('');
@@ -189,7 +189,7 @@ const UserManagement = () => {
     if (!email.trim()) {
       toast({
         title: 'خطأ',
-        description: 'يرجى إدخال البريد الإلكتروني',
+        description: 'يرجى اختيار البريد الإلكتروني',
         variant: 'destructive',
       });
       return;
@@ -221,18 +221,18 @@ const UserManagement = () => {
             إضافة دور جديد
           </CardTitle>
           <CardDescription>
-            أدخل البريد الإلكتروني للمستخدم لمنحه الدور المحدد. تأكد من أن المستخدم قد سجل دخوله مرة واحدة على الأقل.
+            ابحث عن البريد الإلكتروني للمستخدم لمنحه الدور المحدد. تأكد من أن المستخدم قد سجل دخوله مرة واحدة على الأقل.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex gap-3">
-            <Input
-              type="email"
-              placeholder="البريد الإلكتروني للمستخدم"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="flex-1"
-            />
+            <div className="flex-1">
+              <UserEmailSearch
+                value={email}
+                onChange={setEmail}
+                placeholder="ابحث عن البريد الإلكتروني للمستخدم"
+              />
+            </div>
             <Select value={selectedRole} onValueChange={(value: 'admin' | 'order_manager') => setSelectedRole(value)}>
               <SelectTrigger className="w-40">
                 <SelectValue placeholder="اختر الدور" />
