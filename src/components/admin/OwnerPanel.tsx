@@ -9,7 +9,7 @@ import ChangesLogPanel from './ChangesLogPanel';
 import UserManagement from './UserManagement';
 import OwnerOrdersManagement from './OwnerOrdersManagement';
 import UserBanManagement from './UserBanManagement';
-import DiscountManagement from './DiscountManagement';
+import SimpleDiscountManagement from './SimpleDiscountManagement';
 
 const OwnerPanel = () => {
   const { user, isOwner, loading } = useAuth();
@@ -63,9 +63,9 @@ const OwnerPanel = () => {
           <TabsContent value="discounts" className="space-y-6">
             <h2 className="text-2xl font-bold flex items-center gap-2">
               <Percent className="w-6 h-6" />
-              إدارة الخصومات
+              إدارة الخصومات العامة
             </h2>
-            <DiscountManagement />
+            <SimpleDiscountManagement />
           </TabsContent>
 
           <TabsContent value="changes-log" className="space-y-6">

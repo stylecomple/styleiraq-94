@@ -12,7 +12,7 @@ import UserManagement from '@/components/admin/UserManagement';
 import StatisticsPanel from '@/components/admin/StatisticsPanel';
 import AdminSettings from '@/components/admin/AdminSettings';
 import FeedbackManagement from '@/components/admin/FeedbackManagement';
-import EnhancedDiscountManagement from '@/components/admin/EnhancedDiscountManagement';
+import SimpleDiscountManagement from '@/components/admin/SimpleDiscountManagement';
 import EnhancedOrdersManagement from '@/components/admin/EnhancedOrdersManagement';
 import ChangesLogPanel from '@/components/admin/ChangesLogPanel';
 
@@ -129,11 +129,11 @@ const AdminPanel = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Percent className="w-5 h-5" />
-                إدارة الخصومات
+                إدارة الخصومات العامة
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <EnhancedDiscountManagement />
+              <SimpleDiscountManagement />
             </CardContent>
           </Card>
         </TabsContent>
