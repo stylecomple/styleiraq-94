@@ -33,10 +33,7 @@ const ProductDiscountTicker = ({ products }: ProductDiscountTickerProps) => {
         {/* Scrolling content */}
         <div className="flex-1 overflow-hidden">
           <div 
-            className="flex items-center gap-8 animate-scroll whitespace-nowrap"
-            style={{
-              animation: 'scroll 30s linear infinite',
-            }}
+            className="flex items-center gap-8 whitespace-nowrap animate-[scroll_30s_linear_infinite]"
           >
             {duplicatedProducts.map((product, index) => (
               <div key={index} className="flex items-center gap-2 text-sm font-semibold">
@@ -58,20 +55,6 @@ const ProductDiscountTicker = ({ products }: ProductDiscountTickerProps) => {
           <Sparkles className="w-4 h-4 animate-spin text-yellow-300" style={{ animationDirection: 'reverse' }} />
         </div>
       </div>
-
-      <style jsx>{`
-        @keyframes scroll {
-          0% {
-            transform: translateX(0);
-          }
-          100% {
-            transform: translateX(-50%);
-          }
-        }
-        .animate-scroll {
-          animation: scroll 30s linear infinite;
-        }
-      `}</style>
     </div>
   );
 };
