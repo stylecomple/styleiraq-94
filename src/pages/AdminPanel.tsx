@@ -1,13 +1,13 @@
-
 import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, Package, Users, BarChart3, Settings, MessageSquare, Percent } from 'lucide-react';
+import { Plus, Package, Users, BarChart3, Settings, MessageSquare, Percent, FolderPlus } from 'lucide-react';
 import ProductsManagement from '@/components/admin/ProductsManagement';
 import AddProductForm from '@/components/admin/AddProductForm';
+import CategoryManager from '@/components/admin/CategoryManager';
 import UserManagement from '@/components/admin/UserManagement';
 import StatisticsPanel from '@/components/admin/StatisticsPanel';
 import AdminSettings from '@/components/admin/AdminSettings';
@@ -19,6 +19,7 @@ import ChangesLogPanel from '@/components/admin/ChangesLogPanel';
 const AdminPanel = () => {
   const { user, isAdmin, isOwner, isOrderManager, loading } = useAuth();
   const [showAddProduct, setShowAddProduct] = useState(false);
+  const [showCategoryManager, setShowCategoryManager] = useState(false);
   const [activeTab, setActiveTab] = useState('products');
 
   if (loading) {
@@ -45,18 +46,48 @@ const AdminPanel = () => {
           {isOrderManager && !isFullAdmin ? 'لوحة إدارة الطلبات' : 'لوحة الإدارة'}
         </h1>
         {activeTab === 'products' && isFullAdmin && (
-          <Button 
-            onClick={() => setShowAddProduct(true)}
-            className="bg-pink-600 hover:bg-pink-700 flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" />
-            إضافة منتج جديد
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              onClick={() => setShowCategoryManager(true)}
+              variant="outline"
+              className="flex items-center gap-2"
+            >
+              <FolderPlus className="w-4 h-4" />
+              إدارة الفئات
+            </Button>
+            <Button 
+              onClick={() => setShowAddProduct(true)}
+              className="bg-pink-600 hover:bg-pink-700 flex items-center gap-2"
+            >
+              <Plus className="w-4 h-4" />
+              إضافة منتج جديد
+            </Button>
+          </div>
         )}
       </div>
 
       {showAddProduct && isFullAdmin && (
         <AddProductForm onClose={() => setShowAddProduct(false)} />
+      )}
+
+      {showCategoryManager && isFullAdmin && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-background rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-2xl font-bold">إدارة الفئات والفئات الفرعية</h2>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setShowCategoryManager(false)}
+                  className="ml-2"
+                >
+                  إغلاق
+                </Button>
+              </div>
+              <CategoryManager />
+            </div>
+          </div>
+        </div>
       )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
