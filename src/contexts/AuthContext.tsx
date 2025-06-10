@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -8,6 +7,7 @@ interface AuthContextType {
   session: Session | null;
   isAdmin: boolean;
   isOwner: boolean;
+  isOrderManager: boolean;
   loading: boolean;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
@@ -29,6 +29,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isOwner, setIsOwner] = useState(false);
+  const [isOrderManager, setIsOrderManager] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const checkUserRoles = async (userId: string) => {
@@ -43,6 +44,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         console.error('Error fetching user roles:', error);
         setIsAdmin(false);
         setIsOwner(false);
+        setIsOrderManager(false);
         return;
       }
 
@@ -50,15 +52,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const userRoles = roles?.map(r => r.role) || [];
       const adminStatus = userRoles.includes('admin');
       const ownerStatus = userRoles.includes('owner');
+      const orderManagerStatus = userRoles.includes('order_manager');
       
       setIsAdmin(adminStatus);
       setIsOwner(ownerStatus);
+      setIsOrderManager(orderManagerStatus);
       
-      console.log('Role status:', { isAdmin: adminStatus, isOwner: ownerStatus });
+      console.log('Role status:', { isAdmin: adminStatus, isOwner: ownerStatus, isOrderManager: orderManagerStatus });
     } catch (error) {
       console.error('Error in checkUserRoles:', error);
       setIsAdmin(false);
       setIsOwner(false);
+      setIsOrderManager(false);
     }
   };
 
@@ -69,25 +74,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       try {
         console.log('Initializing auth...');
         
-        // Get initial session
         const { data: { session: initialSession } } = await supabase.auth.getSession();
         console.log('Initial session check:', initialSession?.user?.id);
         
         if (!mounted) return;
 
-        // Set user and session immediately
         setSession(initialSession);
         setUser(initialSession?.user ?? null);
         
-        // Set loading to false first to show the UI
         setLoading(false);
         
-        // Then check roles in background if user exists
         if (initialSession?.user) {
           checkUserRoles(initialSession.user.id);
         } else {
           setIsAdmin(false);
           setIsOwner(false);
+          setIsOrderManager(false);
         }
       } catch (error) {
         console.error('Error initializing auth:', error);
@@ -97,31 +99,27 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
     };
 
-    // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('Auth state changed:', event, session?.user?.id);
         
         if (!mounted) return;
 
-        // Update session and user immediately
         setSession(session);
         setUser(session?.user ?? null);
         
-        // Set loading to false immediately
         setLoading(false);
         
-        // Check roles in background if user exists
         if (session?.user) {
           checkUserRoles(session.user.id);
         } else {
           setIsAdmin(false);
           setIsOwner(false);
+          setIsOrderManager(false);
         }
       }
     );
 
-    // Initialize auth
     initializeAuth();
 
     return () => {
@@ -163,11 +161,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         throw error;
       }
       
-      // Clear local state immediately
       setUser(null);
       setSession(null);
       setIsAdmin(false);
       setIsOwner(false);
+      setIsOrderManager(false);
       
       console.log('SignOut completed successfully');
     } catch (error) {
@@ -181,6 +179,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     session,
     isAdmin,
     isOwner,
+    isOrderManager,
     loading,
     signUp,
     signIn,
@@ -193,3 +192,5 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     </AuthContext.Provider>
   );
 };
+
+export default AuthProvider;

@@ -51,7 +51,6 @@ const ProductsManagement = () => {
   const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
 
-  // Fetch categories
   const { data: categories } = useQuery({
     queryKey: ['categories'],
     queryFn: async () => {
@@ -65,7 +64,6 @@ const ProductsManagement = () => {
     }
   });
 
-  // Fetch subcategories based on selected category
   const { data: subcategories } = useQuery({
     queryKey: ['subcategories', selectedCategory],
     queryFn: async () => {
@@ -88,8 +86,7 @@ const ProductsManagement = () => {
     queryFn: async () => {
       let query = supabase
         .from('products')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .select('*');
       
       // Apply search filter - enhanced search through name and description
       if (searchQuery) {
@@ -156,7 +153,7 @@ const ProductsManagement = () => {
       if (error) throw error;
       
       // Transform raw database data to match Product interface
-      return data.map(rawProduct => {
+      let transformedProducts = data.map(rawProduct => {
         // Safely transform options
         const rawOptions = rawProduct.options;
         let options: ProductOption[] = [];
@@ -178,10 +175,30 @@ const ProductsManagement = () => {
           subcategories
         } as Product;
       });
+
+      // Sort products: if no specific category is selected, show discounted products first
+      if (!selectedCategory && !selectedSubcategory) {
+        transformedProducts.sort((a, b) => {
+          const aHasDiscount = (a.discount_percentage || 0) > 0;
+          const bHasDiscount = (b.discount_percentage || 0) > 0;
+          
+          if (aHasDiscount && !bHasDiscount) return -1;
+          if (!aHasDiscount && bHasDiscount) return 1;
+          
+          // If both have discounts or both don't have discounts, randomize
+          return Math.random() - 0.5;
+        });
+      } else {
+        // For specific categories, keep the original order (by created_at desc)
+        transformedProducts.sort((a, b) => 
+          new Date(b.created_at || '').getTime() - new Date(a.created_at || '').getTime()
+        );
+      }
+
+      return transformedProducts;
     }
   });
 
-  // Bulk discount mutation
   const bulkDiscountMutation = useMutation({
     mutationFn: async ({ productIds, discount }: { productIds: string[], discount: number }) => {
       const { error } = await supabase
@@ -215,7 +232,6 @@ const ProductsManagement = () => {
     }
   });
 
-  // Bulk inactive mutation
   const bulkInactiveMutation = useMutation({
     mutationFn: async (productIds: string[]) => {
       const { error } = await supabase
@@ -247,10 +263,8 @@ const ProductsManagement = () => {
     }
   });
 
-  // Bulk delete mutation
   const bulkDeleteMutation = useMutation({
     mutationFn: async (productIds: string[]) => {
-      // Check if any products have orders
       const { data: orderItems, error: checkError } = await supabase
         .from('order_items')
         .select('product_id')
@@ -262,7 +276,6 @@ const ProductsManagement = () => {
       const productsToDelete = productIds.filter(id => !productsWithOrders.includes(id));
       const productsToDeactivate = productIds.filter(id => productsWithOrders.includes(id));
 
-      // Delete products without orders
       if (productsToDelete.length > 0) {
         const { error: deleteError } = await supabase
           .from('products')
@@ -272,7 +285,6 @@ const ProductsManagement = () => {
         if (deleteError) throw new Error('فشل في حذف بعض المنتجات');
       }
 
-      // Deactivate products with orders
       if (productsToDeactivate.length > 0) {
         const { error: deactivateError } = await supabase
           .from('products')
@@ -326,7 +338,6 @@ const ProductsManagement = () => {
     }
   });
 
-  // Handle individual product operations
   const deleteProductMutation = useMutation({
     mutationFn: async (product: any) => {
       console.log('Starting product deletion process for:', product.id);
@@ -479,15 +490,6 @@ const ProductsManagement = () => {
     setSelectedSubcategory(subcategoryId);
   };
 
-  const categoryLabels = {
-    makeup: 'مكياج',
-    perfumes: 'عطور',
-    flowers: 'ورد',
-    home: 'مستلزمات منزلية',
-    personal_care: 'عناية شخصية',
-    exclusive_offers: 'العروض الحصرية'
-  };
-
   const formatPrice = (price: number) => {
     return `${price.toLocaleString('ar-IQ')} د.ع`;
   };
@@ -538,7 +540,6 @@ const ProductsManagement = () => {
 
         {showFilters && (
           <div className="bg-muted p-4 rounded-lg space-y-4">
-            {/* Category Filter */}
             <div className="space-y-2">
               <label className="text-sm font-medium">الفئة</label>
               <Select value={selectedCategory || ''} onValueChange={(value) => handleCategorySelect(value || null)}>
@@ -584,7 +585,6 @@ const ProductsManagement = () => {
           </div>
           
           <div className="flex flex-wrap gap-3">
-            {/* Bulk Discount */}
             <div className="flex items-center gap-2">
               <Input
                 type="number"
@@ -602,15 +602,14 @@ const ProductsManagement = () => {
                 className="flex items-center gap-2"
               >
                 <Percent className="w-4 h-4" />
-                تطبيق خصم
+                تطبيق الخصم
               </Button>
             </div>
 
-            {/* Bulk Inactive */}
             <Button
               onClick={() => bulkInactiveMutation.mutate(selectedProducts)}
               disabled={bulkInactiveMutation.isPending}
-              variant="secondary"
+              variant="outline"
               size="sm"
               className="flex items-center gap-2"
             >
@@ -618,26 +617,23 @@ const ProductsManagement = () => {
               إلغاء التفعيل
             </Button>
 
-            {/* Bulk Delete */}
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button
                   variant="destructive"
                   size="sm"
                   className="flex items-center gap-2"
-                  disabled={bulkDeleteMutation.isPending}
                 >
                   <Trash2 className="w-4 h-4" />
-                  حذف المحددة
+                  حذف المحدد
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
                   <AlertDialogTitle>تأكيد الحذف</AlertDialogTitle>
                   <AlertDialogDescription>
-                    هل أنت متأكد من حذف {selectedProducts.length} منتج؟ 
-                    المنتجات المرتبطة بطلبات سيتم إلغاء تفعيلها بدلاً من حذفها.
-                    هذا الإجراء لا يمكن التراجع عنه.
+                    هل أنت متأكد من حذف {selectedProducts.length} منتج محدد؟
+                    سيتم إلغاء تفعيل المنتجات المرتبطة بطلبات موجودة بدلاً من حذفها.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
@@ -646,7 +642,7 @@ const ProductsManagement = () => {
                     onClick={() => bulkDeleteMutation.mutate(selectedProducts)}
                     className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                   >
-                    حذف
+                    تأكيد الحذف
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
@@ -655,24 +651,24 @@ const ProductsManagement = () => {
         </div>
       )}
 
+      {/* Products Table */}
       <div className="border rounded-lg">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="text-right w-12">
+              <TableHead className="w-12">
                 <Checkbox
                   checked={selectedProducts.length === products?.length && products?.length > 0}
                   onCheckedChange={handleSelectAll}
                 />
               </TableHead>
-              <TableHead className="text-right">الصورة</TableHead>
-              <TableHead className="text-right">اسم المنتج</TableHead>
-              <TableHead className="text-right">الفئات</TableHead>
-              <TableHead className="text-right">السعر</TableHead>
-              <TableHead className="text-right">الخيارات المتاحة</TableHead>
-              <TableHead className="text-right">المخزون</TableHead>
-              <TableHead className="text-right">الحالة</TableHead>
-              <TableHead className="text-right">الإجراءات</TableHead>
+              <TableHead>الصورة</TableHead>
+              <TableHead>الاسم</TableHead>
+              <TableHead>السعر</TableHead>
+              <TableHead>الخصم</TableHead>
+              <TableHead>الخيارات</TableHead>
+              <TableHead>الحالة</TableHead>
+              <TableHead>الإجراءات</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -691,36 +687,38 @@ const ProductsManagement = () => {
                     className="w-12 h-12 object-cover rounded"
                   />
                 </TableCell>
-                <TableCell className="font-medium">{product.name}</TableCell>
                 <TableCell>
-                  <div className="flex flex-wrap gap-1">
-                    {product.categories?.map((category: string) => (
-                      <Badge key={category} variant="outline" className="text-xs">
-                        {categoryLabels[category as keyof typeof categoryLabels] || category}
-                      </Badge>
-                    ))}
+                  <div>
+                    <p className="font-medium">{product.name}</p>
+                    {product.description && (
+                      <p className="text-sm text-muted-foreground line-clamp-2">
+                        {product.description}
+                      </p>
+                    )}
                   </div>
                 </TableCell>
                 <TableCell>{formatPrice(product.price)}</TableCell>
-                <TableCell className="max-w-[200px] truncate" title={formatOptions(product.options, product.price)}>
-                  {formatOptions(product.options, product.price)}
-                </TableCell>
-                <TableCell>{product.stock_quantity}</TableCell>
                 <TableCell>
-                  <Badge 
-                    variant={product.is_active ? "default" : "secondary"}
-                    className="cursor-pointer"
-                    onClick={() => toggleProductStatus.mutate({ 
-                      id: product.id, 
-                      is_active: product.is_active,
-                      name: product.name 
-                    })}
-                  >
-                    {product.is_active ? 'نشط' : 'غير نشط'}
+                  {product.discount_percentage && product.discount_percentage > 0 ? (
+                    <Badge variant="destructive">
+                      {product.discount_percentage}%
+                    </Badge>
+                  ) : (
+                    <span className="text-muted-foreground">لا يوجد</span>
+                  )}
+                </TableCell>
+                <TableCell>
+                  <div className="text-sm">
+                    {formatOptions(product.options, product.price)}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <Badge variant={product.is_active ? "default" : "secondary"}>
+                    {product.is_active ? "نشط" : "غير نشط"}
                   </Badge>
                 </TableCell>
                 <TableCell>
-                  <div className="flex gap-2">
+                  <div className="flex items-center gap-2">
                     <Button
                       variant="outline"
                       size="sm"
@@ -728,23 +726,30 @@ const ProductsManagement = () => {
                     >
                       <Edit className="w-4 h-4" />
                     </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => toggleProductStatus.mutate({
+                        id: product.id,
+                        is_active: product.is_active || false,
+                        name: product.name
+                      })}
+                    >
+                      {product.is_active ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </Button>
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          disabled={deleteProductMutation.isPending}
-                        >
-                          <Trash2 className="w-4 h-4 text-red-500" />
+                        <Button variant="outline" size="sm">
+                          <Trash2 className="w-4 h-4" />
                         </Button>
                       </AlertDialogTrigger>
                       <AlertDialogContent>
                         <AlertDialogHeader>
                           <AlertDialogTitle>تأكيد الحذف</AlertDialogTitle>
                           <AlertDialogDescription>
-                            هل أنت متأكد من حذف منتج "{product.name}"؟ 
-                            إذا كان هذا المنتج مرتبط بطلبات، سيتم إلغاء تفعيله بدلاً من حذفه.
-                            هذا الإجراء لا يمكن التراجع عنه.
+                            هل أنت متأكد من حذف "{product.name}"؟
+                            {product.stock_quantity && product.stock_quantity > 0 && 
+                              " سيتم إلغاء تفعيل المنتج إذا كان مرتبطاً بطلبات موجودة."}
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
@@ -753,7 +758,7 @@ const ProductsManagement = () => {
                             onClick={() => deleteProductMutation.mutate(product)}
                             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                           >
-                            حذف
+                            تأكيد الحذف
                           </AlertDialogAction>
                         </AlertDialogFooter>
                       </AlertDialogContent>
@@ -764,6 +769,12 @@ const ProductsManagement = () => {
             ))}
           </TableBody>
         </Table>
+        
+        {products?.length === 0 && (
+          <div className="text-center py-8 text-muted-foreground">
+            لا توجد منتجات
+          </div>
+        )}
       </div>
     </div>
   );

@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { UserPlus, UserMinus, Mail, Shield, Users } from 'lucide-react';
+import { UserPlus, UserMinus, Mail, Shield, Users, ClipboardList } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -17,9 +17,17 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 const UserManagement = () => {
   const [email, setEmail] = useState('');
+  const [selectedRole, setSelectedRole] = useState<'admin' | 'order_manager'>('admin');
   const { logChange } = useChangeLogger();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -54,9 +62,9 @@ const UserManagement = () => {
     }
   });
 
-  // Add admin role mutation
-  const addAdminMutation = useMutation({
-    mutationFn: async (userEmail: string) => {
+  // Add role mutation
+  const addRoleMutation = useMutation({
+    mutationFn: async ({ userEmail, role }: { userEmail: string; role: 'admin' | 'order_manager' }) => {
       // First get user by email from profiles
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
@@ -66,84 +74,99 @@ const UserManagement = () => {
       
       if (profileError) throw new Error('المستخدم غير موجود');
 
-      // Check if user already has admin role
+      // Check if user already has this role
       const { data: existingRole } = await supabase
         .from('user_roles')
         .select('*')
         .eq('user_id', profile.id)
-        .eq('role', 'admin')
+        .eq('role', role)
         .single();
 
-      if (existingRole) throw new Error('المستخدم مدير بالفعل');
+      if (existingRole) {
+        const roleLabels = {
+          admin: 'مدير',
+          order_manager: 'مدير طلبات'
+        };
+        throw new Error(`المستخدم ${roleLabels[role]} بالفعل`);
+      }
 
-      // Add admin role
+      // Add role
       const { error } = await supabase
         .from('user_roles')
         .insert({
           user_id: profile.id,
-          role: 'admin'
+          role: role
         });
 
       if (error) throw error;
 
       // Log the change
-      await logChange('admin_role_added', 'user', profile.id, {
+      await logChange(`${role}_role_added`, 'user', profile.id, {
         user_email: userEmail,
-        user_name: profile.full_name
+        user_name: profile.full_name,
+        role: role
       });
 
-      return { profile, userEmail };
+      return { profile, userEmail, role };
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['user-roles'] });
+      const roleLabels = {
+        admin: 'المدير',
+        order_manager: 'مدير الطلبات'
+      };
       toast({
-        title: 'تم إضافة المدير',
-        description: `تم منح ${data.userEmail} صلاحيات المدير بنجاح`,
+        title: `تم إضافة ${roleLabels[data.role]}`,
+        description: `تم منح ${data.userEmail} صلاحيات ${roleLabels[data.role]} بنجاح`,
       });
       setEmail('');
     },
     onError: (error: any) => {
       toast({
         title: 'خطأ',
-        description: error.message || 'فشل في إضافة المدير',
+        description: error.message || 'فشل في إضافة الدور',
         variant: 'destructive',
       });
     }
   });
 
-  // Remove admin role mutation
-  const removeAdminMutation = useMutation({
-    mutationFn: async (userId: string) => {
+  // Remove role mutation
+  const removeRoleMutation = useMutation({
+    mutationFn: async ({ userId, role }: { userId: string; role: string }) => {
       const { error } = await supabase
         .from('user_roles')
         .delete()
         .eq('user_id', userId)
-        .eq('role', 'admin');
+        .eq('role', role);
 
       if (error) throw error;
 
       // Log the change
-      await logChange('admin_role_removed', 'user', userId, {});
+      await logChange(`${role}_role_removed`, 'user', userId, { role });
 
-      return userId;
+      return { userId, role };
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['user-roles'] });
+      const roleLabels = {
+        admin: 'المدير',
+        order_manager: 'مدير الطلبات'
+      };
       toast({
-        title: 'تم إزالة المدير',
-        description: 'تم إزالة صلاحيات المدير بنجاح',
+        title: `تم إزالة ${roleLabels[data.role as keyof typeof roleLabels]}`,
+        description: 'تم إزالة الصلاحيات بنجاح',
       });
     },
     onError: () => {
       toast({
         title: 'خطأ',
-        description: 'فشل في إزالة صلاحيات المدير',
+        description: 'فشل في إزالة الصلاحيات',
         variant: 'destructive',
       });
     }
   });
 
-  const handleAddAdmin = () => {
+  const handleAddRole = () => {
     if (!email.trim()) {
       toast({
         title: 'خطأ',
@@ -152,11 +175,11 @@ const UserManagement = () => {
       });
       return;
     }
-    addAdminMutation.mutate(email.trim());
+    addRoleMutation.mutate({ userEmail: email.trim(), role: selectedRole });
   };
 
-  const handleRemoveAdmin = (userId: string) => {
-    removeAdminMutation.mutate(userId);
+  const handleRemoveRole = (userId: string, role: string) => {
+    removeRoleMutation.mutate({ userId, role });
   };
 
   if (isLoading) {
@@ -164,6 +187,7 @@ const UserManagement = () => {
   }
 
   const adminUsers = userRoles?.filter(role => role.role === 'admin') || [];
+  const orderManagerUsers = userRoles?.filter(role => role.role === 'order_manager') || [];
   const ownerUsers = userRoles?.filter(role => role.role === 'owner') || [];
 
   return (
@@ -172,10 +196,10 @@ const UserManagement = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <UserPlus className="w-5 h-5" />
-            إضافة مدير جديد
+            إضافة دور جديد
           </CardTitle>
           <CardDescription>
-            أدخل البريد الإلكتروني للمستخدم لمنحه صلاحيات المدير
+            أدخل البريد الإلكتروني للمستخدم لمنحه الدور المحدد
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -187,13 +211,22 @@ const UserManagement = () => {
               onChange={(e) => setEmail(e.target.value)}
               className="flex-1"
             />
+            <Select value={selectedRole} onValueChange={(value: 'admin' | 'order_manager') => setSelectedRole(value)}>
+              <SelectTrigger className="w-40">
+                <SelectValue placeholder="اختر الدور" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="admin">مدير</SelectItem>
+                <SelectItem value="order_manager">مدير طلبات</SelectItem>
+              </SelectContent>
+            </Select>
             <Button 
-              onClick={handleAddAdmin}
-              disabled={addAdminMutation.isPending}
+              onClick={handleAddRole}
+              disabled={addRoleMutation.isPending}
               className="bg-pink-600 hover:bg-pink-700"
             >
               <Mail className="w-4 h-4 mr-2" />
-              إضافة مدير
+              إضافة الدور
             </Button>
           </div>
         </CardContent>
@@ -206,7 +239,7 @@ const UserManagement = () => {
             إدارة المستخدمين
           </CardTitle>
           <CardDescription>
-            قائمة بجميع المديرين والمالكين في النظام
+            قائمة بجميع المديرين ومديري الطلبات والمالكين في النظام
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -249,8 +282,32 @@ const UserManagement = () => {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleRemoveAdmin(user.user_id)}
-                      disabled={removeAdminMutation.isPending}
+                      onClick={() => handleRemoveRole(user.user_id, 'admin')}
+                      disabled={removeRoleMutation.isPending}
+                      className="text-red-600 border-red-300 hover:bg-red-50"
+                    >
+                      <UserMinus className="w-4 h-4 mr-1" />
+                      إزالة صلاحيات
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {orderManagerUsers.map((user) => (
+                <TableRow key={user.id}>
+                  <TableCell>{user.profile?.full_name || 'غير محدد'}</TableCell>
+                  <TableCell>{user.profile?.email}</TableCell>
+                  <TableCell>
+                    <Badge variant="secondary" className="bg-green-100 text-green-800">
+                      <ClipboardList className="w-3 h-3 mr-1" />
+                      مدير طلبات
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleRemoveRole(user.user_id, 'order_manager')}
+                      disabled={removeRoleMutation.isPending}
                       className="text-red-600 border-red-300 hover:bg-red-50"
                     >
                       <UserMinus className="w-4 h-4 mr-1" />
@@ -262,7 +319,7 @@ const UserManagement = () => {
             </TableBody>
           </Table>
           
-          {adminUsers.length === 0 && ownerUsers.length === 0 && (
+          {adminUsers.length === 0 && ownerUsers.length === 0 && orderManagerUsers.length === 0 && (
             <div className="text-center py-8 text-muted-foreground">
               لا توجد أدوار مستخدمين حالياً
             </div>
