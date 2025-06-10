@@ -786,5 +786,3 @@ const ProductsManagement = () => {
 };
 
 export default ProductsManagement;
-
-}
