@@ -99,21 +99,39 @@ const ProductsManagement = () => {
         if (error) throw error;
         
         const filteredProducts = (allProducts || []).filter(product => {
+          // Safely handle options as Json type
+          const productOptions = Array.isArray(product.options) ? product.options : 
+                               (product.options && typeof product.options === 'object' && !Array.isArray(product.options)) ? 
+                               Object.values(product.options) : [];
+          
+          const optionNames = Array.isArray(productOptions) ? 
+            productOptions.map((opt: any) => typeof opt === 'object' && opt?.name ? opt.name : String(opt)).filter(Boolean) : [];
+
           const searchableText = [
             product.name || '',
             product.description || '',
             ...(product.categories || []),
-            ...(product.options?.map((opt: any) => opt.name) || [])
+            ...optionNames
           ].join(' ').toLowerCase();
           
           return searchTerms.every(term => searchableText.includes(term));
         });
         
         return filteredProducts.map(rawProduct => {
-          const options = (rawProduct as any).options || 
-            ((rawProduct as any).colors ? (rawProduct as any).colors.map((color: string) => ({ name: color, price: undefined })) : []);
+          // Safely transform options
+          const rawOptions = rawProduct.options;
+          let options: ProductOption[] = [];
           
-          const subcategories = (rawProduct as any).subcategories || [];
+          if (Array.isArray(rawOptions)) {
+            options = rawOptions.map((opt: any) => ({
+              name: opt?.name || String(opt),
+              price: opt?.price
+            }));
+          } else if (rawProduct.colors && Array.isArray(rawProduct.colors)) {
+            options = rawProduct.colors.map((color: string) => ({ name: color, price: undefined }));
+          }
+          
+          const subcategories = Array.isArray(rawProduct.subcategories) ? rawProduct.subcategories : [];
 
           return {
             ...rawProduct,
@@ -139,10 +157,20 @@ const ProductsManagement = () => {
       
       // Transform raw database data to match Product interface
       return data.map(rawProduct => {
-        const options = (rawProduct as any).options || 
-          ((rawProduct as any).colors ? (rawProduct as any).colors.map((color: string) => ({ name: color, price: undefined })) : []);
+        // Safely transform options
+        const rawOptions = rawProduct.options;
+        let options: ProductOption[] = [];
         
-        const subcategories = (rawProduct as any).subcategories || [];
+        if (Array.isArray(rawOptions)) {
+          options = rawOptions.map((opt: any) => ({
+            name: opt?.name || String(opt),
+            price: opt?.price
+          }));
+        } else if (rawProduct.colors && Array.isArray(rawProduct.colors)) {
+          options = rawProduct.colors.map((color: string) => ({ name: color, price: undefined }));
+        }
+        
+        const subcategories = Array.isArray(rawProduct.subcategories) ? rawProduct.subcategories : [];
 
         return {
           ...rawProduct,
