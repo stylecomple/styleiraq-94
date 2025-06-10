@@ -40,21 +40,6 @@ const Index = () => {
     }
   });
 
-  // Check for global discounts on all products
-  const { data: hasGlobalDiscount } = useQuery({
-    queryKey: ['global-discount-check'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('products')
-        .select('discount_percentage')
-        .gt('discount_percentage', 0)
-        .limit(1);
-      
-      if (error) throw error;
-      return data && data.length > 0 ? data[0].discount_percentage : null;
-    }
-  });
-
   // Fetch products with individual discounts for the ticker
   const { data: discountedProducts } = useQuery({
     queryKey: ['discounted-products'],
@@ -97,10 +82,10 @@ const Index = () => {
     navigate(`/products?category=${categoryId}`);
   };
 
-  // Check if there's a site-wide discount (all products)
+  // Check if there's a site-wide discount (all products) from active_discounts table
   const hasSiteWideDiscount = activeDiscounts?.some(discount => 
     discount.discount_type === 'all_products'
-  ) || hasGlobalDiscount;
+  );
 
   // Show individual product discounts only if there's no site-wide discount
   const shouldShowProductTicker = !hasSiteWideDiscount && discountedProducts && discountedProducts.length > 0;
@@ -113,8 +98,8 @@ const Index = () => {
       )}
       
       {/* Global Discount Alert - Cool effects for site-wide discounts */}
-      {hasGlobalDiscount && (
-        <GlobalDiscountAlert discountPercentage={hasGlobalDiscount} />
+      {hasSiteWideDiscount && (
+        <GlobalDiscountAlert discountPercentage={activeDiscounts?.find(d => d.discount_type === 'all_products')?.discount_percentage || 0} />
       )}
 
       {/* Small Moving Ticker - Only for individual product discounts */}

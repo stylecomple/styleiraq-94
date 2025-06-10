@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -15,6 +14,13 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -25,10 +31,13 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Trash2, Edit, Eye, Percent, EyeOff } from 'lucide-react';
+import { Trash2, Edit, Eye, Percent, EyeOff, Filter } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useChangeLogger } from '@/hooks/useChangeLogger';
 import EditProductForm from './EditProductForm';
+import SearchBar from '@/components/SearchBar';
+import CategorySection from '@/components/CategorySection';
+import SubCategorySection from '@/components/SubCategorySection';
 import { ProductOption, Product } from '@/types';
 
 const ProductsManagement = () => {
@@ -38,14 +47,67 @@ const ProductsManagement = () => {
   const [editingProduct, setEditingProduct] = useState<any>(null);
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [discountPercentage, setDiscountPercentage] = useState<string>('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
 
-  const { data: products, isLoading } = useQuery({
-    queryKey: ['admin-products'],
+  // Fetch categories
+  const { data: categories } = useQuery({
+    queryKey: ['categories'],
     queryFn: async () => {
       const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .order('name');
+      
+      if (error) throw error;
+      return data || [];
+    }
+  });
+
+  // Fetch subcategories based on selected category
+  const { data: subcategories } = useQuery({
+    queryKey: ['subcategories', selectedCategory],
+    queryFn: async () => {
+      if (!selectedCategory) return [];
+      
+      const { data, error } = await supabase
+        .from('subcategories')
+        .select('*')
+        .eq('category_id', selectedCategory)
+        .order('name');
+      
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!selectedCategory
+  });
+
+  const { data: products, isLoading } = useQuery({
+    queryKey: ['admin-products', searchQuery, selectedCategory, selectedSubcategory],
+    queryFn: async () => {
+      let query = supabase
         .from('products')
         .select('*')
         .order('created_at', { ascending: false });
+      
+      // Apply search filter
+      if (searchQuery) {
+        query = query.ilike('name', `%${searchQuery}%`);
+      }
+      
+      // Apply category filter
+      if (selectedCategory) {
+        query = query.contains('categories', [selectedCategory]);
+      }
+      
+      // Apply subcategory filter
+      if (selectedSubcategory) {
+        query = query.contains('subcategories', [selectedSubcategory]);
+      }
+      
+      const { data, error } = await query;
       
       if (error) throw error;
       
@@ -356,6 +418,15 @@ const ProductsManagement = () => {
     bulkDiscountMutation.mutate({ productIds: selectedProducts, discount });
   };
 
+  const handleCategorySelect = (categoryId: string | null) => {
+    setSelectedCategory(categoryId);
+    setSelectedSubcategory(null); // Reset subcategory when category changes
+  };
+
+  const handleSubcategorySelect = (subcategoryId: string | null) => {
+    setSelectedSubcategory(subcategoryId);
+  };
+
   const categoryLabels = {
     makeup: 'مكياج',
     perfumes: 'عطور',
@@ -396,6 +467,41 @@ const ProductsManagement = () => {
           onClose={() => setEditingProduct(null)} 
         />
       )}
+
+      {/* Search and Filter Section */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-4">
+          <div className="flex-1">
+            <SearchBar searchQuery={searchQuery} onSearchChange={setSearchQuery} />
+          </div>
+          <Button
+            variant="outline"
+            onClick={() => setShowFilters(!showFilters)}
+            className="flex items-center gap-2"
+          >
+            <Filter className="w-4 h-4" />
+            تصفية
+          </Button>
+        </div>
+
+        {showFilters && (
+          <div className="bg-muted p-4 rounded-lg space-y-4">
+            <CategorySection
+              categories={categories || []}
+              selectedCategory={selectedCategory}
+              onCategorySelect={handleCategorySelect}
+            />
+            
+            {selectedCategory && subcategories && subcategories.length > 0 && (
+              <SubCategorySection
+                subcategories={subcategories}
+                selectedSubcategory={selectedSubcategory}
+                onSubcategorySelect={handleSubcategorySelect}
+              />
+            )}
+          </div>
+        )}
+      </div>
 
       {/* Bulk Actions */}
       {selectedProducts.length > 0 && (
