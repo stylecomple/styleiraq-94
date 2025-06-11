@@ -44,27 +44,27 @@ const MobileCategoryDetail = () => {
         query = query.eq('subcategory_id', selectedSubcategory);
       }
 
-      const { data, error } = await query.order('created_at', { ascending: false });
+      const { data: rawProducts, error } = await query.order('created_at', { ascending: false });
       
       if (error) throw error;
       
       // Transform raw database data to match Product interface
-      const transformedProducts = (data || []).map((rawProduct) => {
+      const transformedProducts: Product[] = (rawProducts || []).map((rawProduct: any) => {
         // Handle options field transformation
         let options: ProductOption[] = [];
         if (rawProduct.options && Array.isArray(rawProduct.options)) {
-          options = (rawProduct.options as any[]).map(opt => ({
+          options = rawProduct.options.map((opt: any) => ({
             name: opt.name || '',
             price: opt.price
           }));
         } else if (rawProduct.colors && Array.isArray(rawProduct.colors)) {
-          options = (rawProduct.colors as string[]).map(color => ({
+          options = rawProduct.colors.map((color: string) => ({
             name: color,
             price: undefined
           }));
         }
 
-        const product: Product = {
+        return {
           id: rawProduct.id,
           name: rawProduct.name,
           description: rawProduct.description,
@@ -80,8 +80,6 @@ const MobileCategoryDetail = () => {
           subcategories: rawProduct.subcategories || [],
           options
         };
-
-        return product;
       });
 
       return transformedProducts;
