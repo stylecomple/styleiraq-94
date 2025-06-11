@@ -1,9 +1,11 @@
+
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { ShoppingBag, Sparkles, Star, Heart } from 'lucide-react';
+import { ShoppingBag, Sparkles, Star, Heart, Smartphone } from 'lucide-react';
 import AnimatedStats from './AnimatedStats';
 import CountUpAnimation from './CountUpAnimation';
 import PWAPrompt from './PWAPrompt';
+import { useNavigate } from 'react-router-dom';
 
 interface HeroProps {
   onStartShopping: () => void;
@@ -18,6 +20,8 @@ const Hero = ({
   onCategoryClick,
   productCount
 }: HeroProps) => {
+  const navigate = useNavigate();
+
   const categories = [{
     id: 'makeup',
     name: 'مكياج',
@@ -79,7 +83,7 @@ const Hero = ({
             اكتشفوا عالماً من الجمال والأناقة مع مجموعتنا المتميزة من المكياج والعطور وكل ما تحتاجونه لإطلالة مثالية
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-8">
             <Button onClick={onStartShopping} size="lg" className="bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-700 hover:to-purple-700 text-white px-8 py-4 text-lg rounded-full shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
               <ShoppingBag className="w-5 h-5 mr-2" />
               ابدأوا التسوق الآن
@@ -88,6 +92,17 @@ const Hero = ({
             <Button onClick={onBrowseCollections} variant="outline" size="lg" className="border-2 border-pink-300 text-pink-700 hover:bg-pink-50 px-8 py-4 text-lg rounded-full transition-all duration-300 transform hover:-translate-y-1">
               <Heart className="w-5 h-5 mr-2" />
               تصفحوا المجموعات
+            </Button>
+            
+            {/* Mobile App Button */}
+            <Button 
+              onClick={() => navigate('/app/products')} 
+              variant="outline" 
+              size="lg" 
+              className="border-2 border-purple-300 text-purple-700 hover:bg-purple-50 px-8 py-4 text-lg rounded-full transition-all duration-300 transform hover:-translate-y-1"
+            >
+              <Smartphone className="w-5 h-5 mr-2" />
+              التطبيق
             </Button>
           </div>
 

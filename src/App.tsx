@@ -22,6 +22,13 @@ import AdminPanel from "@/pages/AdminPanel";
 import OwnerPanel from "@/pages/OwnerPanel";
 import NotFound from "@/pages/NotFound";
 
+// Mobile App Pages
+import MobileProducts from "@/pages/app/MobileProducts";
+import MobileCategories from "@/pages/app/MobileCategories";
+import MobileCategoryDetail from "@/pages/app/MobileCategoryDetail";
+import MobileCart from "@/pages/app/MobileCart";
+import MobileAccount from "@/pages/app/MobileAccount";
+
 const queryClient = new QueryClient();
 
 const LovableBadgeRemover: React.FC = () => {
@@ -92,12 +99,13 @@ const AppContent: React.FC = () => {
   const location = useLocation();
   const isAdminPanel = location.pathname === '/admin';
   const isOwnerPanel = location.pathname === '/owner';
-  const hideFooter = isAdminPanel || isOwnerPanel;
+  const isMobileApp = location.pathname.startsWith('/app/');
+  const hideHeaderFooter = isAdminPanel || isOwnerPanel || isMobileApp;
 
   return (
     <div className="min-h-screen flex flex-col">
       <LovableBadgeRemover />
-      <Header />
+      {!hideHeaderFooter && <Header />}
       <main className="flex-1">
         <Routes>
           <Route path="/" element={<Index />} />
@@ -108,10 +116,18 @@ const AppContent: React.FC = () => {
           <Route path="/auth" element={<Auth />} />
           <Route path="/admin" element={<AdminPanel />} />
           <Route path="/owner" element={<OwnerPanel />} />
+          
+          {/* Mobile App Routes */}
+          <Route path="/app/products" element={<MobileProducts />} />
+          <Route path="/app/categories" element={<MobileCategories />} />
+          <Route path="/app/category/:categoryId" element={<MobileCategoryDetail />} />
+          <Route path="/app/cart" element={<MobileCart />} />
+          <Route path="/app/account" element={<MobileAccount />} />
+          
           <Route path="*" element={<NotFound />} />
         </Routes>
       </main>
-      {!hideFooter && <Footer />}
+      {!hideHeaderFooter && <Footer />}
     </div>
   );
 };
