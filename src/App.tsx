@@ -15,6 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import MobileProducts from "@/pages/app/MobileProducts";
 import MobileCategories from "@/pages/app/MobileCategories";
 import MobileCategoryDetail from "@/pages/app/MobileCategoryDetail";
+import MobileProductDetail from "@/pages/app/MobileProductDetail";
 import MobileCart from "@/pages/app/MobileCart";
 import MobileAccount from "@/pages/app/MobileAccount";
 import MobileSplash from "@/pages/app/MobileSplash";

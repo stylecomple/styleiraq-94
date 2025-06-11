@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -5,7 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import MobileAppLayout from '@/components/MobileAppLayout';
 import ProductCard from '@/components/ProductCard';
 import { Button } from '@/components/ui/button';
-import { Product, ProductOption } from '@/types';
+import { Product } from '@/types';
 
 interface Category {
   id: string;
@@ -21,25 +22,6 @@ interface Subcategory {
   category_id: string;
 }
 
-// Define a simple type for the raw database product
-interface RawProduct {
-  id: string;
-  name: string;
-  description: string | null;
-  price: number;
-  discount_percentage: number | null;
-  images: string[] | null;
-  cover_image: string | null;
-  is_active: boolean | null;
-  stock_quantity: number | null;
-  created_at: string | null;
-  updated_at: string | null;
-  categories: string[] | null;
-  subcategories: string[] | null;
-  options: any;
-  colors: string[] | null;
-}
-
 const MobileCategoryDetail = () => {
   const { categoryId } = useParams<{ categoryId: string }>();
   const location = useLocation();
@@ -49,7 +31,7 @@ const MobileCategoryDetail = () => {
 
   const { data: products, isLoading } = useQuery({
     queryKey: ['category-products', categoryId, selectedSubcategory],
-    queryFn: async (): Promise<Product[]> => {
+    queryFn: async () => {
       if (!categoryId) return [];
       
       let query = supabase
@@ -66,43 +48,28 @@ const MobileCategoryDetail = () => {
       
       if (error) throw error;
       
-      // Transform raw database data to match Product interface
-      const transformedProducts = (data as RawProduct[] || []).map((rawProduct) => {
-        // Handle options field transformation
-        let options: ProductOption[] = [];
-        if (rawProduct.options && Array.isArray(rawProduct.options)) {
-          options = rawProduct.options.map((opt: any) => ({
-            name: opt.name || '',
-            price: opt.price
-          }));
-        } else if (rawProduct.colors && Array.isArray(rawProduct.colors)) {
-          options = rawProduct.colors.map((color: string) => ({
-            name: color,
-            price: undefined
-          }));
-        }
+      // Transform to Product interface
+      return (data || []).map((item: any): Product => {
+        const options = item.options || 
+          (item.colors ? item.colors.map((color: string) => ({ name: color, price: undefined })) : []);
 
-        const product: Product = {
-          id: rawProduct.id,
-          name: rawProduct.name,
-          description: rawProduct.description,
-          price: rawProduct.price,
-          discount_percentage: rawProduct.discount_percentage,
-          images: rawProduct.images || [],
-          cover_image: rawProduct.cover_image,
-          is_active: rawProduct.is_active,
-          stock_quantity: rawProduct.stock_quantity,
-          created_at: rawProduct.created_at,
-          updated_at: rawProduct.updated_at,
-          categories: rawProduct.categories || [],
-          subcategories: rawProduct.subcategories || [],
+        return {
+          id: item.id,
+          name: item.name,
+          description: item.description,
+          price: item.price,
+          discount_percentage: item.discount_percentage,
+          images: item.images || [],
+          cover_image: item.cover_image,
+          is_active: item.is_active,
+          stock_quantity: item.stock_quantity,
+          created_at: item.created_at,
+          updated_at: item.updated_at,
+          categories: item.categories || [],
+          subcategories: item.subcategories || [],
           options
         };
-
-        return product;
       });
-
-      return transformedProducts;
     },
     enabled: !!categoryId
   });

@@ -22,13 +22,13 @@ const ProductCard = ({ product }: ProductCardProps) => {
     e.stopPropagation();
     
     if (!user) {
-      navigate('/auth');
+      navigate('/app/auth');
       return;
     }
 
     // If product has options, redirect to product detail page
     if (product.options && product.options.length > 0) {
-      navigate(`/product/${product.id}`);
+      navigate(`/app/product/${product.id}`);
       return;
     }
 
@@ -44,7 +44,7 @@ const ProductCard = ({ product }: ProductCardProps) => {
   };
 
   const handleViewProduct = () => {
-    navigate(`/product/${product.id}`);
+    navigate(`/app/product/${product.id}`);
   };
 
   const getEffectivePrice = () => {
