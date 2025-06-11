@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { ShoppingBag, Sparkles, Star, Heart } from 'lucide-react';
 import AnimatedStats from './AnimatedStats';
 import CountUpAnimation from './CountUpAnimation';
+import PWAPrompt from './PWAPrompt';
 
 interface HeroProps {
   onStartShopping: () => void;
@@ -138,6 +139,9 @@ const Hero = ({
           </div>
         </div>
       </div>
+
+      {/* PWA Installation Prompt */}
+      <PWAPrompt />
     </div>
   );
 };
