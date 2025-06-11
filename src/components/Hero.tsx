@@ -1,20 +1,55 @@
-import React from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { ShoppingBag, Sparkles, Star, Heart } from 'lucide-react';
+import { ShoppingBag, Sparkles, Star, Heart, Download } from 'lucide-react';
 import AnimatedStats from './AnimatedStats';
 import CountUpAnimation from './CountUpAnimation';
+
 interface HeroProps {
   onStartShopping: () => void;
   onBrowseCollections: () => void;
   onCategoryClick: (categoryId: string) => void;
   productCount?: number;
 }
+
 const Hero = ({
   onStartShopping,
   onBrowseCollections,
   onCategoryClick,
   productCount
 }: HeroProps) => {
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [showInstallButton, setShowInstallButton] = useState(false);
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setShowInstallButton(true);
+    };
+
+    window.addEventListener('beforeinstallprompt', handler);
+
+    // Check if app is already installed
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+      setShowInstallButton(false);
+    }
+
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) return;
+
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    
+    if (outcome === 'accepted') {
+      setDeferredPrompt(null);
+      setShowInstallButton(false);
+    }
+  };
+
   const categories = [{
     id: 'makeup',
     name: 'مكياج',
@@ -36,7 +71,9 @@ const Hero = ({
     icon: '🏠',
     color: 'from-blue-400 to-cyan-500'
   }];
-  return <div className="relative min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-indigo-50 overflow-hidden">
+
+  return (
+    <div className="relative min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-indigo-50 overflow-hidden">
       {/* Background decorative elements */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-pink-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob"></div>
@@ -74,7 +111,7 @@ const Hero = ({
             اكتشفوا عالماً من الجمال والأناقة مع مجموعتنا المتميزة من المكياج والعطور وكل ما تحتاجونه لإطلالة مثالية
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
             <Button onClick={onStartShopping} size="lg" className="bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-700 hover:to-purple-700 text-white px-8 py-4 text-lg rounded-full shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
               <ShoppingBag className="w-5 h-5 mr-2" />
               ابدأوا التسوق الآن
@@ -84,6 +121,20 @@ const Hero = ({
               <Heart className="w-5 h-5 mr-2" />
               تصفحوا المجموعات
             </Button>
+
+            {/* PWA Install Button */}
+            {showInstallButton && (
+              <Button 
+                onClick={handleInstallClick}
+                size="lg" 
+                className="bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white px-8 py-4 text-lg rounded-full shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 relative overflow-hidden group"
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-purple-400 opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
+                <Download className="w-5 h-5 mr-2 animate-bounce" />
+                <span className="relative z-10">تحميل التطبيق</span>
+                <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12 transform -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
+              </Button>
+            )}
           </div>
 
           {/* Responsive Stats Section with Product Count */}
@@ -112,7 +163,8 @@ const Hero = ({
           </p>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            {categories.map(category => <div key={category.id} onClick={() => onCategoryClick(category.id)} className="group cursor-pointer transform hover:-translate-y-2 transition-all duration-300">
+            {categories.map(category => (
+              <div key={category.id} onClick={() => onCategoryClick(category.id)} className="group cursor-pointer transform hover:-translate-y-2 transition-all duration-300">
                 <div className={`bg-gradient-to-br ${category.color} rounded-3xl p-8 shadow-lg hover:shadow-2xl transition-all duration-300 border border-white/20`}>
                   <div className="text-6xl mb-4 group-hover:scale-110 transition-transform duration-300">
                     {category.icon}
@@ -128,10 +180,13 @@ const Hero = ({
                     <Star className="w-4 h-4 text-white/80 fill-current" />
                   </div>
                 </div>
-              </div>)}
+              </div>
+            ))}
           </div>
         </div>
       </div>
-    </div>;
+    </div>
+  );
 };
+
 export default Hero;
