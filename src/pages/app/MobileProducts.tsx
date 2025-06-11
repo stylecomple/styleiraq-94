@@ -25,7 +25,20 @@ const MobileProducts = () => {
       const { data, error } = await query.order('created_at', { ascending: false });
       
       if (error) throw error;
-      return data as Product[];
+      
+      // Transform raw database data to match Product interface
+      return (data || []).map(rawProduct => {
+        const options = (rawProduct as any).options || 
+          ((rawProduct as any).colors ? (rawProduct as any).colors.map((color: string) => ({ name: color, price: undefined })) : []);
+        
+        const subcategories = (rawProduct as any).subcategories || [];
+
+        return {
+          ...rawProduct,
+          options,
+          subcategories
+        } as Product;
+      });
     }
   });
 
