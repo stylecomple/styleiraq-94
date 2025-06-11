@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useReducer, useEffect, ReactNode, useState } from 'react';
 
 export interface CartItem {
@@ -37,12 +38,16 @@ type CartAction =
   | { type: 'CLEAR_CART' }
   | { type: 'LOAD_CART'; payload: CartItem[] };
 
+// Helper function to compare cart items
+const isSameCartItem = (item: CartItem, id: string, selectedOption?: string | null) => {
+  return item.id === id && (item.selectedOption || item.selectedColor || null) === (selectedOption || null);
+};
+
 const cartReducer = (state: CartState, action: CartAction): CartState => {
   switch (action.type) {
     case 'ADD_TO_CART': {
       const existingItemIndex = state.items.findIndex(
-        item => item.id === action.payload.id && 
-        (item.selectedOption || item.selectedColor) === (action.payload.selectedOption || action.payload.selectedColor)
+        item => isSameCartItem(item, action.payload.id, action.payload.selectedOption || action.payload.selectedColor)
       );
 
       if (existingItemIndex > -1) {
@@ -57,8 +62,7 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
       return {
         ...state,
         items: state.items.filter(
-          item => !(item.id === action.payload.id && 
-          (item.selectedOption || item.selectedColor) === action.payload.selectedOption)
+          item => !isSameCartItem(item, action.payload.id, action.payload.selectedOption)
         ),
       };
     }
@@ -67,8 +71,7 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
         return {
           ...state,
           items: state.items.filter(
-            item => !(item.id === action.payload.id && 
-            (item.selectedOption || item.selectedColor) === action.payload.selectedOption)
+            item => !isSameCartItem(item, action.payload.id, action.payload.selectedOption)
           ),
         };
       }
@@ -76,8 +79,7 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
       return {
         ...state,
         items: state.items.map(item =>
-          item.id === action.payload.id && 
-          (item.selectedOption || item.selectedColor) === action.payload.selectedOption
+          isSameCartItem(item, action.payload.id, action.payload.selectedOption)
             ? { ...item, quantity: action.payload.quantity }
             : item
         ),
@@ -124,14 +126,17 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       quantity: item.quantity || 1,
       selectedOption: item.selectedColor || item.selectedOption || null,
     };
+    console.log('Adding to cart:', cartItem);
     dispatch({ type: 'ADD_TO_CART', payload: cartItem });
   };
 
   const removeFromCart = (id: string, selectedOption?: string | null) => {
+    console.log('Removing from cart:', id, selectedOption);
     dispatch({ type: 'REMOVE_FROM_CART', payload: { id, selectedOption } });
   };
 
   const updateQuantity = (id: string, quantity: number, selectedOption?: string | null) => {
+    console.log('Updating quantity:', id, quantity, selectedOption);
     dispatch({ type: 'UPDATE_QUANTITY', payload: { id, quantity, selectedOption } });
   };
 
