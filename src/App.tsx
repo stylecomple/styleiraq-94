@@ -1,26 +1,15 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { CartProvider } from "@/contexts/CartContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
-import Index from "@/pages/Index";
-import Products from "@/pages/Products";
-import ProductDetail from "@/pages/ProductDetail";
-import Cart from "@/pages/Cart";
-import Orders from "@/pages/Orders";
-import Auth from "@/pages/Auth";
-import AdminPanel from "@/pages/AdminPanel";
-import OwnerPanel from "@/pages/OwnerPanel";
-import NotFound from "@/pages/NotFound";
 
 // Mobile App Pages
 import MobileProducts from "@/pages/app/MobileProducts";
@@ -28,6 +17,8 @@ import MobileCategories from "@/pages/app/MobileCategories";
 import MobileCategoryDetail from "@/pages/app/MobileCategoryDetail";
 import MobileCart from "@/pages/app/MobileCart";
 import MobileAccount from "@/pages/app/MobileAccount";
+import MobileSplash from "@/pages/app/MobileSplash";
+import MobileAuth from "@/pages/app/MobileAuth";
 
 const queryClient = new QueryClient();
 
@@ -51,19 +42,15 @@ const LovableBadgeRemover: React.FC = () => {
   useEffect(() => {
     const removeLovableBadge = () => {
       const badge = document.getElementById('lovable-badge');
-      if (badge && settings?.hide_lovable_banner) {
+      if (badge) {
         badge.remove();
       }
     };
 
-    // Initial check
     removeLovableBadge();
 
-    // Set up a mutation observer to watch for the badge being added
     const observer = new MutationObserver(() => {
-      if (settings?.hide_lovable_banner) {
-        removeLovableBadge();
-      }
+      removeLovableBadge();
     });
 
     observer.observe(document.body, {
@@ -72,18 +59,15 @@ const LovableBadgeRemover: React.FC = () => {
     });
 
     return () => observer.disconnect();
-  }, [settings?.hide_lovable_banner]);
+  }, []);
 
-  // Update favicon if stored in database
   useEffect(() => {
     if (settings?.favicon_url) {
-      // Remove existing favicon
       const existingFavicon = document.querySelector('link[rel="icon"]');
       if (existingFavicon) {
         existingFavicon.remove();
       }
 
-      // Add new favicon
       const link = document.createElement('link');
       link.rel = 'icon';
       link.type = 'image/png';
@@ -96,38 +80,33 @@ const LovableBadgeRemover: React.FC = () => {
 };
 
 const AppContent: React.FC = () => {
-  const location = useLocation();
-  const isAdminPanel = location.pathname === '/admin';
-  const isOwnerPanel = location.pathname === '/owner';
-  const isMobileApp = location.pathname.startsWith('/app/');
-  const hideHeaderFooter = isAdminPanel || isOwnerPanel || isMobileApp;
+  const [showSplash, setShowSplash] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowSplash(false);
+    }, 2000);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (showSplash) {
+    return <MobileSplash />;
+  }
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen bg-gray-50">
       <LovableBadgeRemover />
-      {!hideHeaderFooter && <Header />}
-      <main className="flex-1">
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/products" element={<Products />} />
-          <Route path="/product/:id" element={<ProductDetail />} />
-          <Route path="/cart" element={<Cart />} />
-          <Route path="/orders" element={<Orders />} />
-          <Route path="/auth" element={<Auth />} />
-          <Route path="/admin" element={<AdminPanel />} />
-          <Route path="/owner" element={<OwnerPanel />} />
-          
-          {/* Mobile App Routes */}
-          <Route path="/app/products" element={<MobileProducts />} />
-          <Route path="/app/categories" element={<MobileCategories />} />
-          <Route path="/app/category/:categoryId" element={<MobileCategoryDetail />} />
-          <Route path="/app/cart" element={<MobileCart />} />
-          <Route path="/app/account" element={<MobileAccount />} />
-          
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </main>
-      {!hideHeaderFooter && <Footer />}
+      <Routes>
+        <Route path="/" element={<Navigate to="/app/products" replace />} />
+        <Route path="/app/products" element={<MobileProducts />} />
+        <Route path="/app/categories" element={<MobileCategories />} />
+        <Route path="/app/category/:categoryId" element={<MobileCategoryDetail />} />
+        <Route path="/app/cart" element={<MobileCart />} />
+        <Route path="/app/account" element={<MobileAccount />} />
+        <Route path="/app/auth" element={<MobileAuth />} />
+        <Route path="*" element={<Navigate to="/app/products" replace />} />
+      </Routes>
     </div>
   );
 };

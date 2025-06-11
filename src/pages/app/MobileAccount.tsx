@@ -13,7 +13,8 @@ import {
   LogOut, 
   Shield,
   Crown,
-  ChevronLeft
+  ChevronLeft,
+  LogIn
 } from 'lucide-react';
 
 const MobileAccount = () => {
@@ -21,8 +22,16 @@ const MobileAccount = () => {
   const { user, signOut, isAdmin, isOwner } = useAuth();
 
   const handleSignOut = async () => {
-    await signOut();
-    navigate('/auth');
+    try {
+      await signOut();
+      navigate('/app/products');
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+  };
+
+  const handleSignIn = () => {
+    navigate('/app/auth');
   };
 
   const accountMenuItems = [
@@ -54,13 +63,33 @@ const MobileAccount = () => {
     return (
       <MobileAppLayout title="حسابي" showBackButton={false}>
         <div className="flex-1 flex items-center justify-center p-4">
-          <div className="text-center">
-            <User className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <h2 className="text-xl font-bold text-gray-800 mb-2">تسجيل الدخول مطلوب</h2>
-            <p className="text-gray-600 mb-6">يرجى تسجيل الدخول للوصول إلى حسابك</p>
-            <Button onClick={() => navigate('/auth')} className="w-full">
-              تسجيل الدخول
-            </Button>
+          <div className="text-center max-w-sm mx-auto">
+            <div className="w-24 h-24 bg-gradient-to-r from-pink-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-6">
+              <User className="w-12 h-12 text-white" />
+            </div>
+            
+            <h2 className="text-2xl font-bold text-gray-800 mb-3">مرحباً بك في Style</h2>
+            <p className="text-gray-600 mb-8 leading-relaxed">
+              سجل الدخول للاستمتاع بتجربة تسوق شخصية وحفظ منتجاتك المفضلة
+            </p>
+            
+            <div className="space-y-3">
+              <Button 
+                onClick={handleSignIn} 
+                className="w-full h-12 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-semibold rounded-xl"
+              >
+                <LogIn className="w-5 h-5 ml-2" />
+                تسجيل الدخول
+              </Button>
+              
+              <Button 
+                variant="outline" 
+                onClick={() => navigate('/app/products')}
+                className="w-full h-12 border-gray-300 text-gray-700 rounded-xl"
+              >
+                متابعة التصفح
+              </Button>
+            </div>
           </div>
         </div>
       </MobileAppLayout>
@@ -71,7 +100,7 @@ const MobileAccount = () => {
     <MobileAppLayout title="حسابي" showBackButton={false}>
       <div className="p-4 space-y-4">
         {/* User Profile Card */}
-        <Card>
+        <Card className="border-0 shadow-lg">
           <CardContent className="p-6">
             <div className="flex items-center space-x-4">
               <Avatar className="w-16 h-16">
@@ -105,7 +134,7 @@ const MobileAccount = () => {
               <Button
                 key={item.id}
                 variant="outline"
-                className="w-full h-14 justify-between bg-white hover:bg-gray-50"
+                className="w-full h-14 justify-between bg-white hover:bg-gray-50 border-gray-200 rounded-xl"
                 onClick={item.action}
               >
                 <div className="flex items-center">
@@ -121,7 +150,7 @@ const MobileAccount = () => {
         {/* Sign Out Button */}
         <Button
           variant="outline"
-          className="w-full h-14 justify-center text-red-600 border-red-200 hover:bg-red-50"
+          className="w-full h-14 justify-center text-red-600 border-red-200 hover:bg-red-50 rounded-xl"
           onClick={handleSignOut}
         >
           <LogOut className="w-5 h-5 ml-2" />
