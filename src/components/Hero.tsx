@@ -1,7 +1,6 @@
-
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Button } from '@/components/ui/button';
-import { ShoppingBag, Sparkles, Star, Heart, Download } from 'lucide-react';
+import { ShoppingBag, Sparkles, Star, Heart } from 'lucide-react';
 import AnimatedStats from './AnimatedStats';
 import CountUpAnimation from './CountUpAnimation';
 
@@ -18,38 +17,6 @@ const Hero = ({
   onCategoryClick,
   productCount
 }: HeroProps) => {
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-  const [showInstallButton, setShowInstallButton] = useState(false);
-
-  useEffect(() => {
-    const handler = (e: Event) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-      setShowInstallButton(true);
-    };
-
-    window.addEventListener('beforeinstallprompt', handler);
-
-    // Check if app is already installed
-    if (window.matchMedia('(display-mode: standalone)').matches) {
-      setShowInstallButton(false);
-    }
-
-    return () => window.removeEventListener('beforeinstallprompt', handler);
-  }, []);
-
-  const handleInstallClick = async () => {
-    if (!deferredPrompt) return;
-
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    
-    if (outcome === 'accepted') {
-      setDeferredPrompt(null);
-      setShowInstallButton(false);
-    }
-  };
-
   const categories = [{
     id: 'makeup',
     name: 'مكياج',
@@ -121,20 +88,6 @@ const Hero = ({
               <Heart className="w-5 h-5 mr-2" />
               تصفحوا المجموعات
             </Button>
-
-            {/* PWA Install Button */}
-            {showInstallButton && (
-              <Button 
-                onClick={handleInstallClick}
-                size="lg" 
-                className="bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white px-8 py-4 text-lg rounded-full shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 relative overflow-hidden group"
-              >
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-purple-400 opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
-                <Download className="w-5 h-5 mr-2 animate-bounce" />
-                <span className="relative z-10">تحميل التطبيق</span>
-                <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12 transform -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
-              </Button>
-            )}
           </div>
 
           {/* Responsive Stats Section with Product Count */}
