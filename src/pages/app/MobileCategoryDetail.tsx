@@ -31,7 +31,7 @@ const MobileCategoryDetail = () => {
 
   const { data: products, isLoading } = useQuery({
     queryKey: ['category-products', categoryId, selectedSubcategory],
-    queryFn: async (): Promise<Product[]> => {
+    queryFn: async () => {
       if (!categoryId) return [];
       
       let query = supabase
@@ -49,7 +49,7 @@ const MobileCategoryDetail = () => {
       if (error) throw error;
       
       // Transform raw database data to match Product interface
-      const transformedProducts: Product[] = (data || []).map((rawProduct): Product => {
+      const transformedProducts = (data || []).map((rawProduct) => {
         // Handle options field transformation
         let options: ProductOption[] = [];
         if (rawProduct.options && Array.isArray(rawProduct.options)) {
@@ -64,7 +64,7 @@ const MobileCategoryDetail = () => {
           }));
         }
 
-        return {
+        const product: Product = {
           id: rawProduct.id,
           name: rawProduct.name,
           description: rawProduct.description,
@@ -77,10 +77,11 @@ const MobileCategoryDetail = () => {
           created_at: rawProduct.created_at,
           updated_at: rawProduct.updated_at,
           categories: rawProduct.categories || [],
-          colors: rawProduct.colors || [],
           subcategories: rawProduct.subcategories || [],
           options
         };
+
+        return product;
       });
 
       return transformedProducts;
