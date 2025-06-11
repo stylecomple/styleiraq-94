@@ -6,7 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import MobileAppLayout from '@/components/MobileAppLayout';
 import ProductCard from '@/components/ProductCard';
 import { Button } from '@/components/ui/button';
-import { Product } from '@/types';
+import { Product, ProductOption } from '@/types';
 
 interface Category {
   id: string;
@@ -31,7 +31,7 @@ const MobileCategoryDetail = () => {
 
   const { data: products, isLoading } = useQuery({
     queryKey: ['category-products', categoryId, selectedSubcategory],
-    queryFn: async () => {
+    queryFn: async (): Promise<Product[]> => {
       if (!categoryId) return [];
       
       let query = supabase
@@ -49,18 +49,41 @@ const MobileCategoryDetail = () => {
       if (error) throw error;
       
       // Transform raw database data to match Product interface
-      return (data || []).map(rawProduct => {
-        const options = (rawProduct as any).options || 
-          ((rawProduct as any).colors ? (rawProduct as any).colors.map((color: string) => ({ name: color, price: undefined })) : []);
-        
-        const subcategories = (rawProduct as any).subcategories || [];
+      const transformedProducts: Product[] = (data || []).map((rawProduct): Product => {
+        // Handle options field transformation
+        let options: ProductOption[] = [];
+        if (rawProduct.options && Array.isArray(rawProduct.options)) {
+          options = (rawProduct.options as any[]).map(opt => ({
+            name: opt.name || '',
+            price: opt.price
+          }));
+        } else if (rawProduct.colors && Array.isArray(rawProduct.colors)) {
+          options = (rawProduct.colors as string[]).map(color => ({
+            name: color,
+            price: undefined
+          }));
+        }
 
         return {
-          ...rawProduct,
-          options,
-          subcategories
-        } as Product;
+          id: rawProduct.id,
+          name: rawProduct.name,
+          description: rawProduct.description,
+          price: rawProduct.price,
+          discount_percentage: rawProduct.discount_percentage,
+          images: rawProduct.images || [],
+          cover_image: rawProduct.cover_image,
+          is_active: rawProduct.is_active,
+          stock_quantity: rawProduct.stock_quantity,
+          created_at: rawProduct.created_at,
+          updated_at: rawProduct.updated_at,
+          categories: rawProduct.categories || [],
+          colors: rawProduct.colors || [],
+          subcategories: rawProduct.subcategories || [],
+          options
+        };
       });
+
+      return transformedProducts;
     },
     enabled: !!categoryId
   });
