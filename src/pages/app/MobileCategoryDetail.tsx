@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -22,6 +21,25 @@ interface Subcategory {
   category_id: string;
 }
 
+// Define a simple type for the raw database product
+interface RawProduct {
+  id: string;
+  name: string;
+  description: string | null;
+  price: number;
+  discount_percentage: number | null;
+  images: string[] | null;
+  cover_image: string | null;
+  is_active: boolean | null;
+  stock_quantity: number | null;
+  created_at: string | null;
+  updated_at: string | null;
+  categories: string[] | null;
+  subcategories: string[] | null;
+  options: any;
+  colors: string[] | null;
+}
+
 const MobileCategoryDetail = () => {
   const { categoryId } = useParams<{ categoryId: string }>();
   const location = useLocation();
@@ -31,7 +49,7 @@ const MobileCategoryDetail = () => {
 
   const { data: products, isLoading } = useQuery({
     queryKey: ['category-products', categoryId, selectedSubcategory],
-    queryFn: async () => {
+    queryFn: async (): Promise<Product[]> => {
       if (!categoryId) return [];
       
       let query = supabase
@@ -44,12 +62,12 @@ const MobileCategoryDetail = () => {
         query = query.eq('subcategory_id', selectedSubcategory);
       }
 
-      const { data: rawProducts, error } = await query.order('created_at', { ascending: false });
+      const { data, error } = await query.order('created_at', { ascending: false });
       
       if (error) throw error;
       
       // Transform raw database data to match Product interface
-      const transformedProducts: Product[] = (rawProducts || []).map((rawProduct: any) => {
+      const transformedProducts = (data as RawProduct[] || []).map((rawProduct) => {
         // Handle options field transformation
         let options: ProductOption[] = [];
         if (rawProduct.options && Array.isArray(rawProduct.options)) {
@@ -64,7 +82,7 @@ const MobileCategoryDetail = () => {
           }));
         }
 
-        return {
+        const product: Product = {
           id: rawProduct.id,
           name: rawProduct.name,
           description: rawProduct.description,
@@ -80,6 +98,8 @@ const MobileCategoryDetail = () => {
           subcategories: rawProduct.subcategories || [],
           options
         };
+
+        return product;
       });
 
       return transformedProducts;
