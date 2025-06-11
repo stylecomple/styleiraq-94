@@ -9,6 +9,174 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      active_discounts: {
+        Row: {
+          created_at: string
+          created_by: string
+          discount_percentage: number
+          discount_type: string
+          id: string
+          is_active: boolean
+          target_value: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          discount_percentage: number
+          discount_type: string
+          id?: string
+          is_active?: boolean
+          target_value?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          discount_percentage?: number
+          discount_type?: string
+          id?: string
+          is_active?: boolean
+          target_value?: string | null
+        }
+        Relationships: []
+      }
+      admin_settings: {
+        Row: {
+          created_at: string
+          email_receiver: string | null
+          favicon_url: string | null
+          hide_lovable_banner: boolean | null
+          id: string
+          is_store_open: boolean
+          notification_sound_url: string | null
+          theme_config: Json | null
+          updated_at: string
+          visa_card_config: Json | null
+          zain_cash_config: Json | null
+        }
+        Insert: {
+          created_at?: string
+          email_receiver?: string | null
+          favicon_url?: string | null
+          hide_lovable_banner?: boolean | null
+          id?: string
+          is_store_open?: boolean
+          notification_sound_url?: string | null
+          theme_config?: Json | null
+          updated_at?: string
+          visa_card_config?: Json | null
+          zain_cash_config?: Json | null
+        }
+        Update: {
+          created_at?: string
+          email_receiver?: string | null
+          favicon_url?: string | null
+          hide_lovable_banner?: boolean | null
+          id?: string
+          is_store_open?: boolean
+          notification_sound_url?: string | null
+          theme_config?: Json | null
+          updated_at?: string
+          visa_card_config?: Json | null
+          zain_cash_config?: Json | null
+        }
+        Relationships: []
+      }
+      categories: {
+        Row: {
+          created_at: string | null
+          icon: string
+          id: string
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          icon: string
+          id: string
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          icon?: string
+          id?: string
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      changes_log: {
+        Row: {
+          action_type: string
+          admin_id: string
+          admin_name: string | null
+          created_at: string
+          details: Json | null
+          entity_id: string | null
+          entity_type: string
+          id: string
+        }
+        Insert: {
+          action_type: string
+          admin_id: string
+          admin_name?: string | null
+          created_at?: string
+          details?: Json | null
+          entity_id?: string | null
+          entity_type: string
+          id?: string
+        }
+        Update: {
+          action_type?: string
+          admin_id?: string
+          admin_name?: string | null
+          created_at?: string
+          details?: Json | null
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+        }
+        Relationships: []
+      }
+      feedback: {
+        Row: {
+          created_at: string
+          id: string
+          message: string
+          rating: number | null
+          status: string | null
+          subject: string
+          updated_at: string
+          user_email: string | null
+          user_id: string | null
+          user_name: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message: string
+          rating?: number | null
+          status?: string | null
+          subject: string
+          updated_at?: string
+          user_email?: string | null
+          user_id?: string | null
+          user_name?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string
+          rating?: number | null
+          status?: string | null
+          subject?: string
+          updated_at?: string
+          user_email?: string | null
+          user_id?: string | null
+          user_name?: string | null
+        }
+        Relationships: []
+      }
       order_items: {
         Row: {
           created_at: string | null
@@ -17,6 +185,7 @@ export type Database = {
           price: number
           product_id: string
           quantity: number
+          selected_color: string | null
         }
         Insert: {
           created_at?: string | null
@@ -25,6 +194,7 @@ export type Database = {
           price: number
           product_id: string
           quantity: number
+          selected_color?: string | null
         }
         Update: {
           created_at?: string | null
@@ -33,6 +203,7 @@ export type Database = {
           price?: number
           product_id?: string
           quantity?: number
+          selected_color?: string | null
         }
         Relationships: [
           {
@@ -54,12 +225,11 @@ export type Database = {
       orders: {
         Row: {
           created_at: string | null
-          customer_name: string
-          governorate: string
+          governorate: string | null
           id: string
-          notes: string | null
-          phone_number: string
-          region: string
+          payment_method: string | null
+          phone: string | null
+          shipping_address: string | null
           status: string | null
           total_amount: number
           updated_at: string | null
@@ -67,12 +237,11 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
-          customer_name: string
-          governorate: string
+          governorate?: string | null
           id?: string
-          notes?: string | null
-          phone_number: string
-          region: string
+          payment_method?: string | null
+          phone?: string | null
+          shipping_address?: string | null
           status?: string | null
           total_amount: number
           updated_at?: string | null
@@ -80,12 +249,11 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
-          customer_name?: string
-          governorate?: string
+          governorate?: string | null
           id?: string
-          notes?: string | null
-          phone_number?: string
-          region?: string
+          payment_method?: string | null
+          phone?: string | null
+          shipping_address?: string | null
           status?: string | null
           total_amount?: number
           updated_at?: string | null
@@ -95,67 +263,132 @@ export type Database = {
       }
       products: {
         Row: {
-          category: string
+          categories: string[] | null
+          colors: string[] | null
+          cover_image: string | null
           created_at: string | null
           description: string | null
+          discount_percentage: number | null
           id: string
-          image_url: string | null
-          in_stock: boolean | null
+          images: string[] | null
+          is_active: boolean | null
           name: string
+          options: Json | null
           price: number
+          stock_quantity: number | null
+          subcategories: string[] | null
           updated_at: string | null
         }
         Insert: {
-          category: string
+          categories?: string[] | null
+          colors?: string[] | null
+          cover_image?: string | null
           created_at?: string | null
           description?: string | null
+          discount_percentage?: number | null
           id?: string
-          image_url?: string | null
-          in_stock?: boolean | null
+          images?: string[] | null
+          is_active?: boolean | null
           name: string
+          options?: Json | null
           price: number
+          stock_quantity?: number | null
+          subcategories?: string[] | null
           updated_at?: string | null
         }
         Update: {
-          category?: string
+          categories?: string[] | null
+          colors?: string[] | null
+          cover_image?: string | null
           created_at?: string | null
           description?: string | null
+          discount_percentage?: number | null
           id?: string
-          image_url?: string | null
-          in_stock?: boolean | null
+          images?: string[] | null
+          is_active?: boolean | null
           name?: string
+          options?: Json | null
           price?: number
+          stock_quantity?: number | null
+          subcategories?: string[] | null
           updated_at?: string | null
         }
         Relationships: []
       }
       profiles: {
         Row: {
-          created_at: string | null
+          created_at: string
           email: string | null
           full_name: string | null
           id: string
-          phone: string | null
-          role: string | null
-          updated_at: string | null
+          updated_at: string
         }
         Insert: {
-          created_at?: string | null
+          created_at?: string
           email?: string | null
           full_name?: string | null
           id: string
-          phone?: string | null
-          role?: string | null
-          updated_at?: string | null
+          updated_at?: string
         }
         Update: {
-          created_at?: string | null
+          created_at?: string
           email?: string | null
           full_name?: string | null
           id?: string
-          phone?: string | null
-          role?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      subcategories: {
+        Row: {
+          category_id: string
+          created_at: string | null
+          icon: string
+          id: string
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          category_id: string
+          created_at?: string | null
+          icon: string
+          id: string
+          name: string
           updated_at?: string | null
+        }
+        Update: {
+          category_id?: string
+          created_at?: string | null
+          icon?: string
+          id?: string
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subcategories_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
         }
         Relationships: []
       }
@@ -164,10 +397,34 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      apply_active_discounts: {
+        Args: { product_ids?: string[] }
+        Returns: undefined
+      }
+      has_role: {
+        Args: {
+          _user_id: string
+          _role: Database["public"]["Enums"]["app_role"]
+        }
+        Returns: boolean
+      }
+      reset_all_product_discounts: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      update_all_products_discount: {
+        Args: { new_discount: number }
+        Returns: undefined
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "user" | "owner" | "order_manager"
+      product_category:
+        | "makeup"
+        | "perfumes"
+        | "flowers"
+        | "home"
+        | "personal_care"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -282,6 +539,15 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "user", "owner", "order_manager"],
+      product_category: [
+        "makeup",
+        "perfumes",
+        "flowers",
+        "home",
+        "personal_care",
+      ],
+    },
   },
 } as const
