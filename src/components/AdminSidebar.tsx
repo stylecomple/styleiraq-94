@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -121,11 +122,11 @@ const AdminSidebar = () => {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
-              onClick={() => navigate('/')}
+              onClick={() => navigate('/app/products')}
               className="w-full justify-start"
             >
               <Home className="w-4 h-4" />
-              <span>العودة للموقع</span>
+              <span>العودة للتطبيق</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>

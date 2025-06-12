@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
-import { ArrowRight, Eye, EyeOff } from 'lucide-react';
+import { ArrowRight, Eye, EyeOff, Sparkles, Heart } from 'lucide-react';
 
 const MobileAuth = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -77,15 +77,32 @@ const MobileAuth = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-50 to-purple-50 flex flex-col">
+    <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-indigo-50 flex flex-col relative overflow-hidden">
+      {/* Animated background elements */}
+      <div className="absolute inset-0">
+        {[...Array(15)].map((_, i) => (
+          <div
+            key={i}
+            className="absolute w-2 h-2 bg-pink-300/30 rounded-full animate-float"
+            style={{
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+              animationDelay: `${Math.random() * 3}s`,
+              animationDuration: `${3 + Math.random() * 2}s`
+            }}
+          />
+        ))}
+      </div>
+
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
+      <div className="relative z-10 bg-white/80 backdrop-blur-sm border-b border-gray-200 px-4 py-3 flex items-center justify-between">
         <Button
           variant="ghost"
           size="sm"
           onClick={handleSkip}
-          className="text-gray-600"
+          className="text-gray-600 flex items-center gap-2"
         >
+          <ArrowRight className="w-4 h-4" />
           تخطي
         </Button>
         <h1 className="text-lg font-semibold text-gray-800">
@@ -95,16 +112,28 @@ const MobileAuth = () => {
       </div>
 
       {/* Content */}
-      <div className="flex-1 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md border-0 shadow-xl">
+      <div className="relative z-10 flex-1 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md border-0 shadow-2xl bg-white/95 backdrop-blur-sm">
           <CardHeader className="text-center pb-6">
-            <div className="w-16 h-16 mx-auto bg-gradient-to-r from-pink-500 to-purple-600 rounded-full flex items-center justify-center mb-4">
-              <span className="text-2xl text-white">💄</span>
+            {/* Animated logo */}
+            <div className="relative mx-auto mb-4">
+              <div className="absolute -inset-3 bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 rounded-full blur opacity-30 animate-pulse"></div>
+              <div className="relative w-20 h-20 mx-auto bg-gradient-to-r from-pink-500 to-purple-600 rounded-full flex items-center justify-center animate-bounce-gentle">
+                <img 
+                  src="/lovable-uploads/44d2a604-8d2c-498a-9c37-e89e541a86cb.png" 
+                  alt="Style" 
+                  className="w-16 h-16 object-contain rounded-full"
+                />
+              </div>
+              {/* Floating icons */}
+              <Sparkles className="absolute -top-2 -right-2 w-6 h-6 text-yellow-500 animate-bounce delay-100" />
+              <Heart className="absolute -bottom-2 -left-2 w-5 h-5 text-pink-500 animate-bounce delay-300" />
             </div>
-            <CardTitle className="text-2xl font-bold bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent">
+            
+            <CardTitle className="text-3xl font-bold bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent">
               Style
             </CardTitle>
-            <CardDescription className="text-gray-600">
+            <CardDescription className="text-gray-600 mt-2">
               {isLogin ? 'ادخل بياناتك للوصول إلى حسابك' : 'أنشئ حساباً جديداً للتسوق'}
             </CardDescription>
           </CardHeader>
@@ -113,7 +142,7 @@ const MobileAuth = () => {
             <form onSubmit={handleSubmit} className="space-y-4">
               {!isLogin && (
                 <div className="space-y-2">
-                  <Label htmlFor="fullName">الاسم الكامل</Label>
+                  <Label htmlFor="fullName" className="text-gray-700">الاسم الكامل</Label>
                   <Input
                     id="fullName"
                     type="text"
@@ -122,13 +151,13 @@ const MobileAuth = () => {
                     onChange={(e) => setFullName(e.target.value)}
                     required
                     dir="rtl"
-                    className="h-12"
+                    className="h-12 bg-gray-50 border-gray-200 focus:bg-white transition-colors"
                   />
                 </div>
               )}
               
               <div className="space-y-2">
-                <Label htmlFor="email">البريد الإلكتروني</Label>
+                <Label htmlFor="email" className="text-gray-700">البريد الإلكتروني</Label>
                 <Input
                   id="email"
                   type="email"
@@ -137,12 +166,12 @@ const MobileAuth = () => {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   dir="ltr"
-                  className="h-12"
+                  className="h-12 bg-gray-50 border-gray-200 focus:bg-white transition-colors"
                 />
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="password">كلمة المرور</Label>
+                <Label htmlFor="password" className="text-gray-700">كلمة المرور</Label>
                 <div className="relative">
                   <Input
                     id="password"
@@ -152,13 +181,13 @@ const MobileAuth = () => {
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     dir="ltr"
-                    className="h-12 pr-10"
+                    className="h-12 pr-10 bg-gray-50 border-gray-200 focus:bg-white transition-colors"
                   />
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="absolute right-0 top-0 h-12 w-10"
+                    className="absolute right-0 top-0 h-12 w-10 text-gray-400 hover:text-gray-600"
                     onClick={() => setShowPassword(!showPassword)}
                   >
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -168,10 +197,17 @@ const MobileAuth = () => {
               
               <Button
                 type="submit"
-                className="w-full h-12 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-semibold rounded-xl"
+                className="w-full h-12 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-semibold rounded-xl shadow-lg transform transition-all duration-200 hover:scale-105"
                 disabled={loading}
               >
-                {loading ? 'جاري التحميل...' : (isLogin ? 'تسجيل الدخول' : 'إنشاء الحساب')}
+                {loading ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    جاري التحميل...
+                  </div>
+                ) : (
+                  isLogin ? 'تسجيل الدخول' : 'إنشاء الحساب'
+                )}
               </Button>
             </form>
             
@@ -179,7 +215,7 @@ const MobileAuth = () => {
               <Button
                 variant="link"
                 onClick={() => setIsLogin(!isLogin)}
-                className="text-pink-600 font-medium"
+                className="text-pink-600 font-medium hover:text-purple-600 transition-colors"
               >
                 {isLogin ? 'ليس لديك حساب؟ أنشئ حساباً جديداً' : 'لديك حساب؟ سجل الدخول'}
               </Button>

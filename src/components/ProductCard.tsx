@@ -86,32 +86,32 @@ const ProductCard = ({ product }: ProductCardProps) => {
 
   return (
     <Card 
-      className="group overflow-hidden border-0 shadow-md hover:shadow-lg transition-all duration-200 bg-white cursor-pointer h-80 flex flex-col"
+      className="group overflow-hidden border-0 shadow-md hover:shadow-xl transition-all duration-300 bg-white cursor-pointer h-80 flex flex-col hover:scale-105"
       onClick={handleViewProduct}
     >
-      <div className="relative overflow-hidden h-32 flex-shrink-0">
+      <div className="relative overflow-hidden h-36 flex-shrink-0">
         <img
           src={product.cover_image || '/placeholder.svg'}
           alt={product.name}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
         />
         
-        {/* Discount badge - only show if there's a valid discount */}
+        {/* Discount badge */}
         {hasValidDiscount && (
-          <Badge className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white text-xs font-bold">
+          <Badge className="absolute top-2 right-2 bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white text-xs font-bold shadow-lg animate-pulse">
             -{product.discount_percentage}%
           </Badge>
         )}
       </div>
 
-      <CardContent className="p-3 flex flex-col flex-1">
+      <CardContent className="p-3 flex flex-col flex-1 relative">
         <h3 className="font-semibold text-sm mb-2 text-gray-800 line-clamp-2 min-h-[2.5rem]">
           {product.name}
         </h3>
         
         {/* Category and Subcategory with cool styling */}
         {(categoryName || subcategoryName) && (
-          <div className="flex flex-wrap gap-1 mb-3">
+          <div className="flex flex-wrap gap-1 mb-2">
             {categoryName && (
               <span className={`text-xs px-2 py-1 rounded-full font-medium ${getCategoryColor(categoryName)}`}>
                 {categoryName}
@@ -125,33 +125,34 @@ const ProductCard = ({ product }: ProductCardProps) => {
           </div>
         )}
 
-        {/* Price */}
-        <div className="flex items-center justify-between mb-3 flex-1">
-          <div className="flex flex-col">
-            {hasValidDiscount ? (
-              <>
-                <span className="text-lg font-bold text-pink-600">
-                  {Math.round(getEffectivePrice()).toLocaleString()} د.ع
-                </span>
-                <span className="text-xs text-gray-500 line-through">
-                  {product.price.toLocaleString()} د.ع
-                </span>
-              </>
-            ) : (
+        {/* Price - more compact spacing */}
+        <div className="flex flex-col mb-3">
+          {hasValidDiscount ? (
+            <>
               <span className="text-lg font-bold text-pink-600">
+                {Math.round(getEffectivePrice()).toLocaleString()} د.ع
+              </span>
+              <span className="text-xs text-gray-500 line-through">
                 {product.price.toLocaleString()} د.ع
               </span>
-            )}
-          </div>
+            </>
+          ) : (
+            <span className="text-lg font-bold text-pink-600">
+              {product.price.toLocaleString()} د.ع
+            </span>
+          )}
         </div>
 
-        <Button 
-          onClick={handleQuickAdd}
-          className="w-full bg-pink-500 hover:bg-pink-600 text-white font-medium py-2 rounded-md text-sm mt-auto"
-        >
-          <ShoppingCart className="w-4 h-4 mr-1" />
-          {hasOptions ? 'عرض' : 'أضف'}
-        </Button>
+        {/* Button - always visible at bottom */}
+        <div className="mt-auto">
+          <Button 
+            onClick={handleQuickAdd}
+            className="w-full bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-medium py-2 rounded-lg text-sm transition-all duration-300 shadow-md hover:shadow-lg transform hover:scale-105"
+          >
+            <ShoppingCart className="w-4 h-4 mr-1" />
+            {hasOptions ? 'عرض المنتج' : 'أضف للسلة'}
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );
