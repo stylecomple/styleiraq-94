@@ -3,9 +3,10 @@ import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Eye } from 'lucide-react';
+import { Eye, ShoppingCart } from 'lucide-react';
 import { Product } from '@/types';
 import { useNavigate } from 'react-router-dom';
+import { useCart } from '@/contexts/CartContext';
 
 interface ProductCardProps {
   product: Product;
@@ -13,9 +14,23 @@ interface ProductCardProps {
 
 const ProductCard = ({ product }: ProductCardProps) => {
   const navigate = useNavigate();
+  const { addToCart } = useCart();
 
   const handleViewProduct = () => {
     navigate(`/app/product/${product.id}`);
+  };
+
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const effectivePrice = getEffectivePrice();
+    addToCart({
+      id: product.id,
+      name: product.name,
+      price: effectivePrice,
+      originalPrice: product.price,
+      image: product.cover_image || '/placeholder.svg',
+      discountPercentage: product.discount_percentage,
+    });
   };
 
   const getEffectivePrice = () => {
@@ -113,13 +128,20 @@ const ProductCard = ({ product }: ProductCardProps) => {
           )}
         </div>
 
-        {/* View Product Button - always visible at bottom */}
-        <div className="mt-auto">
+        {/* Action buttons - fixed position at bottom */}
+        <div className="mt-auto flex gap-2">
           <Button 
-            className="w-full bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-medium py-2 rounded-lg text-sm transition-all duration-300 shadow-md hover:shadow-lg transform hover:scale-105"
+            className="flex-1 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-medium py-2 rounded-lg text-sm transition-all duration-300 shadow-md hover:shadow-lg transform hover:scale-105"
           >
             <Eye className="w-4 h-4 mr-1" />
-            عرض المنتج
+            عرض
+          </Button>
+          
+          <Button
+            onClick={handleAddToCart}
+            className="px-3 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-medium py-2 rounded-lg text-sm transition-all duration-300 shadow-md hover:shadow-lg transform hover:scale-105"
+          >
+            <ShoppingCart className="w-4 h-4" />
           </Button>
         </div>
       </CardContent>

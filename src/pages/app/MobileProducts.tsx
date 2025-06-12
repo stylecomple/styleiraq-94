@@ -91,16 +91,25 @@ const MobileProducts = () => {
     <>
       <MobileAppLayout title="جميع المنتجات" showBackButton={false}>
         <div className="space-y-6 animate-fade-in">
-          {/* App Logo Section */}
+          {/* App Logo Section - improved mobile design */}
           <div className="flex justify-center py-4 animate-slide-down">
             <div className="relative group">
-              <div className="absolute -inset-3 bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 rounded-full blur-md opacity-30 group-hover:opacity-50 transition-opacity duration-300" />
-              <div className="relative bg-white rounded-full p-4 shadow-lg transform transition-all duration-300 hover:scale-105">
-                <img 
-                  src="/lovable-uploads/44d2a604-8d2c-498a-9c37-e89e541a86cb.png" 
-                  alt="Style متجر الجمال والأناقة" 
-                  className="w-24 h-24 object-contain rounded-full"
-                />
+              {/* Animated background gradient */}
+              <div className="absolute -inset-3 bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 rounded-xl blur-md opacity-25 group-hover:opacity-45 transition-all duration-300 animate-pulse" />
+              
+              {/* Main logo container */}
+              <div className="relative bg-white rounded-xl p-4 shadow-lg transform transition-all duration-300 hover:scale-105 border border-pink-100">
+                <div className="w-20 h-20 mx-auto flex items-center justify-center bg-gradient-to-br from-pink-50 to-purple-50 rounded-lg">
+                  <img 
+                    src="/lovable-uploads/44d2a604-8d2c-498a-9c37-e89e541a86cb.png" 
+                    alt="Style متجر الجمال والأناقة" 
+                    className="w-16 h-16 object-contain filter drop-shadow-md"
+                  />
+                </div>
+                
+                {/* Mobile decorative elements */}
+                <div className="absolute -top-1 -right-1 w-4 h-4 bg-gradient-to-r from-pink-400 to-purple-500 rounded-full animate-bounce" style={{ animationDelay: '0.5s' }} />
+                <div className="absolute -bottom-1 -left-1 w-3 h-3 bg-gradient-to-r from-purple-400 to-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '1s' }} />
               </div>
             </div>
           </div>

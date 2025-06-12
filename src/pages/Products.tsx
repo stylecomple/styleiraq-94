@@ -74,16 +74,25 @@ const Products = () => {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      {/* Logo Section - bigger and circular */}
+      {/* Logo Section - improved design with better proportions */}
       <div className="flex justify-center mb-8">
         <div className="relative group">
-          <div className="absolute -inset-3 bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 rounded-full blur-md opacity-30 group-hover:opacity-50 transition-opacity duration-300" />
-          <div className="relative bg-white rounded-full p-5 shadow-lg transform transition-all duration-300 hover:scale-105">
-            <img 
-              src="/lovable-uploads/44d2a604-8d2c-498a-9c37-e89e541a86cb.png" 
-              alt="Style متجر الجمال والأناقة" 
-              className="w-28 h-28 object-contain rounded-full"
-            />
+          {/* Animated background gradient */}
+          <div className="absolute -inset-4 bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 rounded-2xl blur-lg opacity-20 group-hover:opacity-40 transition-all duration-500 animate-pulse" />
+          
+          {/* Main logo container */}
+          <div className="relative bg-white rounded-2xl p-6 shadow-xl transform transition-all duration-300 hover:scale-105 border border-pink-100">
+            <div className="w-32 h-32 mx-auto flex items-center justify-center bg-gradient-to-br from-pink-50 to-purple-50 rounded-xl">
+              <img 
+                src="/lovable-uploads/44d2a604-8d2c-498a-9c37-e89e541a86cb.png" 
+                alt="Style متجر الجمال والأناقة" 
+                className="w-24 h-24 object-contain filter drop-shadow-lg"
+              />
+            </div>
+            
+            {/* Decorative elements */}
+            <div className="absolute -top-2 -right-2 w-6 h-6 bg-gradient-to-r from-pink-400 to-purple-500 rounded-full animate-bounce" style={{ animationDelay: '0.5s' }} />
+            <div className="absolute -bottom-2 -left-2 w-4 h-4 bg-gradient-to-r from-purple-400 to-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '1s' }} />
           </div>
         </div>
       </div>
