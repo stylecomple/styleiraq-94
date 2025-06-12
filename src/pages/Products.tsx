@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -74,26 +73,31 @@ const Products = () => {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      {/* Logo Section - improved design with better proportions */}
+      {/* New Modern Logo Section */}
       <div className="flex justify-center mb-8">
-        <div className="relative group">
-          {/* Animated background gradient */}
-          <div className="absolute -inset-4 bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 rounded-2xl blur-lg opacity-20 group-hover:opacity-40 transition-all duration-500 animate-pulse" />
-          
-          {/* Main logo container */}
-          <div className="relative bg-white rounded-2xl p-6 shadow-xl transform transition-all duration-300 hover:scale-105 border border-pink-100">
-            <div className="w-32 h-32 mx-auto flex items-center justify-center bg-gradient-to-br from-pink-50 to-purple-50 rounded-xl">
-              <img 
-                src="/lovable-uploads/44d2a604-8d2c-498a-9c37-e89e541a86cb.png" 
-                alt="Style متجر الجمال والأناقة" 
-                className="w-24 h-24 object-contain filter drop-shadow-lg"
-              />
+        <div className="relative">
+          {/* Modern minimalist design */}
+          <div className="bg-white rounded-full p-8 shadow-2xl border-4 border-gradient-to-r from-pink-200 to-purple-200 hover:shadow-3xl transition-all duration-500 transform hover:scale-105">
+            <div className="relative">
+              {/* Main brand text */}
+              <div className="text-center">
+                <h1 className="text-4xl font-black bg-gradient-to-r from-pink-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent mb-2">
+                  Style
+                </h1>
+                <p className="text-sm font-medium text-gray-600 tracking-wide">
+                  متجر الجمال والأناقة
+                </p>
+              </div>
+              
+              {/* Decorative elements */}
+              <div className="absolute -top-3 -right-3 w-6 h-6 bg-gradient-to-r from-pink-400 to-rose-500 rounded-full animate-pulse"></div>
+              <div className="absolute -bottom-3 -left-3 w-4 h-4 bg-gradient-to-r from-purple-400 to-indigo-500 rounded-full animate-pulse" style={{ animationDelay: '1s' }}></div>
+              <div className="absolute top-1/2 -left-4 w-3 h-3 bg-gradient-to-r from-emerald-400 to-teal-500 rounded-full animate-bounce" style={{ animationDelay: '0.5s' }}></div>
             </div>
-            
-            {/* Decorative elements */}
-            <div className="absolute -top-2 -right-2 w-6 h-6 bg-gradient-to-r from-pink-400 to-purple-500 rounded-full animate-bounce" style={{ animationDelay: '0.5s' }} />
-            <div className="absolute -bottom-2 -left-2 w-4 h-4 bg-gradient-to-r from-purple-400 to-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '1s' }} />
           </div>
+          
+          {/* Background glow effect */}
+          <div className="absolute inset-0 bg-gradient-to-r from-pink-300 via-purple-300 to-indigo-300 rounded-full blur-xl opacity-20 -z-10 animate-pulse"></div>
         </div>
       </div>
 

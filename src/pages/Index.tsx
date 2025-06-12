@@ -45,7 +45,7 @@ const Index = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('products')
-        .select('name, discount_percentage')
+        .select('id, name, discount_percentage')
         .gt('discount_percentage', 0)
         .eq('is_active', true)
         .limit(10);

@@ -74,47 +74,47 @@ const ProductCard = ({ product }: ProductCardProps) => {
       className="group overflow-hidden border-0 shadow-md hover:shadow-xl transition-all duration-300 bg-white cursor-pointer h-80 flex flex-col hover:scale-105"
       onClick={handleViewProduct}
     >
-      <div className="relative overflow-hidden h-36 flex-shrink-0">
+      <div className="relative overflow-hidden h-32 flex-shrink-0">
         <img
           src={product.cover_image || '/placeholder.svg'}
           alt={product.name}
           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
         />
         
-        {/* Discount badge */}
+        {/* Discount badge - positioned to not interfere with content */}
         {hasValidDiscount && (
-          <Badge className="absolute top-2 right-2 bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white text-xs font-bold shadow-lg animate-pulse">
+          <Badge className="absolute top-1 right-1 bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white text-xs font-bold shadow-lg animate-pulse px-1.5 py-0.5">
             -{product.discount_percentage}%
           </Badge>
         )}
       </div>
 
-      <CardContent className="p-3 flex flex-col flex-1 relative">
-        <h3 className="font-semibold text-sm mb-2 text-gray-800 line-clamp-2 min-h-[2.5rem]">
+      <CardContent className="p-2.5 flex flex-col flex-1 relative">
+        <h3 className="font-semibold text-xs mb-1.5 text-gray-800 line-clamp-2 min-h-[2rem] leading-tight">
           {product.name}
         </h3>
         
-        {/* Category and Subcategory with cool styling */}
+        {/* Category and Subcategory with compact styling */}
         {(categoryName || subcategoryName) && (
-          <div className="flex flex-wrap gap-1 mb-2">
+          <div className="flex flex-wrap gap-1 mb-1.5">
             {categoryName && (
-              <span className={`text-xs px-2 py-1 rounded-full font-medium ${getCategoryColor(categoryName)}`}>
+              <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${getCategoryColor(categoryName)}`}>
                 {categoryName}
               </span>
             )}
             {subcategoryName && (
-              <span className={`text-xs px-2 py-1 rounded-full font-medium ${getSubcategoryColor(subcategoryName)}`}>
+              <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${getSubcategoryColor(subcategoryName)}`}>
                 {subcategoryName}
               </span>
             )}
           </div>
         )}
 
-        {/* Price - more compact spacing */}
-        <div className="flex flex-col mb-3">
+        {/* Price - compact spacing */}
+        <div className="flex flex-col mb-2">
           {hasValidDiscount ? (
             <>
-              <span className="text-lg font-bold text-pink-600">
+              <span className="text-sm font-bold text-pink-600">
                 {Math.round(getEffectivePrice()).toLocaleString()} د.ع
               </span>
               <span className="text-xs text-gray-500 line-through">
@@ -122,26 +122,26 @@ const ProductCard = ({ product }: ProductCardProps) => {
               </span>
             </>
           ) : (
-            <span className="text-lg font-bold text-pink-600">
+            <span className="text-sm font-bold text-pink-600">
               {product.price.toLocaleString()} د.ع
             </span>
           )}
         </div>
 
-        {/* Action buttons - fixed position at bottom */}
-        <div className="mt-auto flex gap-2">
+        {/* Action buttons - fixed position at bottom with smaller size */}
+        <div className="mt-auto flex gap-1.5">
           <Button 
-            className="flex-1 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-medium py-2 rounded-lg text-sm transition-all duration-300 shadow-md hover:shadow-lg transform hover:scale-105"
+            className="flex-1 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-medium py-1.5 rounded-md text-xs transition-all duration-300 shadow-md hover:shadow-lg transform hover:scale-105 h-7"
           >
-            <Eye className="w-4 h-4 mr-1" />
+            <Eye className="w-3 h-3 mr-1" />
             عرض
           </Button>
           
           <Button
             onClick={handleAddToCart}
-            className="px-3 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-medium py-2 rounded-lg text-sm transition-all duration-300 shadow-md hover:shadow-lg transform hover:scale-105"
+            className="px-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-medium py-1.5 rounded-md text-xs transition-all duration-300 shadow-md hover:shadow-lg transform hover:scale-105 h-7 min-w-[2.5rem]"
           >
-            <ShoppingCart className="w-4 h-4" />
+            <ShoppingCart className="w-3 h-3" />
           </Button>
         </div>
       </CardContent>

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -19,13 +18,11 @@ const MobileProducts = () => {
   const [showGuestPrompt, setShowGuestPrompt] = useState(false);
 
   useEffect(() => {
-    // Check if user has seen onboarding
     const hasSeenOnboarding = localStorage.getItem('hasSeenOnboarding');
     
     if (!hasSeenOnboarding) {
       setShowOnboarding(true);
     } else if (!user) {
-      // Show guest prompt for non-logged in users who have seen onboarding
       setShowGuestPrompt(true);
     }
   }, [user]);
@@ -41,7 +38,6 @@ const MobileProducts = () => {
       
       if (error) throw error;
       
-      // Transform raw database data to match Product interface
       return (data || []).map(rawProduct => {
         const options = (rawProduct as any).options || 
           ((rawProduct as any).colors ? (rawProduct as any).colors.map((color: string) => ({ name: color, price: undefined })) : []);
@@ -51,16 +47,20 @@ const MobileProducts = () => {
         return {
           ...rawProduct,
           options,
-          subcategories
+          subcategories,
+          discount_percentage: rawProduct.discount_percentage || 0
         } as Product;
       });
     }
   });
 
-  // Get products with discounts for the ticker
   const discountedProducts = products?.filter(product => 
     product.discount_percentage && product.discount_percentage > 0
-  ) || [];
+  ).map(product => ({
+    id: product.id,
+    name: product.name,
+    discount_percentage: product.discount_percentage || 0
+  })) || [];
 
   const handleOnboardingComplete = () => {
     localStorage.setItem('hasSeenOnboarding', 'true');
@@ -91,26 +91,27 @@ const MobileProducts = () => {
     <>
       <MobileAppLayout title="جميع المنتجات" showBackButton={false}>
         <div className="space-y-6 animate-fade-in">
-          {/* App Logo Section - improved mobile design */}
+          {/* New Mobile Logo Section */}
           <div className="flex justify-center py-4 animate-slide-down">
-            <div className="relative group">
-              {/* Animated background gradient */}
-              <div className="absolute -inset-3 bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 rounded-xl blur-md opacity-25 group-hover:opacity-45 transition-all duration-300 animate-pulse" />
-              
-              {/* Main logo container */}
-              <div className="relative bg-white rounded-xl p-4 shadow-lg transform transition-all duration-300 hover:scale-105 border border-pink-100">
-                <div className="w-20 h-20 mx-auto flex items-center justify-center bg-gradient-to-br from-pink-50 to-purple-50 rounded-lg">
-                  <img 
-                    src="/lovable-uploads/44d2a604-8d2c-498a-9c37-e89e541a86cb.png" 
-                    alt="Style متجر الجمال والأناقة" 
-                    className="w-16 h-16 object-contain filter drop-shadow-md"
-                  />
+            <div className="relative">
+              {/* Mobile optimized modern design */}
+              <div className="bg-white rounded-2xl p-4 shadow-xl border-2 border-gradient-to-r from-pink-200 to-purple-200 hover:shadow-2xl transition-all duration-300 transform hover:scale-105">
+                <div className="text-center relative">
+                  <h1 className="text-2xl font-black bg-gradient-to-r from-pink-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent mb-1">
+                    Style
+                  </h1>
+                  <p className="text-xs font-medium text-gray-600 tracking-wide">
+                    متجر الجمال والأناقة
+                  </p>
+                  
+                  {/* Mobile decorative elements */}
+                  <div className="absolute -top-2 -right-2 w-4 h-4 bg-gradient-to-r from-pink-400 to-rose-500 rounded-full animate-pulse"></div>
+                  <div className="absolute -bottom-2 -left-2 w-3 h-3 bg-gradient-to-r from-purple-400 to-indigo-500 rounded-full animate-pulse" style={{ animationDelay: '1s' }}></div>
                 </div>
-                
-                {/* Mobile decorative elements */}
-                <div className="absolute -top-1 -right-1 w-4 h-4 bg-gradient-to-r from-pink-400 to-purple-500 rounded-full animate-bounce" style={{ animationDelay: '0.5s' }} />
-                <div className="absolute -bottom-1 -left-1 w-3 h-3 bg-gradient-to-r from-purple-400 to-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '1s' }} />
               </div>
+              
+              {/* Background glow */}
+              <div className="absolute inset-0 bg-gradient-to-r from-pink-300 via-purple-300 to-indigo-300 rounded-2xl blur-lg opacity-15 -z-10 animate-pulse"></div>
             </div>
           </div>
 
