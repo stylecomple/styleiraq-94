@@ -13,7 +13,8 @@ import {
   FolderPlus,
   Crown,
   LogOut,
-  Home
+  Home,
+  Plus
 } from 'lucide-react';
 import {
   Sidebar,
@@ -31,13 +32,16 @@ import {
 const AdminSidebar = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { isAdmin, isOwner, isOrderManager, signOut } = useAuth();
+  const { isAdmin, isOwner, isOrderManager, isProductsAdder, signOut } = useAuth();
 
   const isFullAdmin = isAdmin || isOwner;
 
   const mainItems = [
     ...(isFullAdmin ? [
       { title: 'المنتجات', url: '/admin', icon: Package, id: 'products' },
+    ] : []),
+    ...(isProductsAdder && !isFullAdmin ? [
+      { title: 'إضافة منتجات', url: '/admin', icon: Plus, id: 'products' },
     ] : []),
     { title: 'الطلبات', url: '/admin', icon: BarChart3, id: 'orders' },
     ...(isFullAdmin ? [
@@ -71,7 +75,8 @@ const AdminSidebar = () => {
           <div>
             <h2 className="font-semibold text-sm">لوحة الإدارة</h2>
             <p className="text-xs text-muted-foreground">
-              {isOrderManager && !isFullAdmin ? 'إدارة الطلبات' : 'إدارة شاملة'}
+              {isProductsAdder && !isFullAdmin ? 'إضافة المنتجات' : 
+               isOrderManager && !isFullAdmin ? 'إدارة الطلبات' : 'إدارة شاملة'}
             </p>
           </div>
         </div>

@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import MobileAppLayout from '@/components/MobileAppLayout';
 import ProductCard from '@/components/ProductCard';
@@ -16,53 +16,44 @@ import { useNavigate } from 'react-router-dom';
 const MobileProducts = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [currentDiscountIndex, setCurrentDiscountIndex] = useState(0);
-  const [isCheckingDiscounts, setIsCheckingDiscounts] = useState(true);
   const {
     cachedData,
     cacheStatus
   } = useCache();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
-  // Quick discount check query
-  const { data: discountCheckResult, isLoading: isDiscountLoading } = useQuery({
-    queryKey: ['quick-discount-check'],
+  // Optimized discount check query - runs immediately without blocking UI
+  const { data: discountedProducts, isLoading: isDiscountLoading } = useQuery({
+    queryKey: ['mobile-discounted-products'],
     queryFn: async () => {
-      console.log('Quick discount check...');
+      console.log('Fetching discounted products...');
       
-      // Check cached data first
-      if (cachedData?.discounts) {
-        return {
-          hasActiveDiscounts: cachedData.discounts.activeDiscounts?.length > 0,
-          hasDiscountedProducts: cachedData.discounts.discountedProducts?.length > 0
-        };
+      // Check cached data first for immediate response
+      if (cachedData?.discounts?.discountedProducts) {
+        console.log('Using cached discounted products');
+        return cachedData.discounts.discountedProducts;
       }
 
-      // Fallback to database check
-      const [activeDiscountsResult, discountedProductsResult] = await Promise.all([
-        supabase
-          .from('active_discounts')
-          .select('id')
-          .eq('is_active', true)
-          .limit(1),
-        supabase
-          .from('products')
-          .select('id')
-          .gt('discount_percentage', 0)
-          .eq('is_active', true)
-          .limit(1)
-      ]);
+      // Fallback to database query for fresh data
+      const { data, error } = await supabase
+        .from('products')
+        .select('id, name, price, cover_image, discount_percentage')
+        .gt('discount_percentage', 0)
+        .eq('is_active', true)
+        .order('discount_percentage', { ascending: false });
 
-      return {
-        hasActiveDiscounts: (activeDiscountsResult.data?.length || 0) > 0,
-        hasDiscountedProducts: (discountedProductsResult.data?.length || 0) > 0
-      };
-    }
+      if (error) throw error;
+      return data || [];
+    },
+    staleTime: 30000, // Cache for 30 seconds to improve performance
+    refetchOnWindowFocus: false, // Don't refetch when window regains focus
   });
 
   // Use cached data if available, otherwise fetch from database
   const {
     data: products,
-    isLoading
+    isLoading: isProductsLoading
   } = useQuery({
     queryKey: ['mobile-products'],
     queryFn: async (): Promise<Product[]> => {
@@ -107,8 +98,10 @@ const MobileProducts = () => {
         } as Product;
       });
     },
-    enabled: !cachedData || cacheStatus === 'complete'
+    enabled: !cachedData || cacheStatus === 'complete',
+    staleTime: 60000, // Cache for 1 minute
   });
+
   const {
     data: categories
   } = useQuery({
@@ -129,18 +122,48 @@ const MobileProducts = () => {
       if (error) throw error;
       return data;
     },
-    enabled: !cachedData || cacheStatus === 'complete'
+    enabled: !cachedData || cacheStatus === 'complete',
+    staleTime: 300000, // Cache categories for 5 minutes
   });
 
-  // Update discount checking state when discount check is complete
+  // Set up real-time updates for discounts
   useEffect(() => {
-    if (!isDiscountLoading && discountCheckResult) {
-      // Small delay for smooth UX
-      setTimeout(() => {
-        setIsCheckingDiscounts(false);
-      }, 300);
-    }
-  }, [isDiscountLoading, discountCheckResult]);
+    const channel = supabase
+      .channel('discount-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'active_discounts'
+        },
+        () => {
+          console.log('Discount updated, refreshing...');
+          // Invalidate both product and discount queries
+          queryClient.invalidateQueries({ queryKey: ['mobile-discounted-products'] });
+          queryClient.invalidateQueries({ queryKey: ['mobile-products'] });
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'products',
+          filter: 'discount_percentage.gt.0'
+        },
+        () => {
+          console.log('Product discount updated, refreshing...');
+          queryClient.invalidateQueries({ queryKey: ['mobile-discounted-products'] });
+          queryClient.invalidateQueries({ queryKey: ['mobile-products'] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
 
   // Filter products based on category
   const filteredProducts = products?.filter(product => {
@@ -148,58 +171,38 @@ const MobileProducts = () => {
     return matchesCategory;
   }) || [];
 
-  // Get discounted products with full details including images
-  const discountedProducts = React.useMemo(() => {
-    // Don't show discounted products while checking
-    if (isCheckingDiscounts) return [];
-
-    // First try to get from cached discount data and match with full product data
-    if (cachedData?.discounts?.discountedProducts && products) {
-      return cachedData.discounts.discountedProducts.map((discountProduct: any) => {
-        const fullProduct = products.find(p => p.id === discountProduct.id);
-        return fullProduct || discountProduct;
-      }).filter(product => product.discount_percentage > 0);
-    }
-
-    // Fallback to filtering current products
-    return products?.filter(product => product.discount_percentage && product.discount_percentage > 0) || [];
-  }, [cachedData?.discounts?.discountedProducts, products, isCheckingDiscounts]);
-
   // Auto-rotate discount carousel
   useEffect(() => {
-    if (discountedProducts.length > 1) {
+    if (discountedProducts && discountedProducts.length > 1) {
       const interval = setInterval(() => {
         setCurrentDiscountIndex(prev => (prev + 1) % discountedProducts.length);
       }, 3000); // Change every 3 seconds
 
       return () => clearInterval(interval);
     }
-  }, [discountedProducts.length]);
+  }, [discountedProducts?.length]);
+
   const handleClearFilters = () => {
     setSelectedCategory('');
   };
+  
   const handleDiscountProductClick = (productId: string) => {
     navigate(`/app/product/${productId}`);
   };
 
   // Show loading skeletons while data is loading
-  const showProductsLoading = isLoading || (cachedData && cacheStatus !== 'complete');
+  const showProductsLoading = isProductsLoading || (cachedData && cacheStatus !== 'complete');
   const showCategoriesLoading = !categories;
 
   return (
     <MobileAppLayout title="المنتجات" showBackButton={false}>
       <div className="space-y-4 p-4">
-        {/* Enhanced Discount Products Carousel with skeleton while checking */}
-        {isCheckingDiscounts ? (
+        {/* Enhanced Discount Products Carousel with skeleton while loading */}
+        {isDiscountLoading ? (
           <DiscountCarouselSkeleton />
-        ) : discountedProducts.length > 0 ? (
+        ) : discountedProducts && discountedProducts.length > 0 ? (
           <div className="relative h-32 bg-gradient-to-r from-red-500 to-pink-500 rounded-xl overflow-hidden shadow-lg">
             <div className="absolute inset-0 bg-black/20"></div>
-            
-            {/* Real-time discount indicator */}
-            <div className="absolute top-2 right-2 z-10">
-              
-            </div>
             
             {discountedProducts.map((product, index) => <div key={product.id} className={`absolute inset-0 transition-all duration-700 ease-in-out cursor-pointer ${index === currentDiscountIndex ? 'opacity-100 translate-x-0' : index < currentDiscountIndex ? 'opacity-0 -translate-x-full' : 'opacity-0 translate-x-full'}`} onClick={() => handleDiscountProductClick(product.id)}>
                 <div className="flex items-center h-full p-4 text-white">

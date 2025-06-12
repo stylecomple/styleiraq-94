@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -8,10 +8,12 @@ interface AuthContextType {
   isAdmin: boolean;
   isOwner: boolean;
   isOrderManager: boolean;
+  isProductsAdder: boolean;
   loading: boolean;
-  signUp: (email: string, password: string, fullName: string) => Promise<{ error: any }>;
+  signUp: (email: string, password: string, fullName?: string) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
+  updateProfile: (fullName: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -24,111 +26,64 @@ export const useAuth = () => {
   return context;
 };
 
-export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isOwner, setIsOwner] = useState(false);
   const [isOrderManager, setIsOrderManager] = useState(false);
+  const [isProductsAdder, setIsProductsAdder] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const checkUserRoles = async (userId: string) => {
+  const checkUserRole = useCallback(async (role: string) => {
+    if (!user) return false;
+    
     try {
-      console.log('Checking roles for user:', userId);
-      const { data: roles, error } = await supabase
+      const { data, error } = await supabase
         .from('user_roles')
         .select('role')
-        .eq('user_id', userId);
+        .eq('user_id', user.id)
+        .eq('role', role)
+        .single();
       
-      if (error) {
-        console.error('Error fetching user roles:', error);
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error checking user role:', error);
+        return false;
+      }
+      
+      return !!data;
+    } catch (error) {
+      console.error('Error checking user role:', error);
+      return false;
+    }
+  }, [user]);
+
+  useEffect(() => {
+    const checkRoles = async () => {
+      if (user) {
+        const [admin, owner, orderManager, productsAdder] = await Promise.all([
+          checkUserRole('admin'),
+          checkUserRole('owner'),
+          checkUserRole('order_manager'),
+          checkUserRole('products_adder')
+        ]);
+        
+        setIsAdmin(admin);
+        setIsOwner(owner);
+        setIsOrderManager(orderManager);
+        setIsProductsAdder(productsAdder);
+      } else {
         setIsAdmin(false);
         setIsOwner(false);
         setIsOrderManager(false);
-        return;
-      }
-
-      console.log('User roles found:', roles);
-      const userRoles = roles?.map(r => r.role) || [];
-      const adminStatus = userRoles.includes('admin');
-      const ownerStatus = userRoles.includes('owner');
-      const orderManagerStatus = userRoles.includes('order_manager');
-      
-      setIsAdmin(adminStatus);
-      setIsOwner(ownerStatus);
-      setIsOrderManager(orderManagerStatus);
-      
-      console.log('Role status:', { isAdmin: adminStatus, isOwner: ownerStatus, isOrderManager: orderManagerStatus });
-    } catch (error) {
-      console.error('Error in checkUserRoles:', error);
-      setIsAdmin(false);
-      setIsOwner(false);
-      setIsOrderManager(false);
-    }
-  };
-
-  useEffect(() => {
-    let mounted = true;
-
-    const initializeAuth = async () => {
-      try {
-        console.log('Initializing auth...');
-        
-        const { data: { session: initialSession } } = await supabase.auth.getSession();
-        console.log('Initial session check:', initialSession?.user?.id);
-        
-        if (!mounted) return;
-
-        setSession(initialSession);
-        setUser(initialSession?.user ?? null);
-        
-        setLoading(false);
-        
-        if (initialSession?.user) {
-          checkUserRoles(initialSession.user.id);
-        } else {
-          setIsAdmin(false);
-          setIsOwner(false);
-          setIsOrderManager(false);
-        }
-      } catch (error) {
-        console.error('Error initializing auth:', error);
-        if (mounted) {
-          setLoading(false);
-        }
+        setIsProductsAdder(false);
       }
     };
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.id);
-        
-        if (!mounted) return;
+    checkRoles();
+  }, [user, checkUserRole]);
 
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-        setLoading(false);
-        
-        if (session?.user) {
-          checkUserRoles(session.user.id);
-        } else {
-          setIsAdmin(false);
-          setIsOwner(false);
-          setIsOrderManager(false);
-        }
-      }
-    );
-
-    initializeAuth();
-
-    return () => {
-      mounted = false;
-      subscription.unsubscribe();
-    };
-  }, []);
-
-  const signUp = async (email: string, password: string, fullName: string) => {
+  const signUp = async (email: string, password: string, fullName?: string) => {
     const redirectUrl = `${window.location.origin}/`;
     
     const { error } = await supabase.auth.signUp({
@@ -166,6 +121,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setIsAdmin(false);
       setIsOwner(false);
       setIsOrderManager(false);
+      setIsProductsAdder(false);
       
       console.log('SignOut completed successfully');
     } catch (error) {
@@ -174,16 +130,27 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  const updateProfile = async (fullName: string) => {
+    const { error } = await supabase.auth.update({
+      data: {
+        full_name: fullName
+      }
+    });
+    return { error };
+  };
+
   const value = {
     user,
     session,
     isAdmin,
     isOwner,
     isOrderManager,
+    isProductsAdder,
     loading,
     signUp,
     signIn,
-    signOut
+    signOut,
+    updateProfile
   };
 
   return (

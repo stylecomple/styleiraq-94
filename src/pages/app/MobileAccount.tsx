@@ -1,204 +1,175 @@
-
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import MobileAppLayout from '@/components/MobileAppLayout';
 import { useAuth } from '@/contexts/AuthContext';
-import { useAppTheme } from '@/contexts/AppThemeContext';
-import { useCache } from '@/contexts/CacheContext';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { User, Package, LogOut, Shield, Settings, RefreshCw } from 'lucide-react';
-import { toast } from 'sonner';
+import { useToast } from '@/components/ui/use-toast';
+import {
+  User,
+  Settings,
+  Package,
+  ChevronLeft,
+  MessageCircle,
+  HelpCircle,
+  LogOut,
+  ExternalLink
+} from 'lucide-react';
 
 const MobileAccount = () => {
+  const { user, isAdmin, isOwner, isOrderManager, isProductsAdder, signOut } = useAuth();
   const navigate = useNavigate();
-  const { user, signOut, isAdmin, isOwner, isOrderManager } = useAuth();
-  const { theme } = useAppTheme();
-  const { clearCache } = useCache();
+  const { toast } = useToast();
 
   const handleSignOut = async () => {
     try {
       await signOut();
-      navigate('/app/products');
-    } catch (error) {
-      console.error('Error signing out:', error);
-    }
-  };
-
-  const handleResetApp = async () => {
-    try {
-      // Clear cache
-      clearCache();
-      
-      // Show success message
-      toast.success('تم إعادة تعيين التطبيق بنجاح');
-      
-      // Navigate to splash screen to re-cache everything
-      navigate('/app/splash');
-    } catch (error) {
-      console.error('Error resetting app:', error);
-      toast.error('حدث خطأ أثناء إعادة التعيين');
+      navigate('/auth');
+      toast({
+        title: 'تم تسجيل الخروج',
+        description: 'تم تسجيل خروجك بنجاح',
+      });
+    } catch (error: any) {
+      toast({
+        title: 'فشل تسجيل الخروج',
+        description: error.message || 'حدث خطأ أثناء تسجيل الخروج',
+        variant: 'destructive',
+      });
     }
   };
 
   const handleAdminPanel = () => {
-    // Navigate to the admin panel page
     navigate('/admin');
   };
 
-  const handleSettings = () => {
-    navigate('/app/settings');
-  };
-
-  // Show admin panel button for any user with admin privileges
-  const showAdminPanel = user && (isAdmin || isOwner || isOrderManager);
-
-  if (!user) {
-    return (
-      <MobileAppLayout title="حسابي">
-        <div className="flex-1 flex items-center justify-center p-4">
-          <Card className={`w-full max-w-md ${
-            theme === 'dark' 
-              ? 'bg-gray-800 border-gray-700' 
-              : 'bg-white border-gray-200'
-          }`}>
-            <CardContent className="p-6 text-center">
-              <User className={`w-16 h-16 mx-auto mb-4 ${
-                theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
-              }`} />
-              <h2 className={`text-xl font-semibold mb-4 ${
-                theme === 'dark' ? 'text-white' : 'text-gray-800'
-              }`}>
-                تسجيل الدخول مطلوب
-              </h2>
-              <p className={`mb-6 ${
-                theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-              }`}>
-                يرجى تسجيل الدخول لعرض معلومات حسابك
-              </p>
-              <Button 
-                onClick={() => navigate('/app/auth')}
-                className="w-full bg-pink-600 hover:bg-pink-700"
-              >
-                تسجيل الدخول
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      </MobileAppLayout>
-    );
-  }
+  const hasAdminAccess = isAdmin || isOwner || isOrderManager || isProductsAdder;
 
   return (
-    <MobileAppLayout title="حسابي">
+    <MobileAppLayout title="حسابي" showBackButton={false}>
       <div className="p-4 space-y-6">
-        {/* User Info */}
-        <Card className={`${
-          theme === 'dark' 
-            ? 'bg-gray-800 border-gray-700' 
-            : 'bg-white border-gray-200'
-        }`}>
-          <CardHeader>
-            <CardTitle className={`flex items-center gap-2 ${
-              theme === 'dark' ? 'text-white' : 'text-gray-900'
-            }`}>
-              <User className="w-5 h-5" />
-              معلومات المستخدم
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
+        {/* User Profile Section */}
+        <div className="bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl p-6 text-white">
+          <div className="flex items-center gap-4">
+            <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center">
+              <User className="w-8 h-8" />
+            </div>
             <div>
-              <p className={`text-sm ${
-                theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-              }`}>الاسم</p>
-              <p className={`font-semibold ${
-                theme === 'dark' ? 'text-white' : 'text-gray-900'
-              }`}>
-                {user.user_metadata?.full_name || 'غير محدد'}
+              <h2 className="text-xl font-bold">
+                {user?.user_metadata?.full_name || 'مستخدم'}
+              </h2>
+              <p className="text-purple-100 text-sm">
+                {user?.email}
               </p>
+              <div className="flex gap-2 mt-2">
+                {isOwner && (
+                  <span className="bg-yellow-500 text-yellow-900 px-2 py-1 rounded-full text-xs font-bold">
+                    مالك
+                  </span>
+                )}
+                {isAdmin && !isOwner && (
+                  <span className="bg-red-500 text-white px-2 py-1 rounded-full text-xs font-bold">
+                    مدير
+                  </span>
+                )}
+                {isOrderManager && !isAdmin && !isOwner && (
+                  <span className="bg-blue-500 text-white px-2 py-1 rounded-full text-xs font-bold">
+                    مدير طلبات
+                  </span>
+                )}
+                {isProductsAdder && !isAdmin && !isOwner && (
+                  <span className="bg-green-500 text-white px-2 py-1 rounded-full text-xs font-bold">
+                    مضيف منتجات
+                  </span>
+                )}
+              </div>
             </div>
-            <div>
-              <p className={`text-sm ${
-                theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-              }`}>البريد الإلكتروني</p>
-              <p className={`font-semibold ${
-                theme === 'dark' ? 'text-white' : 'text-gray-900'
-              }`}>{user.email}</p>
+          </div>
+        </div>
+
+        {/* Admin Panel Access */}
+        {hasAdminAccess && (
+          <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl p-4 text-white">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
+                  <Settings className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="font-bold">لوحة التحكم</h3>
+                  <p className="text-sm text-indigo-100">
+                    {isProductsAdder && !isAdmin && !isOwner ? 'إضافة وإدارة المنتجات' :
+                     isOrderManager && !isAdmin && !isOwner ? 'إدارة الطلبات' : 'إدارة شاملة للمتجر'}
+                  </p>
+                </div>
+              </div>
+              <Button 
+                variant="secondary" 
+                size="sm" 
+                onClick={handleAdminPanel}
+                className="bg-white/20 text-white border-white/30 hover:bg-white/30"
+              >
+                <ExternalLink className="w-4 h-4 mr-2" />
+                فتح
+              </Button>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        )}
 
         {/* Quick Actions */}
-        <div className="space-y-4">
-          <h3 className={`text-lg font-semibold ${
-            theme === 'dark' ? 'text-white' : 'text-gray-900'
-          }`}>الإجراءات السريعة</h3>
+        <div className="space-y-3">
+          <h3 className="font-semibold text-gray-800">الإجراءات السريعة</h3>
           
-          <Button
+          <Button 
+            variant="outline" 
+            className="w-full justify-start h-12"
             onClick={() => navigate('/app/orders')}
-            variant="outline"
-            className={`w-full justify-start gap-3 h-12 ${
-              theme === 'dark'
-                ? 'border-gray-600 text-gray-300 hover:bg-gray-700 hover:text-white'
-                : 'border-gray-300 text-gray-700 hover:bg-gray-50'
-            }`}
           >
-            <Package className="w-5 h-5" />
-            طلباتي
+            <Package className="w-5 h-5 mr-3 text-blue-600" />
+            <span>طلباتي</span>
+            <ChevronLeft className="w-4 h-4 mr-auto" />
           </Button>
 
-          <Button
-            onClick={handleSettings}
-            variant="outline"
-            className={`w-full justify-start gap-3 h-12 ${
-              theme === 'dark'
-                ? 'border-gray-600 text-gray-300 hover:bg-gray-700 hover:text-white'
-                : 'border-gray-300 text-gray-700 hover:bg-gray-50'
-            }`}
+          <Button 
+            variant="outline" 
+            className="w-full justify-start h-12"
+            onClick={() => navigate('/app/settings')}
           >
-            <Settings className="w-5 h-5" />
-            الإعدادات
+            <Settings className="w-5 h-5 mr-3 text-gray-600" />
+            <span>الإعدادات</span>
+            <ChevronLeft className="w-4 h-4 mr-auto" />
+          </Button>
+        </div>
+
+        {/* Help & Support */}
+        <div className="space-y-3">
+          <h3 className="font-semibold text-gray-800">المساعدة والدعم</h3>
+          
+          <Button 
+            variant="outline" 
+            className="w-full justify-start h-12"
+          >
+            <MessageCircle className="w-5 h-5 mr-3 text-green-600" />
+            <span>تواصل معنا</span>
+            <ChevronLeft className="w-4 h-4 mr-auto" />
           </Button>
 
-          <Button
-            onClick={handleResetApp}
-            variant="outline"
-            className={`w-full justify-start gap-3 h-12 ${
-              theme === 'dark'
-                ? 'border-orange-500 text-orange-400 hover:bg-orange-900/30'
-                : 'border-orange-200 text-orange-600 hover:bg-orange-50'
-            }`}
+          <Button 
+            variant="outline" 
+            className="w-full justify-start h-12"
           >
-            <RefreshCw className="w-5 h-5" />
-            إعادة تعيين التطبيق
+            <HelpCircle className="w-5 h-5 mr-3 text-orange-600" />
+            <span>الأسئلة الشائعة</span>
+            <ChevronLeft className="w-4 h-4 mr-auto" />
           </Button>
+        </div>
 
-          {/* Admin Panel Button - Show for admin, owner, or order manager */}
-          {showAdminPanel && (
-            <Button
-              onClick={handleAdminPanel}
-              variant="outline"
-              className={`w-full justify-start gap-3 h-12 ${
-                theme === 'dark'
-                  ? 'border-indigo-500 text-indigo-400 hover:bg-indigo-900/30'
-                  : 'border-indigo-200 text-indigo-600 hover:bg-indigo-50'
-              }`}
-            >
-              <Shield className="w-5 h-5" />
-              لوحة التحكم
-            </Button>
-          )}
-
-          <Button
+        {/* Sign Out */}
+        <div className="pt-4">
+          <Button 
+            variant="destructive" 
+            className="w-full h-12"
             onClick={handleSignOut}
-            variant="outline"
-            className={`w-full justify-start gap-3 h-12 ${
-              theme === 'dark'
-                ? 'border-red-500 text-red-400 hover:bg-red-900/30'
-                : 'border-red-200 text-red-600 hover:bg-red-50'
-            }`}
           >
-            <LogOut className="w-5 h-5" />
+            <LogOut className="w-5 h-5 mr-3" />
             تسجيل الخروج
           </Button>
         </div>

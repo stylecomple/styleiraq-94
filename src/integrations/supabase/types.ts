@@ -411,6 +411,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      manage_discount_category: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       reset_all_product_discounts: {
         Args: Record<PropertyKey, never>
         Returns: undefined
@@ -421,7 +425,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "user" | "owner" | "order_manager"
+      app_role: "admin" | "user" | "owner" | "order_manager" | "products_adder"
       product_category:
         | "makeup"
         | "perfumes"
@@ -543,7 +547,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "user", "owner", "order_manager"],
+      app_role: ["admin", "user", "owner", "order_manager", "products_adder"],
       product_category: [
         "makeup",
         "perfumes",
