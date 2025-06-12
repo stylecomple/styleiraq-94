@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -35,13 +36,13 @@ const Products = () => {
     selectedSubcategory,
   });
 
-  // Get all products for discount ticker
+  // Get all products for discount ticker - fixed to include price
   const { data: allProductsData } = useQuery({
     queryKey: ['all-products-for-discounts'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('products')
-        .select('id, name, discount_percentage')
+        .select('id, name, price, discount_percentage')
         .eq('is_active', true)
         .gt('discount_percentage', 0);
       
