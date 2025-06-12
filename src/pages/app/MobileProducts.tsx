@@ -1,19 +1,20 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import MobileAppLayout from '@/components/MobileAppLayout';
 import ProductCard from '@/components/ProductCard';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search, Filter, SlidersHorizontal } from 'lucide-react';
+import { Filter, SlidersHorizontal } from 'lucide-react';
 import { Product } from '@/types';
 import { useCache } from '@/contexts/CacheContext';
+import { useNavigate } from 'react-router-dom';
 
 const MobileProducts = () => {
-  const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [currentDiscountIndex, setCurrentDiscountIndex] = useState(0);
   const { cachedData, cacheStatus } = useCache();
+  const navigate = useNavigate();
 
   // Use cached data if available, otherwise fetch from database
   const { data: products, isLoading } = useQuery({
@@ -85,20 +86,36 @@ const MobileProducts = () => {
     enabled: !cachedData || cacheStatus === 'complete'
   });
 
-  // Filter products based on search term and category
+  // Filter products based on category
   const filteredProducts = products?.filter(product => {
-    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         product.description?.toLowerCase().includes(searchTerm.toLowerCase());
-    
     const matchesCategory = !selectedCategory || 
                            (product.categories && product.categories.includes(selectedCategory));
     
-    return matchesSearch && matchesCategory;
+    return matchesCategory;
   }) || [];
 
+  // Get products with discounts for the carousel
+  const discountedProducts = products?.filter(product => 
+    product.discount_percentage && product.discount_percentage > 0
+  ) || [];
+
+  // Auto-rotate discount carousel
+  useEffect(() => {
+    if (discountedProducts.length > 1) {
+      const interval = setInterval(() => {
+        setCurrentDiscountIndex((prev) => (prev + 1) % discountedProducts.length);
+      }, 3000); // Change every 3 seconds
+
+      return () => clearInterval(interval);
+    }
+  }, [discountedProducts.length]);
+
   const handleClearFilters = () => {
-    setSearchTerm('');
     setSelectedCategory('');
+  };
+
+  const handleDiscountProductClick = (productId: string) => {
+    navigate(`/app/product/${productId}`);
   };
 
   const showLoading = isLoading || (cachedData && cacheStatus !== 'complete');
@@ -106,67 +123,109 @@ const MobileProducts = () => {
   return (
     <MobileAppLayout title="المنتجات" showBackButton={false}>
       <div className="space-y-4 p-4">
-        {/* Search and Filter Section */}
-        <div className="space-y-3">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-            <Input
-              placeholder="ابحث عن منتج..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 pr-4 bg-white border-gray-200 rounded-xl"
-            />
+        {/* Discount Products Carousel */}
+        {discountedProducts.length > 0 && (
+          <div className="relative h-32 bg-gradient-to-r from-red-500 to-pink-500 rounded-xl overflow-hidden shadow-lg">
+            <div className="absolute inset-0 bg-black/20"></div>
+            {discountedProducts.map((product, index) => (
+              <div
+                key={product.id}
+                className={`absolute inset-0 transition-all duration-700 ease-in-out cursor-pointer ${
+                  index === currentDiscountIndex 
+                    ? 'opacity-100 translate-x-0' 
+                    : index < currentDiscountIndex 
+                      ? 'opacity-0 -translate-x-full' 
+                      : 'opacity-0 translate-x-full'
+                }`}
+                onClick={() => handleDiscountProductClick(product.id)}
+              >
+                <div className="flex items-center h-full p-4 text-white">
+                  <div className="flex-shrink-0 w-20 h-20 mr-4">
+                    <img
+                      src={product.cover_image || '/placeholder.svg'}
+                      alt={product.name}
+                      className="w-full h-full object-cover rounded-lg border-2 border-white/30"
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-bold text-lg truncate">{product.name}</h3>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-sm line-through opacity-75">
+                        {product.price} د.ع
+                      </span>
+                      <span className="text-lg font-bold text-yellow-300">
+                        {Math.round(product.price * (1 - (product.discount_percentage || 0) / 100))} د.ع
+                      </span>
+                    </div>
+                    <div className="bg-yellow-400 text-red-800 px-2 py-1 rounded-full text-xs font-bold inline-block mt-1">
+                      خصم {product.discount_percentage}%
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+            
+            {/* Indicators */}
+            {discountedProducts.length > 1 && (
+              <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex gap-1">
+                {discountedProducts.map((_, index) => (
+                  <button
+                    key={index}
+                    className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                      index === currentDiscountIndex ? 'bg-white' : 'bg-white/50'
+                    }`}
+                    onClick={() => setCurrentDiscountIndex(index)}
+                  />
+                ))}
+              </div>
+            )}
           </div>
+        )}
 
-          {/* Category Filter */}
-          {categories && categories.length > 0 && (
-            <div className="flex gap-2 overflow-x-auto pb-2">
+        {/* Category Filter */}
+        {categories && categories.length > 0 && (
+          <div className="flex gap-2 overflow-x-auto pb-2">
+            <Button
+              variant={selectedCategory === '' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setSelectedCategory('')}
+              className="whitespace-nowrap rounded-full"
+            >
+              الكل
+            </Button>
+            {categories.map((category: any) => (
               <Button
-                variant={selectedCategory === '' ? 'default' : 'outline'}
+                key={category.id}
+                variant={selectedCategory === category.id ? 'default' : 'outline'}
                 size="sm"
-                onClick={() => setSelectedCategory('')}
+                onClick={() => setSelectedCategory(category.id)}
                 className="whitespace-nowrap rounded-full"
               >
-                الكل
+                {category.icon} {category.name}
               </Button>
-              {categories.map((category: any) => (
-                <Button
-                  key={category.id}
-                  variant={selectedCategory === category.id ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setSelectedCategory(category.id)}
-                  className="whitespace-nowrap rounded-full"
-                >
-                  {category.icon} {category.name}
-                </Button>
-              ))}
-            </div>
-          )}
+            ))}
+          </div>
+        )}
 
-          {/* Active Filters */}
-          {(searchTerm || selectedCategory) && (
-            <div className="flex items-center justify-between bg-blue-50 p-3 rounded-xl">
-              <div className="flex items-center gap-2">
-                <Filter className="w-4 h-4 text-blue-600" />
-                <span className="text-sm text-blue-800">
-                  {searchTerm && `البحث: "${searchTerm}"`}
-                  {searchTerm && selectedCategory && ' • '}
-                  {selectedCategory && categories && 
-                    `الفئة: ${categories.find((c: any) => c.id === selectedCategory)?.name}`
-                  }
-                </span>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleClearFilters}
-                className="text-blue-600 hover:text-blue-800"
-              >
-                مسح
-              </Button>
+        {/* Active Filters */}
+        {selectedCategory && (
+          <div className="flex items-center justify-between bg-blue-50 p-3 rounded-xl">
+            <div className="flex items-center gap-2">
+              <Filter className="w-4 h-4 text-blue-600" />
+              <span className="text-sm text-blue-800">
+                الفئة: {categories && categories.find((c: any) => c.id === selectedCategory)?.name}
+              </span>
             </div>
-          )}
-        </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleClearFilters}
+              className="text-blue-600 hover:text-blue-800"
+            >
+              مسح
+            </Button>
+          </div>
+        )}
 
         {/* Cache Status Indicator */}
         {cachedData && cacheStatus !== 'complete' && (
@@ -192,41 +251,28 @@ const MobileProducts = () => {
             ))}
           </div>
         ) : filteredProducts.length > 0 ? (
-          <>
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-800">
-                {filteredProducts.length} منتج
-              </h2>
-              {cachedData && (
-                <div className="text-xs text-gray-500 flex items-center gap-1">
-                  <div className="w-2 h-2 bg-green-500 rounded-full" />
-                  محفوظ محلياً
-                </div>
-              )}
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              {filteredProducts.map((product, index) => (
-                <div 
-                  key={product.id}
-                  className="animate-fade-in-up"
-                  style={{ animationDelay: `${index * 50}ms` }}
-                >
-                  <ProductCard product={product} />
-                </div>
-              ))}
-            </div>
-          </>
+          <div className="grid grid-cols-2 gap-4">
+            {filteredProducts.map((product, index) => (
+              <div 
+                key={product.id}
+                className="animate-fade-in-up"
+                style={{ animationDelay: `${index * 50}ms` }}
+              >
+                <ProductCard product={product} />
+              </div>
+            ))}
+          </div>
         ) : (
           <div className="text-center py-16 animate-fade-in">
             <div className="text-6xl mb-4">🔍</div>
             <h3 className="text-xl font-semibold text-gray-700 mb-2">لا توجد منتجات</h3>
             <p className="text-gray-500 mb-4">
-              {searchTerm || selectedCategory 
-                ? 'لم يتم العثور على منتجات تطابق معايير البحث'
+              {selectedCategory 
+                ? 'لم يتم العثور على منتجات في هذه الفئة'
                 : 'لا توجد منتجات متاحة حالياً'
               }
             </p>
-            {(searchTerm || selectedCategory) && (
+            {selectedCategory && (
               <Button 
                 onClick={handleClearFilters}
                 variant="outline"
