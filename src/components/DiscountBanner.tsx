@@ -1,7 +1,8 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Percent, Sparkles, Tag, Package } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Discount {
   id: string;
@@ -10,12 +11,61 @@ interface Discount {
   discount_percentage: number;
 }
 
-interface DiscountBannerProps {
-  discounts: Discount[];
-}
+const DiscountBanner = () => {
+  const [discounts, setDiscounts] = useState<Discount[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-const DiscountBanner = ({ discounts }: DiscountBannerProps) => {
-  if (!discounts || discounts.length === 0) return null;
+  useEffect(() => {
+    const fetchDiscounts = async () => {
+      try {
+        console.log('Fetching active discounts directly from Supabase...');
+        
+        const { data, error } = await supabase
+          .from('active_discounts')
+          .select('*')
+          .eq('is_active', true);
+
+        if (error) {
+          console.error('Error fetching discounts:', error);
+          return;
+        }
+
+        console.log('Active discounts fetched:', data);
+        setDiscounts(data || []);
+      } catch (error) {
+        console.error('Error in fetchDiscounts:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchDiscounts();
+
+    // Set up real-time listener for discount changes
+    const channel = supabase
+      .channel('discount-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'active_discounts'
+        },
+        (payload) => {
+          console.log('Discount change detected:', payload);
+          fetchDiscounts(); // Refetch discounts on any change
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  if (isLoading || !discounts || discounts.length === 0) {
+    return null;
+  }
 
   const getDiscountText = (discount: Discount) => {
     if (discount.discount_type === 'all_products') {

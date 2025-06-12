@@ -1,7 +1,8 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Tag, Percent, Sparkles } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Product {
   id: string;
@@ -9,14 +10,64 @@ interface Product {
   discount_percentage: number;
 }
 
-interface ProductDiscountTickerProps {
-  products: Product[];
-}
-
-const ProductDiscountTicker = ({ products }: ProductDiscountTickerProps) => {
+const ProductDiscountTicker = () => {
   const navigate = useNavigate();
+  const [products, setProducts] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  if (!products || products.length === 0) return null;
+  useEffect(() => {
+    const fetchDiscountedProducts = async () => {
+      try {
+        console.log('Fetching discounted products directly from Supabase...');
+        
+        const { data, error } = await supabase
+          .from('products')
+          .select('id, name, discount_percentage')
+          .gt('discount_percentage', 0)
+          .eq('is_active', true)
+          .limit(10);
+
+        if (error) {
+          console.error('Error fetching discounted products:', error);
+          return;
+        }
+
+        console.log('Discounted products fetched:', data);
+        setProducts(data || []);
+      } catch (error) {
+        console.error('Error in fetchDiscountedProducts:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchDiscountedProducts();
+
+    // Set up real-time listener for product changes
+    const channel = supabase
+      .channel('product-discount-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'products'
+        },
+        (payload) => {
+          console.log('Product change detected:', payload);
+          fetchDiscountedProducts(); // Refetch products on any change
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  if (isLoading || !products || products.length === 0) {
+    return null;
+  }
 
   // Duplicate products to create seamless loop
   const duplicatedProducts = [...products, ...products];
@@ -45,7 +96,7 @@ const ProductDiscountTicker = ({ products }: ProductDiscountTickerProps) => {
           >
             {duplicatedProducts.map((product, index) => (
               <button
-                key={index}
+                key={`${product.id}-${index}`}
                 onClick={() => handleProductClick(product.id)}
                 className="flex items-center gap-2 text-sm font-semibold hover:bg-white/10 px-2 py-1 rounded transition-colors cursor-pointer"
               >
