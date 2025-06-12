@@ -1,30 +1,23 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import MobileAppLayout from '@/components/MobileAppLayout';
 import ProductCard from '@/components/ProductCard';
-import SearchBar from '@/components/SearchBar';
 import { Product } from '@/types';
 import { useAppLogo } from '@/hooks/useAppLogo';
 
 const MobileProducts = () => {
-  const [searchQuery, setSearchQuery] = useState('');
   const { logoUrl } = useAppLogo();
 
   const { data: products, isLoading } = useQuery({
-    queryKey: ['mobile-products', searchQuery],
+    queryKey: ['mobile-products'],
     queryFn: async () => {
-      let query = supabase
+      const { data, error } = await supabase
         .from('products')
         .select('*')
-        .eq('is_active', true);
-
-      if (searchQuery) {
-        query = query.ilike('name', `%${searchQuery}%`);
-      }
-
-      const { data, error } = await query.order('created_at', { ascending: false });
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
       
       if (error) throw error;
       
@@ -64,14 +57,6 @@ const MobileProducts = () => {
         )}
 
         <div className="p-4 space-y-4">
-          {/* Search Bar */}
-          <div className="animate-slide-in-right">
-            <SearchBar 
-              searchQuery={searchQuery} 
-              onSearchChange={setSearchQuery}
-            />
-          </div>
-
           {/* Products Grid */}
           {isLoading ? (
             <div className="grid grid-cols-2 gap-4">
@@ -97,13 +82,9 @@ const MobileProducts = () => {
             </div>
           ) : (
             <div className="text-center py-12 animate-fade-in">
-              <div className="text-6xl mb-4 animate-bounce">🔍</div>
+              <div className="text-6xl mb-4 animate-bounce">📦</div>
               <h3 className="text-xl font-semibold text-gray-700 mb-2">لا توجد منتجات</h3>
-              <p className="text-gray-500">
-                {searchQuery 
-                  ? 'لم نجد أي منتجات تطابق بحثك.' 
-                  : 'لا توجد منتجات متاحة حالياً.'}
-              </p>
+              <p className="text-gray-500">لا توجد منتجات متاحة حالياً.</p>
             </div>
           )}
         </div>

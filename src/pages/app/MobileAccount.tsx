@@ -5,7 +5,7 @@ import MobileAppLayout from '@/components/MobileAppLayout';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { User, Package, LogOut, Shield } from 'lucide-react';
+import { User, Package, LogOut, Shield, Settings } from 'lucide-react';
 
 const MobileAccount = () => {
   const navigate = useNavigate();
@@ -21,7 +21,12 @@ const MobileAccount = () => {
   };
 
   const handleAdminPanel = () => {
-    navigate('/admin');
+    // Navigate to desktop admin panel
+    window.location.href = '/admin';
+  };
+
+  const handleSettings = () => {
+    navigate('/app/settings');
   };
 
   // Show admin panel button for any user with admin privileges
@@ -89,6 +94,15 @@ const MobileAccount = () => {
           >
             <Package className="w-5 h-5" />
             طلباتي
+          </Button>
+
+          <Button
+            onClick={handleSettings}
+            variant="outline"
+            className="w-full justify-start gap-3 h-12"
+          >
+            <Settings className="w-5 h-5" />
+            الإعدادات
           </Button>
 
           {/* Admin Panel Button - Show for admin, owner, or order manager */}
