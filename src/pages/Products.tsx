@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import ProductCard from '@/components/ProductCard';
 import ProductCardSkeleton from '@/components/ProductCardSkeleton';
 import CategorySkeleton from '@/components/CategorySkeleton';
-import ProductDiscountTicker from '@/components/ProductDiscountTicker';
+import DiscountSwapper from '@/components/DiscountSwapper';
 import SearchBar from '@/components/SearchBar';
 import CategorySection from '@/components/CategorySection';
 import SubCategorySection from '@/components/SubCategorySection';
@@ -36,21 +36,6 @@ const Products = () => {
     selectedSubcategory,
   });
 
-  // Get all products for discount ticker - fixed to include price
-  const { data: allProductsData } = useQuery({
-    queryKey: ['all-products-for-discounts'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('products')
-        .select('id, name, price, discount_percentage')
-        .eq('is_active', true)
-        .gt('discount_percentage', 0);
-      
-      if (error) throw error;
-      return data || [];
-    }
-  });
-
   const handleCategorySelect = (categoryId: string) => {
     setSelectedCategory(categoryId);
     setSelectedSubcategory(null);
@@ -73,7 +58,6 @@ const Products = () => {
   };
 
   const products = searchResults?.products || [];
-  const discountedProducts = allProductsData || [];
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -105,18 +89,10 @@ const Products = () => {
         </div>
       </div>
 
-      {/* Discount Ticker with skeleton fallback */}
-      {allProductsData ? (
-        discountedProducts.length > 0 && (
-          <div className="mb-8">
-            <ProductDiscountTicker products={discountedProducts} />
-          </div>
-        )
-      ) : (
-        <div className="mb-8">
-          <Skeleton className="h-12 w-full rounded-lg" />
-        </div>
-      )}
+      {/* Enhanced Discount Swapper */}
+      <div className="mb-8">
+        <DiscountSwapper />
+      </div>
 
       {/* Search Section */}
       <div className="mb-8">

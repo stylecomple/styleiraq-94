@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -7,6 +6,7 @@ import ProductCard from '@/components/ProductCard';
 import ProductCardSkeleton from '@/components/ProductCardSkeleton';
 import CategorySkeleton from '@/components/CategorySkeleton';
 import DiscountCarouselSkeleton from '@/components/DiscountCarouselSkeleton';
+import DiscountSwapper from '@/components/DiscountSwapper';
 import { Button } from '@/components/ui/button';
 import { Filter } from 'lucide-react';
 import { Product } from '@/types';
@@ -272,72 +272,8 @@ const MobileProducts = () => {
   return (
     <MobileAppLayout title="المنتجات" showBackButton={false}>
       <div className="space-y-4 p-4">
-        {/* Enhanced Discount Products Carousel with skeleton while loading */}
-        {isDiscountLoading ? (
-          <DiscountCarouselSkeleton />
-        ) : discountedProducts && discountedProducts.length > 0 ? (
-          <div className="relative h-32 bg-gradient-to-r from-red-500 to-pink-500 rounded-xl overflow-hidden shadow-lg">
-            <div className="absolute inset-0 bg-black/20"></div>
-            
-            {discountedProducts.map((product, index) => {
-              const originalPrice = Number(product.price) || 0;
-              const discountedPrice = calculateDiscountedPrice(originalPrice, product.discount_percentage || 0);
-              
-              return (
-                <div 
-                  key={product.id} 
-                  className={`absolute inset-0 transition-all duration-700 ease-in-out cursor-pointer ${
-                    index === currentDiscountIndex 
-                      ? 'opacity-100 translate-x-0' 
-                      : index < currentDiscountIndex 
-                        ? 'opacity-0 -translate-x-full' 
-                        : 'opacity-0 translate-x-full'
-                  }`} 
-                  onClick={() => handleDiscountProductClick(product.id)}
-                >
-                  <div className="flex items-center h-full p-4 text-white">
-                    <div className="flex-shrink-0 w-20 h-20 mr-4">
-                      <img 
-                        src={product.cover_image || '/placeholder.svg'} 
-                        alt={product.name} 
-                        className="w-full h-full object-cover rounded-lg border-2 border-white/30" 
-                      />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-bold text-lg truncate">{product.name}</h3>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="text-sm line-through opacity-75">
-                          {originalPrice} د.ع
-                        </span>
-                        <span className="text-lg font-bold text-yellow-300">
-                          {discountedPrice} د.ع
-                        </span>
-                      </div>
-                      <div className="bg-yellow-400 text-red-800 px-2 py-1 rounded-full text-xs font-bold inline-block mt-1">
-                        خصم {product.discount_percentage}%
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-            
-            {/* Indicators */}
-            {discountedProducts.length > 1 && (
-              <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex gap-1">
-                {discountedProducts.map((_, index) => (
-                  <button 
-                    key={index} 
-                    className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                      index === currentDiscountIndex ? 'bg-white' : 'bg-white/50'
-                    }`} 
-                    onClick={() => setCurrentDiscountIndex(index)} 
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-        ) : null}
+        {/* Import and use DiscountSwapper instead of the inline discount carousel */}
+        <DiscountSwapper />
 
         {/* Refresh indicator when auto-refreshing */}
         {refreshCount > 0 && refreshCount < 2 && (
