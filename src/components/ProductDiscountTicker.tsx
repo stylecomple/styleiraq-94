@@ -19,7 +19,6 @@ const ProductDiscountTicker = ({ products: propProducts }: ProductDiscountTicker
   const navigate = useNavigate();
   const [products, setProducts] = useState<Product[]>(propProducts || []);
   const [isLoading, setIsLoading] = useState(!propProducts);
-  const [retryCount, setRetryCount] = useState(0);
 
   // Safe price calculation function
   const calculateDiscountedPrice = (price: number, discountPercentage: number) => {
@@ -31,12 +30,14 @@ const ProductDiscountTicker = ({ products: propProducts }: ProductDiscountTicker
 
   useEffect(() => {
     if (propProducts) {
+      console.log('Using prop products:', propProducts);
       // Filter and validate products when passed as props
       const validProducts = propProducts.filter(product => {
         const price = Number(product.price);
         const discount = Number(product.discount_percentage);
         
         if (!price || isNaN(price) || !discount || isNaN(discount) || discount <= 0 || discount > 100) {
+          console.log('Invalid product filtered out:', product);
           return false;
         }
         
@@ -44,6 +45,7 @@ const ProductDiscountTicker = ({ products: propProducts }: ProductDiscountTicker
         return !isNaN(discountedPrice) && discountedPrice > 0;
       });
       
+      console.log('Valid products after filtering:', validProducts);
       setProducts(validProducts);
       setIsLoading(false);
       return;
@@ -59,14 +61,14 @@ const ProductDiscountTicker = ({ products: propProducts }: ProductDiscountTicker
           .gt('discount_percentage', 0)
           .eq('is_active', true)
           .not('price', 'is', null)
-          .limit(10);
+          .order('discount_percentage', { ascending: false });
 
         if (error) {
           console.error('Error fetching discounted products:', error);
           return;
         }
 
-        console.log('Discounted products fetched:', data);
+        console.log('Raw discounted products fetched:', data);
         
         // Filter out products with invalid prices and validate discounts
         const validProducts = (data || []).filter(product => {
@@ -74,29 +76,24 @@ const ProductDiscountTicker = ({ products: propProducts }: ProductDiscountTicker
           const discount = Number(product.discount_percentage);
           
           if (!price || isNaN(price) || !discount || isNaN(discount) || discount <= 0 || discount > 100) {
+            console.log('Invalid product filtered out:', product);
             return false;
           }
           
           // Test discount calculation
           const discountedPrice = calculateDiscountedPrice(price, discount);
-          return !isNaN(discountedPrice) && discountedPrice > 0;
+          const isValid = !isNaN(discountedPrice) && discountedPrice > 0;
+          if (!isValid) {
+            console.log('Product with invalid calculated price filtered out:', product);
+          }
+          return isValid;
         }).map(product => ({
           ...product,
           price: Number(product.price)
         }));
 
-        console.log('Valid products after filtering:', validProducts);
-        
-        // If we get NaN or invalid data and haven't retried too much, try again
-        if (validProducts.length === 0 && retryCount < 2) {
-          console.log('No valid products found, retrying...');
-          setTimeout(() => {
-            setRetryCount(prev => prev + 1);
-          }, 1000);
-        } else {
-          setProducts(validProducts);
-          setRetryCount(0); // Reset retry count on success
-        }
+        console.log('Valid products after filtering and mapping:', validProducts);
+        setProducts(validProducts);
       } catch (error) {
         console.error('Error in fetchDiscountedProducts:', error);
       } finally {
@@ -118,7 +115,6 @@ const ProductDiscountTicker = ({ products: propProducts }: ProductDiscountTicker
         },
         (payload) => {
           console.log('Product change detected:', payload);
-          setRetryCount(0); // Reset retry count
           fetchDiscountedProducts(); // Refetch products on any change
         }
       )
@@ -131,7 +127,6 @@ const ProductDiscountTicker = ({ products: propProducts }: ProductDiscountTicker
         },
         (payload) => {
           console.log('Active discount change detected:', payload);
-          setRetryCount(0); // Reset retry count
           fetchDiscountedProducts(); // Refetch products on discount changes
         }
       )
@@ -140,9 +135,22 @@ const ProductDiscountTicker = ({ products: propProducts }: ProductDiscountTicker
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [propProducts, retryCount]);
+  }, [propProducts]);
 
-  if (isLoading || !products || products.length === 0) {
+  console.log('ProductDiscountTicker render state:', { isLoading, productsCount: products.length, products });
+
+  if (isLoading) {
+    return (
+      <div className="bg-gradient-to-r from-orange-500 to-red-500 text-white py-2 overflow-hidden relative border-b-2 border-orange-600 shadow-lg">
+        <div className="flex items-center justify-center">
+          <div className="animate-pulse text-sm">جاري تحميل العروض...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!products || products.length === 0) {
+    console.log('No products to display in ticker');
     return null;
   }
 

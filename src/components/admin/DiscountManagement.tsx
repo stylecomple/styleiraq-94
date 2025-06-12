@@ -9,7 +9,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Trash2, Percent, Tag, Package } from 'lucide-react';
+import { Trash2, Percent, Tag, Package, AlertTriangle, Zap } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface Discount {
   id: string;
@@ -40,6 +41,7 @@ const DiscountManagement = () => {
   const [discountType, setDiscountType] = useState<'all_products' | 'category' | 'subcategory'>('all_products');
   const [targetValue, setTargetValue] = useState('');
   const [discountPercentage, setDiscountPercentage] = useState<number>(0);
+  const [bulkDiscountPercentage, setBulkDiscountPercentage] = useState<number>(10);
 
   // Fetch active discounts
   const { data: discounts, isLoading: discountsLoading } = useQuery({
@@ -79,6 +81,86 @@ const DiscountManagement = () => {
       
       if (error) throw error;
       return data as Subcategory[];
+    }
+  });
+
+  // Bulk discount mutation - applies discount to all products
+  const bulkDiscountMutation = useMutation({
+    mutationFn: async (percentage: number) => {
+      console.log(`Applying bulk discount of ${percentage}% to all products...`);
+
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError || !userData.user) {
+        throw new Error('المستخدم غير مسجل الدخول');
+      }
+
+      // Use the RPC function to update all products
+      const { error: rpcError } = await supabase.rpc('update_all_products_discount', {
+        new_discount: percentage
+      });
+
+      if (rpcError) {
+        console.error('Error applying bulk discount:', rpcError);
+        throw new Error(rpcError.message || 'فشل في تطبيق الخصم الشامل');
+      }
+
+      console.log(`Successfully applied ${percentage}% discount to all products`);
+      return { percentage };
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+      queryClient.invalidateQueries({ queryKey: ['featured-products'] });
+      queryClient.invalidateQueries({ queryKey: ['all-products-for-discounts'] });
+      
+      toast({
+        title: 'تم تطبيق الخصم الشامل',
+        description: `تم تطبيق خصم ${data.percentage}% على جميع المنتجات بنجاح`,
+      });
+    },
+    onError: (error: Error) => {
+      console.error('Bulk discount application failed:', error);
+      toast({
+        title: 'خطأ',
+        description: error.message || 'فشل في تطبيق الخصم الشامل',
+        variant: 'destructive',
+      });
+    }
+  });
+
+  // Reset all discounts mutation
+  const resetDiscountsMutation = useMutation({
+    mutationFn: async () => {
+      console.log('Resetting all product discounts to 0...');
+
+      const { error: rpcError } = await supabase.rpc('reset_all_product_discounts');
+
+      if (rpcError) {
+        console.error('Error resetting discounts:', rpcError);
+        throw new Error(rpcError.message || 'فشل في إعادة تعيين الخصومات');
+      }
+
+      console.log('Successfully reset all discounts to 0');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+      queryClient.invalidateQueries({ queryKey: ['featured-products'] });
+      queryClient.invalidateQueries({ queryKey: ['active-discounts'] });
+      queryClient.invalidateQueries({ queryKey: ['all-products-for-discounts'] });
+      
+      toast({
+        title: 'تم إعادة تعيين الخصومات',
+        description: 'تم إعادة تعيين جميع خصومات المنتجات إلى 0%',
+      });
+    },
+    onError: (error: Error) => {
+      console.error('Reset discounts failed:', error);
+      toast({
+        title: 'خطأ',
+        description: error.message || 'فشل في إعادة تعيين الخصومات',
+        variant: 'destructive',
+      });
     }
   });
 
@@ -198,6 +280,23 @@ const DiscountManagement = () => {
     }
   });
 
+  const handleBulkDiscount = () => {
+    if (bulkDiscountPercentage < 0 || bulkDiscountPercentage > 100) {
+      toast({
+        title: 'خطأ',
+        description: 'يجب أن تكون نسبة الخصم بين 0 و 100',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    bulkDiscountMutation.mutate(bulkDiscountPercentage);
+  };
+
+  const handleResetDiscounts = () => {
+    resetDiscountsMutation.mutate();
+  };
+
   const handleCreateDiscount = () => {
     if (discountPercentage <= 0 || discountPercentage > 100) {
       toast({
@@ -239,6 +338,72 @@ const DiscountManagement = () => {
 
   return (
     <div className="space-y-6">
+      {/* Bulk Discount Management */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Zap className="w-5 h-5" />
+            إدارة الخصومات الشاملة
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Alert>
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              هذه العمليات ستؤثر على جميع المنتجات في قاعدة البيانات. تأكد من صحة النسبة قبل التطبيق.
+            </AlertDescription>
+          </Alert>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="bulk-discount">نسبة الخصم الشامل (%)</Label>
+                <Input
+                  id="bulk-discount"
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={bulkDiscountPercentage}
+                  onChange={(e) => setBulkDiscountPercentage(Number(e.target.value))}
+                  placeholder="أدخل نسبة الخصم"
+                />
+              </div>
+              
+              <Button 
+                onClick={handleBulkDiscount}
+                disabled={bulkDiscountMutation.isPending}
+                className="w-full bg-orange-600 hover:bg-orange-700"
+              >
+                {bulkDiscountMutation.isPending 
+                  ? 'جاري التطبيق...' 
+                  : `تطبيق خصم ${bulkDiscountPercentage}% على جميع المنتجات`
+                }
+              </Button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="bg-red-50 p-4 rounded-lg border border-red-200">
+                <h4 className="font-medium text-red-800 mb-2">إعادة تعيين جميع الخصومات</h4>
+                <p className="text-sm text-red-600 mb-3">
+                  هذا سيقوم بإعادة تعيين جميع خصومات المنتجات إلى 0%
+                </p>
+                <Button 
+                  variant="destructive"
+                  onClick={handleResetDiscounts}
+                  disabled={resetDiscountsMutation.isPending}
+                  className="w-full"
+                >
+                  {resetDiscountsMutation.isPending 
+                    ? 'جاري الإعادة...' 
+                    : 'إعادة تعيين جميع الخصومات'
+                  }
+                </Button>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Create New Discount */}
       <Card>
         <CardHeader>
