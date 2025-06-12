@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -8,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
 import { ArrowRight, Eye, EyeOff, Sparkles, Heart } from 'lucide-react';
+import { useAppLogo } from '@/hooks/useAppLogo';
 
 const MobileAuth = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -16,6 +16,7 @@ const MobileAuth = () => {
   const [fullName, setFullName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const { logoUrl } = useAppLogo();
   
   const { signIn, signUp, user } = useAuth();
   const navigate = useNavigate();
@@ -94,7 +95,7 @@ const MobileAuth = () => {
         ))}
       </div>
 
-      {/* Header */}
+      {/* Header with app logo */}
       <div className="relative z-10 bg-white/80 backdrop-blur-sm border-b border-gray-200 px-4 py-3 flex items-center justify-between">
         <Button
           variant="ghost"
@@ -105,9 +106,24 @@ const MobileAuth = () => {
           <ArrowRight className="w-4 h-4" />
           تخطي
         </Button>
-        <h1 className="text-lg font-semibold text-gray-800">
-          {isLogin ? 'تسجيل الدخول' : 'إنشاء حساب'}
-        </h1>
+        
+        {/* App Logo in Header */}
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            <div className="absolute -inset-1 bg-gradient-to-r from-pink-500 to-purple-600 rounded-full blur opacity-30"></div>
+            <div className="relative w-8 h-8 bg-gradient-to-r from-pink-500 to-purple-600 rounded-full flex items-center justify-center">
+              <img 
+                src={logoUrl || "/lovable-uploads/44d2a604-8d2c-498a-9c37-e89e541a86cb.png"} 
+                alt="Style" 
+                className="w-7 h-7 object-contain rounded-full"
+              />
+            </div>
+          </div>
+          <span className="text-lg font-semibold bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent">
+            Style
+          </span>
+        </div>
+        
         <div className="w-16"></div>
       </div>
 
@@ -115,12 +131,12 @@ const MobileAuth = () => {
       <div className="relative z-10 flex-1 flex items-center justify-center p-4">
         <Card className="w-full max-w-md border-0 shadow-2xl bg-white/95 backdrop-blur-sm">
           <CardHeader className="text-center pb-6">
-            {/* Animated logo */}
+            {/* Animated main logo */}
             <div className="relative mx-auto mb-4">
               <div className="absolute -inset-3 bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 rounded-full blur opacity-30 animate-pulse"></div>
               <div className="relative w-20 h-20 mx-auto bg-gradient-to-r from-pink-500 to-purple-600 rounded-full flex items-center justify-center animate-bounce-gentle">
                 <img 
-                  src="/lovable-uploads/44d2a604-8d2c-498a-9c37-e89e541a86cb.png" 
+                  src={logoUrl || "/lovable-uploads/44d2a604-8d2c-498a-9c37-e89e541a86cb.png"} 
                   alt="Style" 
                   className="w-16 h-16 object-contain rounded-full"
                 />

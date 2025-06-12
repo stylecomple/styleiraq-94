@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -7,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
+import { useAppLogo } from '@/hooks/useAppLogo';
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -14,6 +14,7 @@ const Auth = () => {
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [loading, setLoading] = useState(false);
+  const { logoUrl } = useAppLogo();
   
   const { signIn, signUp, user } = useAuth();
   const navigate = useNavigate();
@@ -73,6 +74,18 @@ const Auth = () => {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
+          {/* App Logo */}
+          <div className="relative mx-auto mb-4">
+            <div className="absolute -inset-2 bg-gradient-to-r from-pink-500 to-purple-600 rounded-full blur opacity-30"></div>
+            <div className="relative w-16 h-16 mx-auto bg-gradient-to-r from-pink-500 to-purple-600 rounded-full flex items-center justify-center">
+              <img 
+                src={logoUrl || "/lovable-uploads/44d2a604-8d2c-498a-9c37-e89e541a86cb.png"} 
+                alt="Style" 
+                className="w-14 h-14 object-contain rounded-full"
+              />
+            </div>
+          </div>
+          
           <CardTitle className="text-2xl font-bold text-pink-600">
             {isLogin ? 'تسجيل الدخول' : 'إنشاء حساب جديد'}
           </CardTitle>

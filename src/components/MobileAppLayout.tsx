@@ -5,6 +5,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAppTheme } from '@/contexts/AppThemeContext';
+import { useAppLogo } from '@/hooks/useAppLogo';
 import BottomNavigation from './BottomNavigation';
 
 interface MobileAppLayoutProps {
@@ -18,6 +19,7 @@ const MobileAppLayout = ({ children, title, showBackButton = true, backPath }: M
   const navigate = useNavigate();
   const location = useLocation();
   const { theme } = useAppTheme();
+  const { logoUrl } = useAppLogo();
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
@@ -87,6 +89,21 @@ const MobileAppLayout = ({ children, title, showBackButton = true, backPath }: M
             <ArrowRight className="w-5 h-5" />
           </Button>
         )}
+        
+        {/* App Logo */}
+        <div className="flex items-center gap-2 mr-2">
+          <div className="relative">
+            <div className="absolute -inset-1 bg-gradient-to-r from-pink-500 to-purple-600 rounded-full blur opacity-30"></div>
+            <div className="relative w-8 h-8 bg-gradient-to-r from-pink-500 to-purple-600 rounded-full flex items-center justify-center">
+              <img 
+                src={logoUrl || "/lovable-uploads/44d2a604-8d2c-498a-9c37-e89e541a86cb.png"} 
+                alt="Style" 
+                className="w-7 h-7 object-contain rounded-full"
+              />
+            </div>
+          </div>
+        </div>
+        
         <h1 className="text-lg font-semibold flex-1">{title}</h1>
       </div>
 

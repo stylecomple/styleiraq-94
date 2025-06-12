@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { ShoppingCart, User, Shield, LogOut, Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -6,10 +5,12 @@ import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCart } from '@/contexts/CartContext';
 import { useNavigate } from 'react-router-dom';
+import { useAppLogo } from '@/hooks/useAppLogo';
 
 const Header = () => {
   const { user, isAdmin, isOwner, isOrderManager, loading, signOut } = useAuth();
   const { getTotalItems } = useCart();
+  const { logoUrl } = useAppLogo();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -55,17 +56,31 @@ const Header = () => {
     <header className="bg-white/95 backdrop-blur-md shadow-lg sticky top-0 z-50 border-b border-pink-100">
       <div className="container mx-auto px-4 py-3 md:py-4">
         <div className="flex items-center justify-between">
-          {/* Logo */}
+          {/* Logo with app logo */}
           <div 
-            className="flex items-center space-x-2 md:space-x-4 rtl:space-x-reverse cursor-pointer group"
+            className="flex items-center space-x-3 md:space-x-4 rtl:space-x-reverse cursor-pointer group"
             onClick={handleHomeClick}
           >
-            <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-pink-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent group-hover:scale-105 transition-transform duration-300">
-              Style
-            </h1>
-            <span className="text-xs md:text-sm text-gray-500 hidden sm:block font-medium">
-              متجر الجمال والأناقة
-            </span>
+            {/* App Logo */}
+            <div className="relative">
+              <div className="absolute -inset-1 bg-gradient-to-r from-pink-500 to-purple-600 rounded-full blur opacity-30 group-hover:opacity-50 transition-opacity"></div>
+              <div className="relative w-10 h-10 md:w-12 md:h-12 bg-gradient-to-r from-pink-500 to-purple-600 rounded-full flex items-center justify-center group-hover:scale-105 transition-transform duration-300">
+                <img 
+                  src={logoUrl || "/lovable-uploads/44d2a604-8d2c-498a-9c37-e89e541a86cb.png"} 
+                  alt="Style" 
+                  className="w-8 h-8 md:w-10 md:h-10 object-contain rounded-full"
+                />
+              </div>
+            </div>
+            
+            <div className="flex flex-col">
+              <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-pink-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent group-hover:scale-105 transition-transform duration-300">
+                Style
+              </h1>
+              <span className="text-xs md:text-sm text-gray-500 hidden sm:block font-medium">
+                متجر الجمال والأناقة
+              </span>
+            </div>
           </div>
           
           {/* Desktop Navigation */}
