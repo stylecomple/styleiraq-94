@@ -11,11 +11,21 @@ interface Discount {
   discount_percentage: number;
 }
 
-const DiscountBanner = () => {
-  const [discounts, setDiscounts] = useState<Discount[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+interface DiscountBannerProps {
+  discounts?: Discount[];
+}
+
+const DiscountBanner = ({ discounts: propDiscounts }: DiscountBannerProps) => {
+  const [discounts, setDiscounts] = useState<Discount[]>(propDiscounts || []);
+  const [isLoading, setIsLoading] = useState(!propDiscounts);
 
   useEffect(() => {
+    if (propDiscounts) {
+      setDiscounts(propDiscounts);
+      setIsLoading(false);
+      return;
+    }
+
     const fetchDiscounts = async () => {
       try {
         console.log('Fetching active discounts directly from Supabase...');
@@ -61,7 +71,7 @@ const DiscountBanner = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [propDiscounts]);
 
   if (isLoading || !discounts || discounts.length === 0) {
     return null;
