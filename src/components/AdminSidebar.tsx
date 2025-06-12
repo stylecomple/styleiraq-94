@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -31,7 +30,7 @@ import {
 const AdminSidebar = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { isAdmin, isOwner, isOrderManager, logout } = useAuth();
+  const { isAdmin, isOwner, isOrderManager, signOut } = useAuth();
 
   const isFullAdmin = isAdmin || isOwner;
 
@@ -131,7 +130,7 @@ const AdminSidebar = () => {
           </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton
-              onClick={logout}
+              onClick={signOut}
               className="w-full justify-start text-destructive hover:text-destructive"
             >
               <LogOut className="w-4 h-4" />
