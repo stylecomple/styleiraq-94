@@ -41,6 +41,7 @@ export type Database = {
       }
       admin_settings: {
         Row: {
+          app_logo_url: string | null
           created_at: string
           email_receiver: string | null
           favicon_url: string | null
@@ -54,6 +55,7 @@ export type Database = {
           zain_cash_config: Json | null
         }
         Insert: {
+          app_logo_url?: string | null
           created_at?: string
           email_receiver?: string | null
           favicon_url?: string | null
@@ -67,6 +69,7 @@ export type Database = {
           zain_cash_config?: Json | null
         }
         Update: {
+          app_logo_url?: string | null
           created_at?: string
           email_receiver?: string | null
           favicon_url?: string | null
