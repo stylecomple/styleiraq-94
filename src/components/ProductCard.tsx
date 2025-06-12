@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -7,6 +7,8 @@ import { Eye, ShoppingCart } from 'lucide-react';
 import { Product } from '@/types';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '@/contexts/CartContext';
+import { useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ProductCardProps {
   product: Product;
@@ -15,6 +17,49 @@ interface ProductCardProps {
 const ProductCard = ({ product }: ProductCardProps) => {
   const navigate = useNavigate();
   const { addToCart } = useCart();
+  const queryClient = useQueryClient();
+
+  // Set up real-time updates for product discounts
+  useEffect(() => {
+    const channel = supabase
+      .channel(`product-updates-${product.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'products',
+          filter: `id=eq.${product.id}`
+        },
+        (payload) => {
+          console.log('Real-time product update:', payload);
+          // Invalidate queries to refresh product data
+          queryClient.invalidateQueries({ queryKey: ['product-search'] });
+          queryClient.invalidateQueries({ queryKey: ['mobile-products'] });
+          queryClient.invalidateQueries({ queryKey: ['mobile-discounted-products'] });
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'active_discounts'
+        },
+        (payload) => {
+          console.log('Real-time discount update affecting products:', payload);
+          // Invalidate queries when discounts change
+          queryClient.invalidateQueries({ queryKey: ['product-search'] });
+          queryClient.invalidateQueries({ queryKey: ['mobile-products'] });
+          queryClient.invalidateQueries({ queryKey: ['mobile-discounted-products'] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [product.id, queryClient]);
 
   const handleViewProduct = () => {
     navigate(`/app/product/${product.id}`);

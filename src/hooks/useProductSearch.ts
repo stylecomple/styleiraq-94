@@ -1,7 +1,8 @@
 
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Product } from '@/types';
+import { useEffect } from 'react';
 
 interface ProductSearchOptions {
   searchQuery: string;
@@ -10,6 +11,43 @@ interface ProductSearchOptions {
 }
 
 export const useProductSearch = ({ searchQuery, selectedCategory, selectedSubcategory }: ProductSearchOptions) => {
+  const queryClient = useQueryClient();
+
+  // Set up real-time subscriptions for product and discount updates
+  useEffect(() => {
+    const channel = supabase
+      .channel('product-search-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'products'
+        },
+        (payload) => {
+          console.log('Real-time product change:', payload);
+          queryClient.invalidateQueries({ queryKey: ['product-search'] });
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'active_discounts'
+        },
+        (payload) => {
+          console.log('Real-time discount change:', payload);
+          queryClient.invalidateQueries({ queryKey: ['product-search'] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
+
   return useQuery({
     queryKey: ['product-search', searchQuery, selectedCategory, selectedSubcategory],
     queryFn: async () => {
@@ -95,6 +133,7 @@ export const useProductSearch = ({ searchQuery, selectedCategory, selectedSubcat
       };
     },
     enabled: true,
-    refetchInterval: 30000, // Refresh every 30 seconds to get updated discount data
+    refetchInterval: 10000, // Refresh every 10 seconds to get updated discount data
+    staleTime: 5000, // Consider data stale after 5 seconds for faster updates
   });
 };
