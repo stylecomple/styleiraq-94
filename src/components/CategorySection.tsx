@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 
-type CategoryType = 'all' | string;
+type CategoryType = 'all' | 'discounts' | string;
 
 interface Category {
   id: CategoryType;
@@ -43,12 +43,40 @@ const CategorySection = ({ selectedCategory, onCategorySelect, onSubcategoriesCh
     }
   });
 
+  // Check if there are discounted products
+  const { data: discountedProductsCount } = useQuery({
+    queryKey: ['discounted-products-count'],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from('products')
+        .select('*', { count: 'exact', head: true })
+        .eq('is_active', true)
+        .gt('discount_percentage', 0);
+      
+      if (error) throw error;
+      return count || 0;
+    }
+  });
+
   const [categories, setCategories] = useState<Category[]>([
     { id: 'all', name: 'جميع المنتجات', icon: '🛍️' }
   ]);
 
   // Update categories when database data loads
   useEffect(() => {
+    const baseCategories = [
+      { id: 'all', name: 'جميع المنتجات', icon: '🛍️' }
+    ];
+
+    // Add discounts category if there are discounted products
+    if (discountedProductsCount && discountedProductsCount > 0) {
+      baseCategories.push({
+        id: 'discounts',
+        name: 'العروض والخصومات',
+        icon: '🏷️'
+      });
+    }
+
     if (dbCategories) {
       const formattedCategories = dbCategories.map(cat => ({
         ...cat,
@@ -56,11 +84,13 @@ const CategorySection = ({ selectedCategory, onCategorySelect, onSubcategoriesCh
       }));
       
       setCategories([
-        { id: 'all', name: 'جميع المنتجات', icon: '🛍️' },
+        ...baseCategories,
         ...formattedCategories
       ]);
+    } else {
+      setCategories(baseCategories);
     }
-  }, [dbCategories]);
+  }, [dbCategories, discountedProductsCount]);
 
   const handleCategorySelect = (categoryId: CategoryType) => {
     console.log('Category selected:', categoryId);
@@ -94,7 +124,9 @@ const CategorySection = ({ selectedCategory, onCategorySelect, onSubcategoriesCh
             variant={selectedCategory === category.id ? "default" : "outline"}
             className={`group relative h-auto p-6 rounded-2xl transition-all duration-300 transform hover:-translate-y-1 ${
               selectedCategory === category.id 
-                ? 'bg-gradient-to-r from-pink-500 to-purple-600 text-white shadow-lg border-0' 
+                ? category.id === 'discounts'
+                  ? 'bg-gradient-to-r from-orange-500 to-red-600 text-white shadow-lg border-0'
+                  : 'bg-gradient-to-r from-pink-500 to-purple-600 text-white shadow-lg border-0'
                 : 'bg-white hover:bg-gradient-to-r hover:from-pink-50 hover:to-purple-50 border-gray-200 hover:border-pink-300 text-gray-700 hover:text-purple-700 shadow-md hover:shadow-lg'
             }`}
             onClick={() => handleCategorySelect(category.id)}

@@ -20,7 +20,12 @@ export const useProductSearch = ({ searchQuery, selectedCategory, selectedSubcat
       
       // Apply category filter
       if (selectedCategory && selectedCategory !== 'all') {
-        query = query.contains('categories', [selectedCategory]);
+        if (selectedCategory === 'discounts') {
+          // Filter for products with discounts
+          query = query.gt('discount_percentage', 0);
+        } else {
+          query = query.contains('categories', [selectedCategory]);
+        }
       }
       
       // Apply subcategory filter
@@ -63,8 +68,12 @@ export const useProductSearch = ({ searchQuery, selectedCategory, selectedSubcat
         });
       }
 
-      // Randomize the products array instead of sorting by created_at
-      products = products.sort(() => Math.random() - 0.5);
+      // Sort discounted products first if in discounts category, otherwise randomize
+      if (selectedCategory === 'discounts') {
+        products = products.sort((a, b) => (b.discount_percentage || 0) - (a.discount_percentage || 0));
+      } else {
+        products = products.sort(() => Math.random() - 0.5);
+      }
 
       return {
         products,

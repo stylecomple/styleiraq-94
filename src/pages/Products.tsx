@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import ProductCard from '@/components/ProductCard';
+import ProductDiscountTicker from '@/components/ProductDiscountTicker';
 import SearchBar from '@/components/SearchBar';
 import CategorySection from '@/components/CategorySection';
 import SubCategorySection from '@/components/SubCategorySection';
@@ -32,6 +33,21 @@ const Products = () => {
     selectedSubcategory,
   });
 
+  // Get all products for discount ticker
+  const { data: allProductsData } = useQuery({
+    queryKey: ['all-products-for-discounts'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('products')
+        .select('id, name, discount_percentage')
+        .eq('is_active', true)
+        .gt('discount_percentage', 0);
+      
+      if (error) throw error;
+      return data || [];
+    }
+  });
+
   const handleCategorySelect = (categoryId: string) => {
     setSelectedCategory(categoryId);
     setSelectedSubcategory(null);
@@ -54,6 +70,7 @@ const Products = () => {
   };
 
   const products = searchResults?.products || [];
+  const discountedProducts = allProductsData || [];
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -70,6 +87,13 @@ const Products = () => {
           </div>
         </div>
       </div>
+
+      {/* Discount Ticker - only show if there are discounted products */}
+      {discountedProducts.length > 0 && (
+        <div className="mb-8">
+          <ProductDiscountTicker products={discountedProducts} />
+        </div>
+      )}
 
       {/* Search Section */}
       <div className="mb-8">

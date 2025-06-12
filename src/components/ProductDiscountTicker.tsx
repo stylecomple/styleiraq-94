@@ -1,8 +1,10 @@
 
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Tag, Percent, Sparkles } from 'lucide-react';
 
 interface Product {
+  id: string;
   name: string;
   discount_percentage: number;
 }
@@ -12,10 +14,16 @@ interface ProductDiscountTickerProps {
 }
 
 const ProductDiscountTicker = ({ products }: ProductDiscountTickerProps) => {
+  const navigate = useNavigate();
+
   if (!products || products.length === 0) return null;
 
   // Duplicate products to create seamless loop
   const duplicatedProducts = [...products, ...products];
+
+  const handleProductClick = (productId: string) => {
+    navigate(`/app/product/${productId}`);
+  };
 
   return (
     <div className="bg-gradient-to-r from-orange-500 to-red-500 text-white py-2 overflow-hidden relative border-b-2 border-orange-600 shadow-lg">
@@ -36,7 +44,11 @@ const ProductDiscountTicker = ({ products }: ProductDiscountTickerProps) => {
             className="flex items-center gap-8 whitespace-nowrap animate-[scroll_30s_linear_infinite]"
           >
             {duplicatedProducts.map((product, index) => (
-              <div key={index} className="flex items-center gap-2 text-sm font-semibold">
+              <button
+                key={index}
+                onClick={() => handleProductClick(product.id)}
+                className="flex items-center gap-2 text-sm font-semibold hover:bg-white/10 px-2 py-1 rounded transition-colors cursor-pointer"
+              >
                 <Percent className="w-3 h-3 text-yellow-300" />
                 <span className="text-yellow-100">
                   {product.name}
@@ -45,7 +57,7 @@ const ProductDiscountTicker = ({ products }: ProductDiscountTickerProps) => {
                   خصم {product.discount_percentage}%
                 </span>
                 <span className="text-white/60 mx-2">•</span>
-              </div>
+              </button>
             ))}
           </div>
         </div>

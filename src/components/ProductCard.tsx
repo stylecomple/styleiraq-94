@@ -3,10 +3,8 @@ import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ShoppingCart } from 'lucide-react';
+import { Eye } from 'lucide-react';
 import { Product } from '@/types';
-import { useCart } from '@/contexts/CartContext';
-import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
 interface ProductCardProps {
@@ -14,34 +12,7 @@ interface ProductCardProps {
 }
 
 const ProductCard = ({ product }: ProductCardProps) => {
-  const { addToCart } = useCart();
-  const { user } = useAuth();
   const navigate = useNavigate();
-
-  const handleQuickAdd = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    
-    if (!user) {
-      navigate('/app/auth');
-      return;
-    }
-
-    // If product has options, redirect to product detail page
-    if (product.options && product.options.length > 0) {
-      navigate(`/app/product/${product.id}`);
-      return;
-    }
-
-    // Quick add for products without options
-    addToCart({
-      id: product.id,
-      name: product.name,
-      price: getEffectivePrice(),
-      image: product.cover_image || '/placeholder.svg',
-      quantity: 1,
-      selectedColor: null
-    });
-  };
 
   const handleViewProduct = () => {
     navigate(`/app/product/${product.id}`);
@@ -55,7 +26,6 @@ const ProductCard = ({ product }: ProductCardProps) => {
   };
 
   const hasValidDiscount = product.discount_percentage && product.discount_percentage > 0;
-  const hasOptions = product.options && product.options.length > 0;
 
   // Get category and subcategory names for display
   const categoryName = product.categories && product.categories.length > 0 ? product.categories[0] : '';
@@ -143,14 +113,13 @@ const ProductCard = ({ product }: ProductCardProps) => {
           )}
         </div>
 
-        {/* Button - always visible at bottom */}
+        {/* View Product Button - always visible at bottom */}
         <div className="mt-auto">
           <Button 
-            onClick={handleQuickAdd}
             className="w-full bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-medium py-2 rounded-lg text-sm transition-all duration-300 shadow-md hover:shadow-lg transform hover:scale-105"
           >
-            <ShoppingCart className="w-4 h-4 mr-1" />
-            {hasOptions ? 'عرض المنتج' : 'أضف للسلة'}
+            <Eye className="w-4 h-4 mr-1" />
+            عرض المنتج
           </Button>
         </div>
       </CardContent>

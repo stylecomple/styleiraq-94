@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import MobileAppLayout from '@/components/MobileAppLayout';
 import ProductCard from '@/components/ProductCard';
+import ProductDiscountTicker from '@/components/ProductDiscountTicker';
 import OnboardingTour from '@/components/OnboardingTour';
 import { Button } from '@/components/ui/button';
 import { User } from 'lucide-react';
@@ -56,6 +57,11 @@ const MobileProducts = () => {
     }
   });
 
+  // Get products with discounts for the ticker
+  const discountedProducts = products?.filter(product => 
+    product.discount_percentage && product.discount_percentage > 0
+  ) || [];
+
   const handleOnboardingComplete = () => {
     localStorage.setItem('hasSeenOnboarding', 'true');
     setShowOnboarding(false);
@@ -98,6 +104,11 @@ const MobileProducts = () => {
               </div>
             </div>
           </div>
+
+          {/* Discount Ticker - only show if there are discounted products */}
+          {discountedProducts.length > 0 && (
+            <ProductDiscountTicker products={discountedProducts} />
+          )}
 
           {/* Guest login prompt */}
           {!user && showGuestPrompt && (
