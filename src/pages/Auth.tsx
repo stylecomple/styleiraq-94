@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -43,6 +44,7 @@ const Auth = () => {
             title: "تم تسجيل الدخول بنجاح",
             description: "مرحباً بك في متجر ستايل"
           });
+          // Navigation will happen automatically via useEffect when user state updates
         }
       } else {
         const { error } = await signUp(email, password, fullName);
@@ -57,12 +59,17 @@ const Auth = () => {
             title: "تم إنشاء الحساب بنجاح",
             description: "تحقق من بريدك الإلكتروني لتأكيد الحساب"
           });
+          // Reset form after successful signup
+          setEmail('');
+          setPassword('');
+          setFullName('');
+          setIsLogin(true);
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "حدث خطأ",
-        description: "حاول مرة أخرى لاحقاً",
+        description: error.message || "حاول مرة أخرى لاحقاً",
         variant: "destructive"
       });
     } finally {

@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Clock, User, Package, ShoppingCart, Store } from 'lucide-react';
+import { Clock, User, Package, ShoppingCart, Store, Mail } from 'lucide-react';
 import { format } from 'date-fns';
 
 const ChangesLogPanel = () => {
@@ -13,7 +13,13 @@ const ChangesLogPanel = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('changes_log')
-        .select('*')
+        .select(`
+          *,
+          profiles!admin_id (
+            email,
+            full_name
+          )
+        `)
         .order('created_at', { ascending: false })
         .limit(100);
       
@@ -77,11 +83,19 @@ const ChangesLogPanel = () => {
       <CardContent>
         <div className="space-y-4 max-h-96 overflow-y-auto">
           {changes?.map((change) => (
-            <div key={change.id} className="border rounded-lg p-4 space-y-2">
+            <div key={change.id} className="border rounded-lg p-4 space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   {getEntityIcon(change.entity_type)}
-                  <span className="font-medium">{change.admin_name}</span>
+                  <div className="flex flex-col">
+                    <span className="font-medium">{change.admin_name}</span>
+                    {change.profiles?.email && (
+                      <div className="flex items-center gap-1 text-xs text-gray-500">
+                        <Mail className="w-3 h-3" />
+                        {change.profiles.email}
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <Badge className={getActionColor(change.action_type)}>
                   {change.action_type}
@@ -93,9 +107,11 @@ const ChangesLogPanel = () => {
                 {change.entity_id && (
                   <div>المعرف: {change.entity_id}</div>
                 )}
-                <div className="flex items-center gap-1 text-xs text-gray-500 mt-1">
+                <div className="flex items-center gap-1 text-xs text-gray-500 mt-2 bg-gray-50 p-2 rounded">
                   <Clock className="w-3 h-3" />
-                  {format(new Date(change.created_at), 'yyyy/MM/dd HH:mm')}
+                  <span className="font-medium">
+                    {format(new Date(change.created_at), 'yyyy/MM/dd')} - {format(new Date(change.created_at), 'HH:mm:ss')}
+                  </span>
                 </div>
               </div>
               

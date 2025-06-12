@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import MobileAppLayout from '@/components/MobileAppLayout';
@@ -23,7 +24,7 @@ const MobileAccount = () => {
   const handleSignOut = async () => {
     try {
       await signOut();
-      navigate('/auth');
+      navigate('/app/auth');
       toast({
         title: 'تم تسجيل الخروج',
         description: 'تم تسجيل خروجك بنجاح',
@@ -41,7 +42,19 @@ const MobileAccount = () => {
     navigate('/admin');
   };
 
+  const handleContactUs = () => {
+    const message = 'مرحبا، أحتاج مساعدة في التطبيق';
+    const whatsappUrl = `https://wa.me/964${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, '_blank');
+  };
+
   const hasAdminAccess = isAdmin || isOwner || isOrderManager || isProductsAdder;
+
+  // If user is not logged in, redirect to auth
+  if (!user) {
+    navigate('/app/auth');
+    return null;
+  }
 
   return (
     <MobileAppLayout title="حسابي" showBackButton={false}>
@@ -54,10 +67,10 @@ const MobileAccount = () => {
             </div>
             <div>
               <h2 className="text-xl font-bold">
-                {user?.user_metadata?.full_name || 'مستخدم'}
+                {user.user_metadata?.full_name || user.email?.split('@')[0] || 'مستخدم'}
               </h2>
               <p className="text-purple-100 text-sm">
-                {user?.email}
+                {user.email}
               </p>
               <div className="flex gap-2 mt-2">
                 {isOwner && (
@@ -146,6 +159,7 @@ const MobileAccount = () => {
           <Button 
             variant="outline" 
             className="w-full justify-start h-12"
+            onClick={handleContactUs}
           >
             <MessageCircle className="w-5 h-5 mr-3 text-green-600" />
             <span>تواصل معنا</span>

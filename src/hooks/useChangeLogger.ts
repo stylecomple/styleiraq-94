@@ -14,18 +14,25 @@ export const useChangeLogger = () => {
     if (!user) return;
 
     try {
-      // Get admin name from profiles
+      // Get admin name from user metadata first, then fallback to profiles
+      let adminName = user.user_metadata?.full_name || user.email || 'Unknown';
+      
+      // Try to get additional profile info
       const { data: profile } = await supabase
         .from('profiles')
-        .select('full_name')
+        .select('full_name, email')
         .eq('id', user.id)
         .single();
+
+      if (profile?.full_name) {
+        adminName = profile.full_name;
+      }
 
       await supabase
         .from('changes_log')
         .insert({
           admin_id: user.id,
-          admin_name: profile?.full_name || user.email || 'Unknown',
+          admin_name: adminName,
           action_type: actionType,
           entity_type: entityType,
           entity_id: entityId,
