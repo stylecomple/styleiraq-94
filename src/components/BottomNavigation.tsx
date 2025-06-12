@@ -48,8 +48,8 @@ const BottomNavigation = () => {
   const isActive = (path: string) => location.pathname === path;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-2 py-2 z-50">
-      <div className="flex justify-around items-center">
+    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-2 py-2 z-[60] shadow-lg">
+      <div className="flex justify-around items-center max-w-md mx-auto">
         {navItems.map((item) => {
           const Icon = item.icon;
           const active = isActive(item.path);
@@ -58,7 +58,7 @@ const BottomNavigation = () => {
             <button
               key={item.id}
               onClick={() => navigate(item.path)}
-              className={`relative flex flex-col items-center py-1 px-2 rounded-lg transition-all duration-200 ${
+              className={`relative flex flex-col items-center py-1 px-2 rounded-lg transition-all duration-200 min-w-0 flex-1 ${
                 active 
                   ? 'text-pink-600 bg-pink-50' 
                   : 'text-gray-600 hover:text-pink-600 hover:bg-pink-50'
@@ -72,7 +72,7 @@ const BottomNavigation = () => {
                   </div>
                 )}
               </div>
-              <span className={`text-xs font-medium ${active ? 'text-pink-600' : 'text-gray-600'}`}>
+              <span className={`text-xs font-medium truncate ${active ? 'text-pink-600' : 'text-gray-600'}`}>
                 {item.label}
               </span>
             </button>

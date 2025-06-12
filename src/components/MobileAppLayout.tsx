@@ -57,7 +57,7 @@ const MobileAppLayout = ({ children, title, showBackButton = true, backPath }: M
   ].includes(location.pathname);
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-gray-50 flex flex-col relative">
       {/* Header with slide down animation */}
       <div className={`bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-3 sticky top-0 z-40 transition-all duration-500 transform ${
         isVisible ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0'
@@ -76,7 +76,7 @@ const MobileAppLayout = ({ children, title, showBackButton = true, backPath }: M
       </div>
 
       {/* Content with fade in and slide up animation */}
-      <div className={`flex-1 pb-20 overflow-y-auto transition-all duration-700 ease-out transform ${
+      <div className={`flex-1 pb-24 overflow-y-auto transition-all duration-700 ease-out transform ${
         isVisible ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
       }`}>
         {children}
