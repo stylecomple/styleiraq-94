@@ -27,6 +27,24 @@ const MobileProducts = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
+  // Auto-remove Lovable badge
+  useEffect(() => {
+    const removeBadge = () => {
+      const badge = document.getElementById("lovable-badge");
+      if (badge) {
+        badge.remove();
+      }
+    };
+
+    // Try immediately
+    removeBadge();
+
+    // Also try after a short delay in case badge loads later
+    const timer = setTimeout(removeBadge, 1000);
+
+    return () => clearTimeout(timer);
+  }, []);
+
   // Auto-refresh logic after splash screen
   useEffect(() => {
     if (!hasAutoRefreshed && cacheStatus === 'complete') {
@@ -81,8 +99,7 @@ const MobileProducts = () => {
     },
     staleTime: 30000,
     refetchOnWindowFocus: false,
-    retry: 3,
-    onError: () => setHasDbError(true),
+    retry: 3
   });
 
   // Use cached data if available, otherwise fetch from database
@@ -143,8 +160,7 @@ const MobileProducts = () => {
       });
     },
     enabled: !cachedData || cacheStatus === 'complete',
-    staleTime: 60000,
-    onError: () => setHasDbError(true),
+    staleTime: 60000
   });
 
   const {
@@ -176,8 +192,7 @@ const MobileProducts = () => {
       return data;
     },
     enabled: !cachedData || cacheStatus === 'complete',
-    staleTime: 300000,
-    onError: () => setHasDbError(true),
+    staleTime: 300000
   });
 
   // Check for database errors
@@ -304,29 +319,15 @@ const MobileProducts = () => {
           <div className="flex items-center justify-between bg-blue-50 p-3 rounded-xl">
             <div className="flex items-center gap-2">
               <Filter className="w-4 h-4 text-blue-600" />
-              <span className="text-sm text-blue-800">
-                الفئة: {categories && categories.find((c: any) => c.id === selectedCategory)?.name}
-              </span>
+              <span className="text-sm text-blue-800">تصفية نشطة</span>
             </div>
-            <Button variant="ghost" size="sm" onClick={handleClearFilters} className="text-blue-600 hover:text-blue-800">
-              مسح
+            <Button variant="outline" size="sm" onClick={handleClearFilters} className="text-blue-600 hover:text-blue-800">
+              مسح التصفية
             </Button>
           </div>
         )}
 
-        {/* Enhanced Cache Status Indicator */}
-        {cachedData && cacheStatus !== 'complete' && (
-          <div className="bg-blue-50 border border-blue-200 rounded-xl p-3">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
-              <span className="text-sm text-blue-800">
-                {cacheStatus === 'updating' ? 'جاري تحديث العروض والمنتجات...' : 'جاري التحقق من التحديثات...'}
-              </span>
-            </div>
-          </div>
-        )}
-
-        {/* Products Grid with skeletons */}
+        {/* Products Grid with enhanced skeletons */}
         {showProductsLoading ? (
           <div className="grid grid-cols-2 gap-4">
             {[...Array(6)].map((_, index) => (
@@ -335,28 +336,17 @@ const MobileProducts = () => {
           </div>
         ) : filteredProducts.length > 0 ? (
           <div className="grid grid-cols-2 gap-4">
-            {filteredProducts.map((product, index) => (
-              <div
-                key={product.id}
-                className="animate-fade-in-up"
-                style={{ animationDelay: `${index * 50}ms` }}
-              >
-                <ProductCard product={product} />
-              </div>
+            {filteredProducts.map((product) => (
+              <ProductCard key={product.id} product={product} />
             ))}
           </div>
         ) : (
-          <div className="text-center py-16 animate-fade-in">
-            <div className="text-6xl mb-4">🔍</div>
+          <div className="text-center py-16">
+            <div className="text-6xl mb-4">📦</div>
             <h3 className="text-xl font-semibold text-gray-700 mb-2">لا توجد منتجات</h3>
-            <p className="text-gray-500 mb-4">
-              {selectedCategory ? 'لم يتم العثور على منتجات في هذه الفئة' : 'لا توجد منتجات متاحة حالياً'}
+            <p className="text-gray-500">
+              {selectedCategory ? 'لا توجد منتجات في هذه الفئة.' : 'لا توجد منتجات متاحة حالياً.'}
             </p>
-            {selectedCategory && (
-              <Button onClick={handleClearFilters} variant="outline" className="mx-auto">
-                مسح جميع المرشحات
-              </Button>
-            )}
           </div>
         )}
       </div>

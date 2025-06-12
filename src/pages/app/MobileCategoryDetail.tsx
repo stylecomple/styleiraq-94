@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -40,6 +41,24 @@ const MobileCategoryDetail = () => {
   const navigate = useNavigate();
   const category = location.state?.category as Category;
   const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(null);
+
+  // Auto-remove Lovable badge
+  useEffect(() => {
+    const removeBadge = () => {
+      const badge = document.getElementById("lovable-badge");
+      if (badge) {
+        badge.remove();
+      }
+    };
+
+    // Try immediately
+    removeBadge();
+
+    // Also try after a short delay in case badge loads later
+    const timer = setTimeout(removeBadge, 1000);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   const { data: products, isLoading } = useQuery({
     queryKey: ['category-products', categoryId, selectedSubcategory],

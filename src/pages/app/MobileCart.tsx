@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import MobileAppLayout from '@/components/MobileAppLayout';
 import { useCart } from '@/contexts/CartContext';
@@ -12,6 +12,24 @@ const MobileCart = () => {
   const { items, updateQuantity, removeFromCart, getTotalPrice, getTotalItems } = useCart();
   const { user } = useAuth();
   const navigate = useNavigate();
+
+  // Auto-remove Lovable badge
+  useEffect(() => {
+    const removeBadge = () => {
+      const badge = document.getElementById("lovable-badge");
+      if (badge) {
+        badge.remove();
+      }
+    };
+
+    // Try immediately
+    removeBadge();
+
+    // Also try after a short delay in case badge loads later
+    const timer = setTimeout(removeBadge, 1000);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleQuantityChange = (id: string, quantity: number, selectedOption?: string | null) => {
     if (quantity <= 0) {

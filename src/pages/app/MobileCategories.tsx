@@ -55,8 +55,7 @@ const MobileCategories = () => {
       setHasDbError(false);
       return data || [];
     },
-    enabled: !cachedData || cacheStatus === 'complete',
-    onError: () => setHasDbError(true),
+    enabled: !cachedData || cacheStatus === 'complete'
   });
 
   // Check for database errors
@@ -65,6 +64,24 @@ const MobileCategories = () => {
       setHasDbError(true);
     }
   }, [error]);
+
+  // Auto-remove Lovable badge
+  useEffect(() => {
+    const removeBadge = () => {
+      const badge = document.getElementById("lovable-badge");
+      if (badge) {
+        badge.remove();
+      }
+    };
+
+    // Try immediately
+    removeBadge();
+
+    // Also try after a short delay in case badge loads later
+    const timer = setTimeout(removeBadge, 1000);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleCategoryPress = (category: Category) => {
     navigate(`/app/category/${category.id}`, { 
