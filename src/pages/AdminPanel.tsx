@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, Package, Users, BarChart3, Settings, MessageSquare, Percent, FolderPlus } from 'lucide-react';
+import { Plus, Package, Users, BarChart3, Settings, MessageSquare, Percent, FolderPlus, Menu } from 'lucide-react';
+import { SidebarProvider, SidebarTrigger, SidebarInset } from '@/components/ui/sidebar';
+import AdminSidebar from '@/components/AdminSidebar';
 import ProductsManagement from '@/components/admin/ProductsManagement';
 import AddProductForm from '@/components/admin/AddProductForm';
 import CategoryManager from '@/components/admin/CategoryManager';
@@ -18,211 +20,216 @@ import ChangesLogPanel from '@/components/admin/ChangesLogPanel';
 
 const AdminPanel = () => {
   const { user, isAdmin, isOwner, isOrderManager, loading } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [showCategoryManager, setShowCategoryManager] = useState(false);
-  const [activeTab, setActiveTab] = useState('products');
+  
+  const activeTab = searchParams.get('tab') || (isOrderManager && !isAdmin && !isOwner ? 'orders' : 'products');
 
   if (loading) {
-    return <div className="flex justify-center items-center min-h-screen">جاري التحميل...</div>;
+    return (
+      <div className="flex justify-center items-center min-h-screen bg-background">
+        <div className="text-lg">جاري التحميل...</div>
+      </div>
+    );
   }
 
   if (!user || (!isAdmin && !isOwner && !isOrderManager)) {
     return <Navigate to="/auth" replace />;
   }
 
-  // For order managers, default to orders tab
-  React.useEffect(() => {
-    if (isOrderManager && !isAdmin && !isOwner) {
-      setActiveTab('orders');
-    }
-  }, [isOrderManager, isAdmin, isOwner]);
-
   const isFullAdmin = isAdmin || isOwner;
 
-  return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">
-          {isOrderManager && !isFullAdmin ? 'لوحة إدارة الطلبات' : 'لوحة الإدارة'}
-        </h1>
-        {activeTab === 'products' && isFullAdmin && (
-          <div className="flex gap-2">
-            <Button 
-              onClick={() => setShowCategoryManager(true)}
-              variant="outline"
-              className="flex items-center gap-2"
-            >
-              <FolderPlus className="w-4 h-4" />
-              إدارة الفئات
-            </Button>
-            <Button 
-              onClick={() => setShowAddProduct(true)}
-              className="bg-pink-600 hover:bg-pink-700 flex items-center gap-2"
-            >
-              <Plus className="w-4 h-4" />
-              إضافة منتج جديد
-            </Button>
-          </div>
-        )}
-      </div>
+  const setActiveTab = (tab: string) => {
+    setSearchParams({ tab });
+  };
 
-      {showAddProduct && isFullAdmin && (
-        <AddProductForm onClose={() => setShowAddProduct(false)} />
-      )}
-
-      {showCategoryManager && isFullAdmin && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-background rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-2xl font-bold">إدارة الفئات والفئات الفرعية</h2>
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case 'products':
+        return isFullAdmin ? (
+          <Card className="h-full">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+              <CardTitle className="flex items-center gap-2">
+                <Package className="w-5 h-5" />
+                إدارة المنتجات
+              </CardTitle>
+              <div className="flex gap-2">
                 <Button 
-                  variant="outline" 
-                  onClick={() => setShowCategoryManager(false)}
-                  className="ml-2"
+                  onClick={() => setShowCategoryManager(true)}
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-2"
                 >
-                  إغلاق
+                  <FolderPlus className="w-4 h-4" />
+                  <span className="hidden sm:inline">إدارة الفئات</span>
+                </Button>
+                <Button 
+                  onClick={() => setShowAddProduct(true)}
+                  size="sm"
+                  className="bg-pink-600 hover:bg-pink-700 flex items-center gap-2"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span className="hidden sm:inline">إضافة منتج</span>
                 </Button>
               </div>
-              <CategoryManager />
-            </div>
-          </div>
-        </div>
-      )}
-
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className={`grid w-full ${isOrderManager && !isFullAdmin ? 'grid-cols-1' : 'grid-cols-7'}`}>
-          {isFullAdmin && (
-            <>
-              <TabsTrigger value="products" className="flex items-center gap-2">
-                <Package className="w-4 h-4" />
-                المنتجات
-              </TabsTrigger>
-            </>
-          )}
-          <TabsTrigger value="orders" className="flex items-center gap-2">
-            <BarChart3 className="w-4 h-4" />
-            الطلبات
-          </TabsTrigger>
-          {isFullAdmin && (
-            <>
-              <TabsTrigger value="users" className="flex items-center gap-2">
-                <Users className="w-4 h-4" />
-                المستخدمين
-              </TabsTrigger>
-              <TabsTrigger value="statistics" className="flex items-center gap-2">
-                <BarChart3 className="w-4 h-4" />
-                الإحصائيات
-              </TabsTrigger>
-              <TabsTrigger value="discounts" className="flex items-center gap-2">
-                <Percent className="w-4 h-4" />
-                الخصومات
-              </TabsTrigger>
-              <TabsTrigger value="feedback" className="flex items-center gap-2">
-                <MessageSquare className="w-4 h-4" />
-                التقييمات
-              </TabsTrigger>
-              <TabsTrigger value="settings" className="flex items-center gap-2">
-                <Settings className="w-4 h-4" />
-                الإعدادات
-              </TabsTrigger>
-            </>
-          )}
-        </TabsList>
-
-        {isFullAdmin && (
-          <TabsContent value="products" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Package className="w-5 h-5" />
-                  إدارة المنتجات
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ProductsManagement />
-              </CardContent>
-            </Card>
-          </TabsContent>
-        )}
-
-        <TabsContent value="orders" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>إدارة الطلبات</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-4 md:p-6">
+              <ProductsManagement />
+            </CardContent>
+          </Card>
+        ) : null;
+
+      case 'orders':
+        return (
+          <Card className="h-full">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BarChart3 className="w-5 h-5" />
+                إدارة الطلبات
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-4 md:p-6">
               <EnhancedOrdersManagement />
             </CardContent>
           </Card>
-        </TabsContent>
+        );
 
-        {isFullAdmin && (
-          <>
-            <TabsContent value="users" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Users className="w-5 h-5" />
-                    إدارة المستخدمين
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <UserManagement />
-                </CardContent>
-              </Card>
-            </TabsContent>
+      case 'users':
+        return isFullAdmin ? (
+          <Card className="h-full">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="w-5 h-5" />
+                إدارة المستخدمين
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-4 md:p-6">
+              <UserManagement />
+            </CardContent>
+          </Card>
+        ) : null;
 
-            <TabsContent value="statistics" className="space-y-6">
-              <StatisticsPanel />
-              <ChangesLogPanel />
-            </TabsContent>
+      case 'statistics':
+        return isFullAdmin ? (
+          <div className="space-y-6">
+            <StatisticsPanel />
+            <ChangesLogPanel />
+          </div>
+        ) : null;
 
-            <TabsContent value="discounts" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Percent className="w-5 h-5" />
-                    إدارة الخصومات العامة
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <SimpleDiscountManagement />
-                </CardContent>
-              </Card>
-            </TabsContent>
+      case 'discounts':
+        return isFullAdmin ? (
+          <Card className="h-full">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Percent className="w-5 h-5" />
+                إدارة الخصومات العامة
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-4 md:p-6">
+              <SimpleDiscountManagement />
+            </CardContent>
+          </Card>
+        ) : null;
 
-            <TabsContent value="feedback" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <MessageSquare className="w-5 h-5" />
-                    إدارة التقييمات
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <FeedbackManagement />
-                </CardContent>
-              </Card>
-            </TabsContent>
+      case 'feedback':
+        return isFullAdmin ? (
+          <Card className="h-full">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MessageSquare className="w-5 h-5" />
+                إدارة التقييمات
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-4 md:p-6">
+              <FeedbackManagement />
+            </CardContent>
+          </Card>
+        ) : null;
 
-            <TabsContent value="settings" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Settings className="w-5 h-5" />
-                    إعدادات النظام
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <AdminSettings />
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </>
+      case 'settings':
+        return isFullAdmin ? (
+          <Card className="h-full">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Settings className="w-5 h-5" />
+                إعدادات النظام
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-4 md:p-6">
+              <AdminSettings />
+            </CardContent>
+          </Card>
+        ) : null;
+
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <SidebarProvider>
+      <div className="min-h-screen w-full flex bg-background">
+        <AdminSidebar />
+        
+        <SidebarInset className="flex-1">
+          {/* Mobile Header */}
+          <header className="flex h-14 items-center justify-between border-b bg-background px-4 lg:hidden">
+            <SidebarTrigger />
+            <h1 className="font-semibold">
+              {isOrderManager && !isFullAdmin ? 'لوحة إدارة الطلبات' : 'لوحة الإدارة'}
+            </h1>
+          </header>
+
+          {/* Main Content */}
+          <main className="flex-1 p-4 md:p-6 space-y-6">
+            {/* Desktop Header */}
+            <div className="hidden lg:flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <SidebarTrigger />
+                <h1 className="text-2xl font-bold">
+                  {isOrderManager && !isFullAdmin ? 'لوحة إدارة الطلبات' : 'لوحة الإدارة'}
+                </h1>
+              </div>
+            </div>
+
+            {/* Tab Content */}
+            <div className="flex-1">
+              {renderTabContent()}
+            </div>
+          </main>
+        </SidebarInset>
+
+        {/* Modals */}
+        {showAddProduct && isFullAdmin && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+            <div className="bg-background rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+              <AddProductForm onClose={() => setShowAddProduct(false)} />
+            </div>
+          </div>
         )}
-      </Tabs>
-    </div>
+
+        {showCategoryManager && isFullAdmin && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+            <div className="bg-background rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-2xl font-bold">إدارة الفئات والفئات الفرعية</h2>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setShowCategoryManager(false)}
+                  >
+                    إغلاق
+                  </Button>
+                </div>
+                <CategoryManager />
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </SidebarProvider>
   );
 };
 
