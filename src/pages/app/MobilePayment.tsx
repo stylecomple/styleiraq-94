@@ -13,6 +13,7 @@ import PaymentDialog from '@/components/PaymentDialog';
 import { CreditCard, Smartphone, Truck, MapPin, Phone, User } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { PaymentMethod } from '@/types';
+import { supabase } from '@/integrations/supabase/client';
 
 const GOVERNORATES = [
   'بغداد', 'البصرة', 'نينوى', 'أربيل', 'النجف', 'كربلاء', 'الأنبار', 'دهوك', 
