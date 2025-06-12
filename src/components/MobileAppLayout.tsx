@@ -25,8 +25,12 @@ const MobileAppLayout = ({ children, title, showBackButton = true, backPath }: M
       
       if (currentPath.startsWith('/app/category/')) {
         navigate('/app/categories');
+      } else if (currentPath.startsWith('/app/product/')) {
+        navigate('/app/products');
       } else if (currentPath === '/app/auth') {
         navigate('/app/products');
+      } else if (currentPath === '/app/orders') {
+        navigate('/app/account');
       } else {
         // Default fallback to products page
         navigate('/app/products');
@@ -35,7 +39,13 @@ const MobileAppLayout = ({ children, title, showBackButton = true, backPath }: M
   };
 
   // Hide back button on main navigation pages
-  const hideBackButton = ['/app/products', '/app/categories', '/app/cart', '/app/account'].includes(location.pathname);
+  const hideBackButton = [
+    '/app/products', 
+    '/app/categories', 
+    '/app/cart', 
+    '/app/account',
+    '/app/search'
+  ].includes(location.pathname);
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">

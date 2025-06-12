@@ -4,7 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { CartProvider } from "@/contexts/CartContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
@@ -20,6 +20,8 @@ import MobileCart from "@/pages/app/MobileCart";
 import MobileAccount from "@/pages/app/MobileAccount";
 import MobileSplash from "@/pages/app/MobileSplash";
 import MobileAuth from "@/pages/app/MobileAuth";
+import MobileOrders from "@/pages/app/MobileOrders";
+import MobileSearch from "@/pages/app/MobileSearch";
 
 const queryClient = new QueryClient();
 
@@ -86,7 +88,7 @@ const AppContent: React.FC = () => {
   useEffect(() => {
     const timer = setTimeout(() => {
       setShowSplash(false);
-    }, 2000);
+    }, 3000);
 
     return () => clearTimeout(timer);
   }, []);
@@ -103,7 +105,10 @@ const AppContent: React.FC = () => {
         <Route path="/app/products" element={<MobileProducts />} />
         <Route path="/app/categories" element={<MobileCategories />} />
         <Route path="/app/category/:categoryId" element={<MobileCategoryDetail />} />
+        <Route path="/app/product/:id" element={<MobileProductDetail />} />
+        <Route path="/app/search" element={<MobileSearch />} />
         <Route path="/app/cart" element={<MobileCart />} />
+        <Route path="/app/orders" element={<MobileOrders />} />
         <Route path="/app/account" element={<MobileAccount />} />
         <Route path="/app/auth" element={<MobileAuth />} />
         <Route path="*" element={<Navigate to="/app/products" replace />} />

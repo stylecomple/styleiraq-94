@@ -6,7 +6,6 @@ import { supabase } from '@/integrations/supabase/client';
 import MobileAppLayout from '@/components/MobileAppLayout';
 import ProductCard from '@/components/ProductCard';
 import { Button } from '@/components/ui/button';
-import { Product } from '@/types';
 
 interface Category {
   id: string;
@@ -22,6 +21,24 @@ interface Subcategory {
   category_id: string;
 }
 
+interface DatabaseProduct {
+  id: string;
+  name: string;
+  description: string | null;
+  price: number;
+  discount_percentage: number | null;
+  images: string[] | null;
+  cover_image: string | null;
+  is_active: boolean;
+  stock_quantity: number | null;
+  created_at: string;
+  updated_at: string;
+  categories: string[] | null;
+  subcategories: string[] | null;
+  options: any;
+  colors: string[] | null;
+}
+
 const MobileCategoryDetail = () => {
   const { categoryId } = useParams<{ categoryId: string }>();
   const location = useLocation();
@@ -31,7 +48,7 @@ const MobileCategoryDetail = () => {
 
   const { data: products, isLoading } = useQuery({
     queryKey: ['category-products', categoryId, selectedSubcategory],
-    queryFn: async () => {
+    queryFn: async (): Promise<DatabaseProduct[]> => {
       if (!categoryId) return [];
       
       let query = supabase
@@ -48,30 +65,31 @@ const MobileCategoryDetail = () => {
       
       if (error) throw error;
       
-      // Transform to Product interface
-      return (data || []).map((item: any): Product => {
-        const options = item.options || 
-          (item.colors ? item.colors.map((color: string) => ({ name: color, price: undefined })) : []);
-
-        return {
-          id: item.id,
-          name: item.name,
-          description: item.description,
-          price: item.price,
-          discount_percentage: item.discount_percentage,
-          images: item.images || [],
-          cover_image: item.cover_image,
-          is_active: item.is_active,
-          stock_quantity: item.stock_quantity,
-          created_at: item.created_at,
-          updated_at: item.updated_at,
-          categories: item.categories || [],
-          subcategories: item.subcategories || [],
-          options
-        };
-      });
+      return (data || []) as DatabaseProduct[];
     },
     enabled: !!categoryId
+  });
+
+  const transformedProducts = products?.map((item): any => {
+    const options = item.options || 
+      (item.colors ? item.colors.map((color: string) => ({ name: color, price: undefined })) : []);
+
+    return {
+      id: item.id,
+      name: item.name,
+      description: item.description,
+      price: item.price,
+      discount_percentage: item.discount_percentage,
+      images: item.images || [],
+      cover_image: item.cover_image,
+      is_active: item.is_active,
+      stock_quantity: item.stock_quantity,
+      created_at: item.created_at,
+      updated_at: item.updated_at,
+      categories: item.categories || [],
+      subcategories: item.subcategories || [],
+      options
+    };
   });
 
   const handleSubcategorySelect = (subcategoryId: string | null) => {
@@ -118,9 +136,9 @@ const MobileCategoryDetail = () => {
                 <div key={index} className="bg-gray-200 animate-pulse rounded-lg h-64"></div>
               ))}
             </div>
-          ) : products && products.length > 0 ? (
+          ) : transformedProducts && transformedProducts.length > 0 ? (
             <div className="grid grid-cols-2 gap-4">
-              {products.map((product) => (
+              {transformedProducts.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}
             </div>
