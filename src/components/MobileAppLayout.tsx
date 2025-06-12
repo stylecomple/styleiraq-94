@@ -75,19 +75,15 @@ const MobileAppLayout = ({ children, title, showBackButton = true, backPath }: M
         <h1 className="text-lg font-semibold text-gray-800 flex-1">{title}</h1>
       </div>
 
-      {/* Content with fade in and slide up animation */}
-      <div className={`flex-1 pb-24 overflow-y-auto transition-all duration-700 ease-out transform ${
+      {/* Content with fade in and slide up animation - increased bottom padding */}
+      <div className={`flex-1 pb-32 overflow-y-auto transition-all duration-700 ease-out transform ${
         isVisible ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
       }`}>
         {children}
       </div>
 
-      {/* Bottom Navigation with slide up animation */}
-      <div className={`transition-all duration-500 delay-200 transform ${
-        isVisible ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0'
-      }`}>
-        <BottomNavigation />
-      </div>
+      {/* Bottom Navigation - always visible */}
+      <BottomNavigation />
     </div>
   );
 };
