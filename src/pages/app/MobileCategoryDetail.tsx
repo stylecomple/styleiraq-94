@@ -1,11 +1,12 @@
-
 import React, { useState } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import MobileAppLayout from '@/components/MobileAppLayout';
 import ProductCard from '@/components/ProductCard';
+import ProductCardSkeleton from '@/components/ProductCardSkeleton';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface Category {
   id: string;
@@ -71,7 +72,7 @@ const MobileCategoryDetail = () => {
   return (
     <MobileAppLayout title={category?.name || 'الفئة'} backPath="/app/categories">
       <div className="p-4 space-y-4">
-        {/* Subcategories */}
+        {/* Subcategories with skeleton */}
         {category?.subcategories && category.subcategories.length > 0 && (
           <div className="space-y-3">
             <h3 className="text-lg font-semibold text-gray-800">الفئات الفرعية</h3>
@@ -98,14 +99,14 @@ const MobileCategoryDetail = () => {
           </div>
         )}
 
-        {/* Products */}
+        {/* Products with enhanced skeletons */}
         <div>
           <h3 className="text-lg font-semibold text-gray-800 mb-3">المنتجات</h3>
           
           {isLoading ? (
             <div className="grid grid-cols-2 gap-4">
               {[...Array(4)].map((_, index) => (
-                <div key={index} className="bg-gray-200 animate-pulse rounded-lg h-64"></div>
+                <ProductCardSkeleton key={index} />
               ))}
             </div>
           ) : products && products.length > 0 ? (

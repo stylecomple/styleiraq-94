@@ -1,14 +1,16 @@
-
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import ProductCard from '@/components/ProductCard';
+import ProductCardSkeleton from '@/components/ProductCardSkeleton';
+import CategorySkeleton from '@/components/CategorySkeleton';
 import ProductDiscountTicker from '@/components/ProductDiscountTicker';
 import SearchBar from '@/components/SearchBar';
 import CategorySection from '@/components/CategorySection';
 import SubCategorySection from '@/components/SubCategorySection';
 import { useProductSearch } from '@/hooks/useProductSearch';
 import { useSearchParams } from 'react-router-dom';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface Subcategory {
   id: string;
@@ -102,10 +104,16 @@ const Products = () => {
         </div>
       </div>
 
-      {/* Discount Ticker - only show if there are discounted products */}
-      {discountedProducts.length > 0 && (
+      {/* Discount Ticker with skeleton fallback */}
+      {allProductsData ? (
+        discountedProducts.length > 0 && (
+          <div className="mb-8">
+            <ProductDiscountTicker products={discountedProducts} />
+          </div>
+        )
+      ) : (
         <div className="mb-8">
-          <ProductDiscountTicker products={discountedProducts} />
+          <Skeleton className="h-12 w-full rounded-lg" />
         </div>
       )}
 
@@ -119,7 +127,7 @@ const Products = () => {
         />
       </div>
 
-      {/* Categories Section with smooth transition */}
+      {/* Categories Section with smooth transition and skeleton */}
       <div 
         className={`transition-all duration-500 ease-in-out overflow-hidden ${
           isSearchFocused 
@@ -127,43 +135,53 @@ const Products = () => {
             : 'max-h-[1000px] opacity-100 translate-y-0 mb-8'
         }`}
       >
-        <CategorySection
-          selectedCategory={selectedCategory}
-          onCategorySelect={handleCategorySelect}
-          onSubcategoriesChange={handleSubcategoriesChange}
-        />
+        {subcategories.length === 0 && !isSearchFocused ? (
+          <CategorySkeleton />
+        ) : (
+          <>
+            <CategorySection
+              selectedCategory={selectedCategory}
+              onCategorySelect={handleCategorySelect}
+              onSubcategoriesChange={handleSubcategoriesChange}
+            />
 
-        {/* Subcategories Section */}
-        {subcategories.length > 0 && (
-          <SubCategorySection
-            subcategories={subcategories}
-            selectedSubcategory={selectedSubcategory}
-            onSubcategorySelect={handleSubcategorySelect}
-          />
+            {/* Subcategories Section */}
+            {subcategories.length > 0 && (
+              <SubCategorySection
+                subcategories={subcategories}
+                selectedSubcategory={selectedSubcategory}
+                onSubcategorySelect={handleSubcategorySelect}
+              />
+            )}
+          </>
         )}
       </div>
 
-      {/* Products Section with dynamic spacing */}
+      {/* Products Section with dynamic spacing and skeletons */}
       <div 
         className={`transition-all duration-500 ease-in-out ${
           isSearchFocused ? '-mt-4' : 'mt-0'
         }`}
       >
-        {/* Results Summary */}
+        {/* Results Summary with skeleton */}
         <div className="mb-6">
           <h2 className="text-2xl font-bold text-gray-800 mb-2">
             {searchQuery ? `نتائج البحث عن "${searchQuery}"` : 'جميع المنتجات'}
           </h2>
-          <p className="text-gray-600">
-            {isLoading ? 'جاري التحميل...' : `عدد المنتجات: ${products.length}`}
-          </p>
+          {isLoading ? (
+            <Skeleton className="h-4 w-48" />
+          ) : (
+            <p className="text-gray-600">
+              عدد المنتجات: {products.length}
+            </p>
+          )}
         </div>
 
-        {/* Products Grid */}
+        {/* Products Grid with enhanced skeletons */}
         {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {[...Array(8)].map((_, index) => (
-              <div key={index} className="bg-gray-200 animate-pulse rounded-lg h-96"></div>
+              <ProductCardSkeleton key={index} />
             ))}
           </div>
         ) : products.length > 0 ? (
