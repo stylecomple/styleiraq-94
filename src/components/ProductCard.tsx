@@ -3,7 +3,7 @@ import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ShoppingCart, Heart, Eye } from 'lucide-react';
+import { ShoppingCart } from 'lucide-react';
 import { Product } from '@/types';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -56,88 +56,57 @@ const ProductCard = ({ product }: ProductCardProps) => {
 
   const hasValidDiscount = product.discount_percentage && product.discount_percentage > 0;
   const hasOptions = product.options && product.options.length > 0;
-  const hasMultipleImages = product.images && product.images.length > 0;
+
+  // Get category and subcategory names (simplified for mobile)
+  const categoryName = product.categories && product.categories.length > 0 ? product.categories[0] : '';
+  const subcategoryName = product.subcategories && product.subcategories.length > 0 ? product.subcategories[0] : '';
 
   return (
     <Card 
-      className="group overflow-hidden border-0 shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 bg-white cursor-pointer"
+      className="group overflow-hidden border-0 shadow-md hover:shadow-lg transition-all duration-200 bg-white cursor-pointer"
       onClick={handleViewProduct}
     >
       <div className="relative overflow-hidden">
         <img
           src={product.cover_image || '/placeholder.svg'}
           alt={product.name}
-          className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-300"
+          className="w-full h-32 object-cover group-hover:scale-105 transition-transform duration-200"
         />
         
-        {/* Discount badge - only show if there's a valid discount */}
+        {/* Discount badge */}
         {hasValidDiscount && (
-          <Badge className="absolute top-3 right-3 bg-red-500 hover:bg-red-600 text-white font-bold">
-            خصم {product.discount_percentage}%
+          <Badge className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white text-xs">
+            -{product.discount_percentage}%
           </Badge>
         )}
-
-        {/* Multiple images indicator */}
-        {hasMultipleImages && (
-          <Badge className="absolute top-3 left-3 bg-blue-500 hover:bg-blue-600 text-white text-xs">
-            +{product.images.length} صور
-          </Badge>
-        )}
-
-        {/* Options indicator */}
-        {hasOptions && (
-          <Badge className="absolute bottom-3 right-3 bg-purple-500 hover:bg-purple-600 text-white text-xs">
-            خيارات متعددة
-          </Badge>
-        )}
-
-        <div className="absolute top-3 left-3">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="bg-white/80 hover:bg-white text-gray-700 hover:text-red-500 rounded-full"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <Heart className="w-4 h-4" />
-          </Button>
-        </div>
-
-        {/* View overlay */}
-        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="bg-white/90 hover:bg-white text-gray-700 rounded-full"
-          >
-            <Eye className="w-6 h-6" />
-          </Button>
-        </div>
       </div>
 
-      <CardContent className="p-6">
-        <h3 className="font-bold text-lg mb-2 text-gray-800 group-hover:text-pink-600 transition-colors">
+      <CardContent className="p-3">
+        <h3 className="font-semibold text-sm mb-1 text-gray-800 line-clamp-1">
           {product.name}
         </h3>
         
-        {product.description && (
-          <p className="text-gray-600 text-sm mb-4 line-clamp-2">
-            {product.description}
-          </p>
-        )}
+        {/* Category and Subcategory */}
+        <div className="text-xs text-gray-500 mb-2">
+          {categoryName && <span>{categoryName}</span>}
+          {categoryName && subcategoryName && <span> • </span>}
+          {subcategoryName && <span>{subcategoryName}</span>}
+        </div>
 
-        <div className="flex items-center justify-between mb-4">
+        {/* Price */}
+        <div className="flex items-center justify-between mb-3">
           <div className="flex flex-col">
             {hasValidDiscount ? (
               <>
-                <span className="text-2xl font-bold text-pink-600">
+                <span className="text-lg font-bold text-pink-600">
                   {Math.round(getEffectivePrice()).toLocaleString()} د.ع
                 </span>
-                <span className="text-sm text-gray-500 line-through">
+                <span className="text-xs text-gray-500 line-through">
                   {product.price.toLocaleString()} د.ع
                 </span>
               </>
             ) : (
-              <span className="text-2xl font-bold text-pink-600">
+              <span className="text-lg font-bold text-pink-600">
                 {product.price.toLocaleString()} د.ع
               </span>
             )}
@@ -146,10 +115,10 @@ const ProductCard = ({ product }: ProductCardProps) => {
 
         <Button 
           onClick={handleQuickAdd}
-          className="w-full bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-semibold py-2 rounded-full transition-all duration-300 transform hover:scale-105"
+          className="w-full bg-pink-500 hover:bg-pink-600 text-white font-medium py-2 rounded-md text-sm"
         >
-          <ShoppingCart className="w-4 h-4 mr-2" />
-          {hasOptions ? 'عرض التفاصيل' : 'أضف للسلة'}
+          <ShoppingCart className="w-4 h-4 mr-1" />
+          {hasOptions ? 'عرض' : 'أضف'}
         </Button>
       </CardContent>
     </Card>

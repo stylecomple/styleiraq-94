@@ -22,6 +22,7 @@ import MobileSplash from "@/pages/app/MobileSplash";
 import MobileAuth from "@/pages/app/MobileAuth";
 import MobileOrders from "@/pages/app/MobileOrders";
 import MobileSearch from "@/pages/app/MobileSearch";
+import MobilePayment from "@/pages/app/MobilePayment";
 
 const queryClient = new QueryClient();
 
@@ -108,6 +109,7 @@ const AppContent: React.FC = () => {
         <Route path="/app/product/:id" element={<MobileProductDetail />} />
         <Route path="/app/search" element={<MobileSearch />} />
         <Route path="/app/cart" element={<MobileCart />} />
+        <Route path="/app/payment" element={<MobilePayment />} />
         <Route path="/app/orders" element={<MobileOrders />} />
         <Route path="/app/account" element={<MobileAccount />} />
         <Route path="/app/auth" element={<MobileAuth />} />
