@@ -22,7 +22,7 @@ const GOVERNORATES = [
 const MobileSettings = () => {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
-  const { theme, toggleTheme } = useAppThemeContext();
+  const { theme, toggleTheme } = useAppTheme();
   const { toast } = useToast();
 
   const [userInfo, setUserInfo] = useState({
@@ -79,7 +79,6 @@ const MobileSettings = () => {
     }, 1000);
   };
 
-  // Don't show loading state, just render immediately
   return (
     <MobileAppLayout title="الإعدادات" showBackButton={true}>
       <div className="p-4 space-y-6">
