@@ -2,6 +2,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import MobileAppLayout from '@/components/MobileAppLayout';
+import FeedbackForm from '@/components/FeedbackForm';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
@@ -10,10 +11,10 @@ import {
   Settings,
   Package,
   ChevronLeft,
-  MessageCircle,
-  HelpCircle,
+  MessageSquare,
   LogOut,
-  ExternalLink
+  ExternalLink,
+  Star
 } from 'lucide-react';
 
 const MobileAccount = () => {
@@ -40,12 +41,6 @@ const MobileAccount = () => {
 
   const handleAdminPanel = () => {
     navigate('/admin');
-  };
-
-  const handleContactUs = () => {
-    const message = 'مرحبا، أحتاج مساعدة في التطبيق';
-    const whatsappUrl = `https://wa.me/964${encodeURIComponent(message)}`;
-    window.open(whatsappUrl, '_blank');
   };
 
   const hasAdminAccess = isAdmin || isOwner || isOrderManager || isProductsAdder;
@@ -152,28 +147,25 @@ const MobileAccount = () => {
           </Button>
         </div>
 
-        {/* Help & Support */}
+        {/* Feedback Section */}
         <div className="space-y-3">
-          <h3 className="font-semibold text-gray-800">المساعدة والدعم</h3>
+          <h3 className="font-semibold text-gray-800">رأيك يهمنا</h3>
           
-          <Button 
-            variant="outline" 
-            className="w-full justify-start h-12"
-            onClick={handleContactUs}
-          >
-            <MessageCircle className="w-5 h-5 mr-3 text-green-600" />
-            <span>تواصل معنا</span>
-            <ChevronLeft className="w-4 h-4 mr-auto" />
-          </Button>
-
-          <Button 
-            variant="outline" 
-            className="w-full justify-start h-12"
-          >
-            <HelpCircle className="w-5 h-5 mr-3 text-orange-600" />
-            <span>الأسئلة الشائعة</span>
-            <ChevronLeft className="w-4 h-4 mr-auto" />
-          </Button>
+          <div className="bg-gradient-to-r from-pink-50 to-purple-50 rounded-xl p-4 border border-pink-200">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 bg-gradient-to-r from-pink-500 to-purple-600 rounded-full flex items-center justify-center">
+                <Star className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h4 className="font-semibold text-gray-800">شاركنا رأيك</h4>
+                <p className="text-sm text-gray-600">ساعدنا في تحسين التطبيق</p>
+              </div>
+            </div>
+            <p className="text-sm text-gray-600 mb-4">
+              نحن نقدر آراءكم واقتراحاتكم لتطوير التطبيق وتحسين تجربة الاستخدام
+            </p>
+            <FeedbackForm />
+          </div>
         </div>
 
         {/* Sign Out */}
