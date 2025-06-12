@@ -13,6 +13,7 @@ interface Discount {
 
 const DiscountSwapper = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [isTransitioning, setIsTransitioning] = useState(false);
   const queryClient = useQueryClient();
 
   // Fetch active discounts with proper error handling
@@ -112,7 +113,11 @@ const DiscountSwapper = () => {
     const contentToShow = discounts.length > 0 ? discounts : marketingContent;
     if (contentToShow.length > 1) {
       const interval = setInterval(() => {
-        setCurrentIndex(prev => (prev + 1) % contentToShow.length);
+        setIsTransitioning(true);
+        setTimeout(() => {
+          setCurrentIndex(prev => (prev + 1) % contentToShow.length);
+          setIsTransitioning(false);
+        }, 200);
       }, 4000);
       return () => clearInterval(interval);
     }
@@ -138,7 +143,7 @@ const DiscountSwapper = () => {
 
   if (isLoading) {
     return (
-      <div className="relative overflow-hidden rounded-2xl mx-auto max-w-2xl my-4">
+      <div className="relative overflow-hidden rounded-2xl mx-auto max-w-lg my-4">
         <div className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 p-4">
           <div className="flex items-center justify-center space-x-4">
             <div className="animate-spin">
@@ -157,7 +162,7 @@ const DiscountSwapper = () => {
   const currentContent = contentToShow[currentIndex];
 
   return (
-    <div className="relative overflow-hidden rounded-2xl mx-auto max-w-2xl my-4 shadow-lg">
+    <div className="relative overflow-hidden rounded-2xl mx-auto max-w-lg my-4 shadow-lg">
       {/* Dynamic gradient background based on content type */}
       <div className={`relative ${
         hasDiscounts 
@@ -182,7 +187,9 @@ const DiscountSwapper = () => {
               <Sparkles className="w-6 h-6 text-white" />
             </div>
             
-            <div className="text-center transition-all duration-700 ease-in-out transform">
+            <div className={`text-center transition-all duration-500 ease-in-out transform ${
+              isTransitioning ? 'opacity-0 scale-95 translate-y-2' : 'opacity-100 scale-100 translate-y-0'
+            }`}>
               {hasDiscounts ? (
                 // Discount content with enhanced styling
                 <div className="flex items-center gap-3">
@@ -230,12 +237,18 @@ const DiscountSwapper = () => {
             {contentToShow.map((_, index) => (
               <button
                 key={index}
-                className={`w-2 h-2 rounded-full transition-all duration-300 transform hover:scale-125 ${
+                className={`w-2 h-2 rounded-full transition-all duration-500 transform hover:scale-125 ${
                   index === currentIndex 
                     ? 'bg-white shadow-lg scale-110' 
                     : 'bg-white/50 hover:bg-white/70'
                 }`}
-                onClick={() => setCurrentIndex(index)}
+                onClick={() => {
+                  setIsTransitioning(true);
+                  setTimeout(() => {
+                    setCurrentIndex(index);
+                    setIsTransitioning(false);
+                  }, 200);
+                }}
               />
             ))}
           </div>

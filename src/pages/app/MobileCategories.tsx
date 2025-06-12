@@ -1,9 +1,10 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import MobileAppLayout from '@/components/MobileAppLayout';
 import CategorySkeleton from '@/components/CategorySkeleton';
+import PageSkeleton from '@/components/PageSkeleton';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { useCache } from '@/contexts/CacheContext';
@@ -25,8 +26,9 @@ interface Subcategory {
 const MobileCategories = () => {
   const navigate = useNavigate();
   const { cachedData, cacheStatus } = useCache();
+  const [hasDbError, setHasDbError] = useState(false);
 
-  const { data: categories, isLoading } = useQuery({
+  const { data: categories, isLoading, error } = useQuery({
     queryKey: ['mobile-categories'],
     queryFn: async (): Promise<Category[]> => {
       // Use cached data if available
@@ -44,17 +46,40 @@ const MobileCategories = () => {
           subcategories (*)
         `);
       
-      if (error) throw error;
+      if (error) {
+        console.error('Database error:', error);
+        setHasDbError(true);
+        throw error;
+      }
+      
+      setHasDbError(false);
       return data || [];
     },
-    enabled: !cachedData || cacheStatus === 'complete'
+    enabled: !cachedData || cacheStatus === 'complete',
+    onError: () => setHasDbError(true),
   });
+
+  // Check for database errors
+  useEffect(() => {
+    if (error) {
+      setHasDbError(true);
+    }
+  }, [error]);
 
   const handleCategoryPress = (category: Category) => {
     navigate(`/app/category/${category.id}`, { 
       state: { category } 
     });
   };
+
+  // Show comprehensive skeleton if there are database issues
+  if (hasDbError) {
+    return (
+      <MobileAppLayout title="الفئات" showBackButton={false}>
+        <PageSkeleton type="categories" />
+      </MobileAppLayout>
+    );
+  }
 
   const showLoading = isLoading || (cachedData && cacheStatus !== 'complete');
 

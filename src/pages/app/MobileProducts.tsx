@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -5,7 +6,7 @@ import MobileAppLayout from '@/components/MobileAppLayout';
 import ProductCard from '@/components/ProductCard';
 import ProductCardSkeleton from '@/components/ProductCardSkeleton';
 import CategorySkeleton from '@/components/CategorySkeleton';
-import DiscountCarouselSkeleton from '@/components/DiscountCarouselSkeleton';
+import PageSkeleton from '@/components/PageSkeleton';
 import DiscountSwapper from '@/components/DiscountSwapper';
 import { Button } from '@/components/ui/button';
 import { Filter } from 'lucide-react';
@@ -18,6 +19,7 @@ const MobileProducts = () => {
   const [currentDiscountIndex, setCurrentDiscountIndex] = useState(0);
   const [refreshCount, setRefreshCount] = useState(0);
   const [hasAutoRefreshed, setHasAutoRefreshed] = useState(false);
+  const [hasDbError, setHasDbError] = useState(false);
   const {
     cachedData,
     cacheStatus
@@ -58,7 +60,13 @@ const MobileProducts = () => {
         .not('price', 'is', null)
         .order('discount_percentage', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Database error:', error);
+        setHasDbError(true);
+        throw error;
+      }
+      
+      setHasDbError(false);
       
       // Filter out products with invalid prices or discounts
       const validProducts = (data || []).filter(product => 
@@ -74,52 +82,14 @@ const MobileProducts = () => {
     staleTime: 30000,
     refetchOnWindowFocus: false,
     retry: 3,
+    onError: () => setHasDbError(true),
   });
-
-  // NaN detection and auto-refresh logic
-  useEffect(() => {
-    if (discountedProducts && discountedProducts.length > 0 && refreshCount < 2) {
-      const hasNaNPrices = discountedProducts.some(product => {
-        if (!product.price || isNaN(Number(product.price))) {
-          return true;
-        }
-        const discountedPrice = Math.round(Number(product.price) * (1 - (product.discount_percentage || 0) / 100));
-        return isNaN(discountedPrice);
-      });
-
-      if (hasNaNPrices) {
-        console.log('NaN detected in prices, refreshing discount swapper...');
-        setTimeout(() => {
-          setRefreshCount(prev => prev + 1);
-          queryClient.invalidateQueries({ queryKey: ['mobile-discounted-products'] });
-        }, 1000);
-      }
-    }
-  }, [discountedProducts, refreshCount, queryClient]);
-
-  // Check if discounts are still valid after multiple refresh attempts
-  useEffect(() => {
-    if (refreshCount >= 2 && discountedProducts) {
-      const invalidProducts = discountedProducts.filter(product => {
-        if (!product.price || isNaN(Number(product.price))) return true;
-        const discountedPrice = Math.round(Number(product.price) * (1 - (product.discount_percentage || 0) / 100));
-        return isNaN(discountedPrice);
-      });
-
-      if (invalidProducts.length > 0) {
-        console.log('Some discounts appear to be invalid after refresh attempts:', invalidProducts);
-        // Remove invalid products from active discounts
-        invalidProducts.forEach(product => {
-          console.log(`Product ${product.name} has invalid discount data`);
-        });
-      }
-    }
-  }, [refreshCount, discountedProducts]);
 
   // Use cached data if available, otherwise fetch from database
   const {
     data: products,
-    isLoading: isProductsLoading
+    isLoading: isProductsLoading,
+    error: productsError
   } = useQuery({
     queryKey: ['mobile-products'],
     queryFn: async (): Promise<Product[]> => {
@@ -149,7 +119,15 @@ const MobileProducts = () => {
       } = await supabase.from('products').select('*').eq('is_active', true).order('created_at', {
         ascending: false
       });
-      if (error) throw error;
+      
+      if (error) {
+        console.error('Database error:', error);
+        setHasDbError(true);
+        throw error;
+      }
+      
+      setHasDbError(false);
+      
       return (data || []).map(rawProduct => {
         const options = (rawProduct as any).options || ((rawProduct as any).colors ? (rawProduct as any).colors.map((color: string) => ({
           name: color,
@@ -166,10 +144,12 @@ const MobileProducts = () => {
     },
     enabled: !cachedData || cacheStatus === 'complete',
     staleTime: 60000,
+    onError: () => setHasDbError(true),
   });
 
   const {
-    data: categories
+    data: categories,
+    error: categoriesError
   } = useQuery({
     queryKey: ['mobile-categories-filter'],
     queryFn: async () => {
@@ -185,12 +165,27 @@ const MobileProducts = () => {
         data,
         error
       } = await supabase.from('categories').select('*');
-      if (error) throw error;
+      
+      if (error) {
+        console.error('Database error:', error);
+        setHasDbError(true);
+        throw error;
+      }
+      
+      setHasDbError(false);
       return data;
     },
     enabled: !cachedData || cacheStatus === 'complete',
     staleTime: 300000,
+    onError: () => setHasDbError(true),
   });
+
+  // Check for database errors
+  useEffect(() => {
+    if (discountError || productsError || categoriesError) {
+      setHasDbError(true);
+    }
+  }, [discountError, productsError, categoriesError]);
 
   // Set up real-time updates for discounts
   useEffect(() => {
@@ -257,13 +252,14 @@ const MobileProducts = () => {
     navigate(`/app/product/${productId}`);
   };
 
-  // Safe price calculation function
-  const calculateDiscountedPrice = (price: number, discountPercentage: number) => {
-    if (!price || isNaN(price) || !discountPercentage || isNaN(discountPercentage)) {
-      return price || 0;
-    }
-    return Math.round(price * (1 - discountPercentage / 100));
-  };
+  // Show comprehensive skeleton if there are database issues
+  if (hasDbError) {
+    return (
+      <MobileAppLayout title="المنتجات" showBackButton={false}>
+        <PageSkeleton type="products" />
+      </MobileAppLayout>
+    );
+  }
 
   // Show loading skeletons while data is loading
   const showProductsLoading = isProductsLoading || (cachedData && cacheStatus !== 'complete');
