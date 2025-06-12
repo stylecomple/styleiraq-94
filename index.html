@@ -27,6 +27,17 @@
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:image" content="/lovable-uploads/0da9cc01-5559-440a-9102-1c28fa7d67dc.jpg" />
+
+    <!-- Auto-remove Lovable badge script -->
+    <script>
+      // Wait until the DOM is fully loaded
+      document.addEventListener("DOMContentLoaded", function () {
+        const badge = document.getElementById("lovable-badge");
+        if (badge) {
+          badge.remove(); // Remove the badge element from the DOM
+        }
+      });
+    </script>
   </head>
 
   <body>
