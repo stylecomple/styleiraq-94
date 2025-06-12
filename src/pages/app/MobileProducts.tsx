@@ -5,11 +5,8 @@ import { supabase } from '@/integrations/supabase/client';
 import MobileAppLayout from '@/components/MobileAppLayout';
 import ProductCard from '@/components/ProductCard';
 import { Product } from '@/types';
-import { useAppLogo } from '@/hooks/useAppLogo';
 
 const MobileProducts = () => {
-  const { logoUrl } = useAppLogo();
-
   const { data: products, isLoading } = useQuery({
     queryKey: ['mobile-products'],
     queryFn: async () => {
@@ -41,20 +38,18 @@ const MobileProducts = () => {
     <MobileAppLayout title="جميع المنتجات" showBackButton={false}>
       <div className="space-y-6 animate-fade-in">
         {/* App Logo Section */}
-        {logoUrl && (
-          <div className="flex justify-center py-4 animate-slide-down">
-            <div className="relative group">
-              <div className="absolute -inset-2 bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 rounded-full blur-md opacity-30 group-hover:opacity-50 transition-opacity duration-300" />
-              <div className="relative bg-white rounded-full p-3 shadow-lg transform transition-all duration-300 hover:scale-105">
-                <img 
-                  src={logoUrl} 
-                  alt="متجر الجمال والأناقة" 
-                  className="w-16 h-16 object-cover rounded-full"
-                />
-              </div>
+        <div className="flex justify-center py-4 animate-slide-down">
+          <div className="relative group">
+            <div className="absolute -inset-2 bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 rounded-full blur-md opacity-30 group-hover:opacity-50 transition-opacity duration-300" />
+            <div className="relative bg-white rounded-full p-3 shadow-lg transform transition-all duration-300 hover:scale-105">
+              <img 
+                src="/lovable-uploads/44d2a604-8d2c-498a-9c37-e89e541a86cb.png" 
+                alt="Style متجر الجمال والأناقة" 
+                className="w-16 h-16 object-contain rounded-full"
+              />
             </div>
           </div>
-        )}
+        </div>
 
         <div className="p-4 space-y-4">
           {/* Products Grid */}
@@ -63,7 +58,7 @@ const MobileProducts = () => {
               {[...Array(6)].map((_, index) => (
                 <div 
                   key={index} 
-                  className="bg-gray-200 animate-pulse rounded-lg h-64"
+                  className="bg-gray-200 animate-pulse rounded-lg h-80"
                   style={{ animationDelay: `${index * 100}ms` }}
                 />
               ))}

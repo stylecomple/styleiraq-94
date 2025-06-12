@@ -1,9 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
-import { useAppLogo } from '@/hooks/useAppLogo';
 
 const MobileSplash = () => {
-  const { logoUrl } = useAppLogo();
   const [showContent, setShowContent] = useState(false);
 
   useEffect(() => {
@@ -46,17 +44,13 @@ const MobileSplash = () => {
             {/* Inner glow ring */}
             <div className="absolute inset-2 w-28 h-28 mx-auto border-2 border-white/50 rounded-full animate-ping-slow" />
             
-            {/* Logo/Icon container */}
+            {/* Logo container */}
             <div className="relative w-32 h-32 mx-auto bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center transform transition-all duration-700 hover:scale-110 animate-bounce-gentle">
-              {logoUrl ? (
-                <img 
-                  src={logoUrl} 
-                  alt="متجر الجمال والأناقة" 
-                  className="w-24 h-24 object-cover rounded-full animate-fade-in-scale" 
-                />
-              ) : (
-                <span className="text-6xl animate-pulse-gentle">💄</span>
-              )}
+              <img 
+                src="/lovable-uploads/44d2a604-8d2c-498a-9c37-e89e541a86cb.png" 
+                alt="Style متجر الجمال والأناقة" 
+                className="w-24 h-24 object-contain animate-fade-in-scale" 
+              />
             </div>
             
             {/* Floating sparkles */}
