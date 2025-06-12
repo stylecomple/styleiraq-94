@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -34,7 +33,9 @@ const PaymentDialog = ({ isOpen, onClose, paymentMethod, orderData, onPaymentSuc
 
     setIsProcessing(true);
     try {
-      // Create order in database
+      console.log('Creating order with UUID:', orderData.orderId);
+      
+      // Create order in database - orderId is already a proper UUID
       const { data: order, error: orderError } = await supabase
         .from('orders')
         .insert({
@@ -47,7 +48,12 @@ const PaymentDialog = ({ isOpen, onClose, paymentMethod, orderData, onPaymentSuc
         .select()
         .single();
 
-      if (orderError) throw orderError;
+      if (orderError) {
+        console.error('Order creation error:', orderError);
+        throw orderError;
+      }
+
+      console.log('Order created successfully:', order);
 
       // Create order items
       const orderItems = orderData.items.map(item => ({
@@ -58,11 +64,18 @@ const PaymentDialog = ({ isOpen, onClose, paymentMethod, orderData, onPaymentSuc
         selected_color: item.selectedOption || item.selectedColor
       }));
 
+      console.log('Creating order items:', orderItems);
+
       const { error: itemsError } = await supabase
         .from('order_items')
         .insert(orderItems);
 
-      if (itemsError) throw itemsError;
+      if (itemsError) {
+        console.error('Order items creation error:', itemsError);
+        throw itemsError;
+      }
+
+      console.log('Order items created successfully');
 
       onPaymentSuccess();
     } catch (error) {

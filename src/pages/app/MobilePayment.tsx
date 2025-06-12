@@ -97,8 +97,8 @@ const MobilePayment = () => {
     if (method === 'cash_on_delivery') {
       handleCashOnDeliveryOrder();
     } else {
-      // Create order data for online payment
-      const orderId = `order_${Date.now()}`;
+      // Create order data for online payment - use crypto.randomUUID() for proper UUID
+      const orderId = crypto.randomUUID();
       const newOrderData = {
         orderId,
         totalAmount,
@@ -113,7 +113,10 @@ const MobilePayment = () => {
 
   const handleCashOnDeliveryOrder = async () => {
     try {
-      const orderId = `cod_${Date.now()}`;
+      // Generate proper UUID instead of string with prefix
+      const orderId = crypto.randomUUID();
+      
+      console.log('Creating cash on delivery order with ID:', orderId);
       
       // Create order in database
       const { data: order, error: orderError } = await supabase
@@ -131,7 +134,12 @@ const MobilePayment = () => {
         .select()
         .single();
 
-      if (orderError) throw orderError;
+      if (orderError) {
+        console.error('Order creation error:', orderError);
+        throw orderError;
+      }
+
+      console.log('Order created successfully:', order);
 
       // Create order items
       const orderItems = items.map(item => ({
@@ -142,11 +150,18 @@ const MobilePayment = () => {
         selected_color: item.selectedOption || item.selectedColor
       }));
 
+      console.log('Creating order items:', orderItems);
+
       const { error: itemsError } = await supabase
         .from('order_items')
         .insert(orderItems);
 
-      if (itemsError) throw itemsError;
+      if (itemsError) {
+        console.error('Order items creation error:', itemsError);
+        throw itemsError;
+      }
+
+      console.log('Order items created successfully');
 
       clearCart();
       toast({
