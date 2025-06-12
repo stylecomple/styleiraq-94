@@ -7,6 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 interface Product {
   id: string;
   name: string;
+  price: number;
   discount_percentage: number;
 }
 
@@ -15,6 +16,14 @@ const ProductDiscountTicker = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Safe price calculation function
+  const calculateDiscountedPrice = (price: number, discountPercentage: number) => {
+    if (!price || isNaN(price) || !discountPercentage || isNaN(discountPercentage)) {
+      return price || 0;
+    }
+    return Math.round(price * (1 - discountPercentage / 100));
+  };
+
   useEffect(() => {
     const fetchDiscountedProducts = async () => {
       try {
@@ -22,9 +31,10 @@ const ProductDiscountTicker = () => {
         
         const { data, error } = await supabase
           .from('products')
-          .select('id, name, discount_percentage')
+          .select('id, name, price, discount_percentage')
           .gt('discount_percentage', 0)
           .eq('is_active', true)
+          .not('price', 'is', null)
           .limit(10);
 
         if (error) {
@@ -33,7 +43,20 @@ const ProductDiscountTicker = () => {
         }
 
         console.log('Discounted products fetched:', data);
-        setProducts(data || []);
+        
+        // Filter out products with invalid prices
+        const validProducts = (data || []).filter(product => 
+          product.price && 
+          !isNaN(Number(product.price)) && 
+          product.discount_percentage > 0 &&
+          product.discount_percentage <= 100
+        ).map(product => ({
+          ...product,
+          price: Number(product.price)
+        }));
+
+        console.log('Valid products after filtering:', validProducts);
+        setProducts(validProducts);
       } catch (error) {
         console.error('Error in fetchDiscountedProducts:', error);
       } finally {
@@ -94,22 +117,26 @@ const ProductDiscountTicker = () => {
           <div 
             className="flex items-center gap-8 whitespace-nowrap animate-[scroll_30s_linear_infinite]"
           >
-            {duplicatedProducts.map((product, index) => (
-              <button
-                key={`${product.id}-${index}`}
-                onClick={() => handleProductClick(product.id)}
-                className="flex items-center gap-2 text-sm font-semibold hover:bg-white/10 px-2 py-1 rounded transition-colors cursor-pointer"
-              >
-                <Percent className="w-3 h-3 text-yellow-300" />
-                <span className="text-yellow-100">
-                  {product.name}
-                </span>
-                <span className="bg-yellow-400 text-red-800 px-2 py-1 rounded-full text-xs font-bold">
-                  خصم {product.discount_percentage}%
-                </span>
-                <span className="text-white/60 mx-2">•</span>
-              </button>
-            ))}
+            {duplicatedProducts.map((product, index) => {
+              const discountedPrice = calculateDiscountedPrice(product.price, product.discount_percentage);
+              
+              return (
+                <button
+                  key={`${product.id}-${index}`}
+                  onClick={() => handleProductClick(product.id)}
+                  className="flex items-center gap-2 text-sm font-semibold hover:bg-white/10 px-2 py-1 rounded transition-colors cursor-pointer"
+                >
+                  <Percent className="w-3 h-3 text-yellow-300" />
+                  <span className="text-yellow-100">
+                    {product.name}
+                  </span>
+                  <span className="bg-yellow-400 text-red-800 px-2 py-1 rounded-full text-xs font-bold">
+                    خصم {product.discount_percentage}%
+                  </span>
+                  <span className="text-white/60 mx-2">•</span>
+                </button>
+              );
+            })}
           </div>
         </div>
 

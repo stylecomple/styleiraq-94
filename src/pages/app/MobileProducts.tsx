@@ -16,6 +16,8 @@ import { useNavigate } from 'react-router-dom';
 const MobileProducts = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [currentDiscountIndex, setCurrentDiscountIndex] = useState(0);
+  const [refreshCount, setRefreshCount] = useState(0);
+  const [hasAutoRefreshed, setHasAutoRefreshed] = useState(false);
   const {
     cachedData,
     cacheStatus
@@ -23,16 +25,28 @@ const MobileProducts = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  // Optimized discount check query - runs immediately without blocking UI
-  const { data: discountedProducts, isLoading: isDiscountLoading } = useQuery({
-    queryKey: ['mobile-discounted-products'],
+  // Auto-refresh logic after splash screen
+  useEffect(() => {
+    if (!hasAutoRefreshed && cacheStatus === 'complete') {
+      console.log('Auto-refreshing discount data after splash...');
+      queryClient.invalidateQueries({ queryKey: ['mobile-discounted-products'] });
+      queryClient.invalidateQueries({ queryKey: ['mobile-products'] });
+      setHasAutoRefreshed(true);
+    }
+  }, [cacheStatus, hasAutoRefreshed, queryClient]);
+
+  // Optimized discount check query with NaN prevention
+  const { data: discountedProducts, isLoading: isDiscountLoading, error: discountError } = useQuery({
+    queryKey: ['mobile-discounted-products', refreshCount],
     queryFn: async () => {
       console.log('Fetching discounted products...');
       
       // Check cached data first for immediate response
-      if (cachedData?.discounts?.discountedProducts) {
+      if (cachedData?.discounts?.discountedProducts && refreshCount === 0) {
         console.log('Using cached discounted products');
-        return cachedData.discounts.discountedProducts;
+        return cachedData.discounts.discountedProducts.filter(product => 
+          product.price && !isNaN(product.price) && product.discount_percentage > 0
+        );
       }
 
       // Fallback to database query for fresh data
@@ -41,14 +55,66 @@ const MobileProducts = () => {
         .select('id, name, price, cover_image, discount_percentage')
         .gt('discount_percentage', 0)
         .eq('is_active', true)
+        .not('price', 'is', null)
         .order('discount_percentage', { ascending: false });
 
       if (error) throw error;
-      return data || [];
+      
+      // Filter out products with invalid prices or discounts
+      const validProducts = (data || []).filter(product => 
+        product.price && 
+        !isNaN(Number(product.price)) && 
+        product.discount_percentage > 0 &&
+        product.discount_percentage <= 100
+      );
+
+      console.log('Valid discounted products:', validProducts.length);
+      return validProducts;
     },
-    staleTime: 30000, // Cache for 30 seconds to improve performance
-    refetchOnWindowFocus: false, // Don't refetch when window regains focus
+    staleTime: 30000,
+    refetchOnWindowFocus: false,
+    retry: 3,
   });
+
+  // NaN detection and auto-refresh logic
+  useEffect(() => {
+    if (discountedProducts && discountedProducts.length > 0 && refreshCount < 2) {
+      const hasNaNPrices = discountedProducts.some(product => {
+        if (!product.price || isNaN(Number(product.price))) {
+          return true;
+        }
+        const discountedPrice = Math.round(Number(product.price) * (1 - (product.discount_percentage || 0) / 100));
+        return isNaN(discountedPrice);
+      });
+
+      if (hasNaNPrices) {
+        console.log('NaN detected in prices, refreshing discount swapper...');
+        setTimeout(() => {
+          setRefreshCount(prev => prev + 1);
+          queryClient.invalidateQueries({ queryKey: ['mobile-discounted-products'] });
+        }, 1000);
+      }
+    }
+  }, [discountedProducts, refreshCount, queryClient]);
+
+  // Check if discounts are still valid after multiple refresh attempts
+  useEffect(() => {
+    if (refreshCount >= 2 && discountedProducts) {
+      const invalidProducts = discountedProducts.filter(product => {
+        if (!product.price || isNaN(Number(product.price))) return true;
+        const discountedPrice = Math.round(Number(product.price) * (1 - (product.discount_percentage || 0) / 100));
+        return isNaN(discountedPrice);
+      });
+
+      if (invalidProducts.length > 0) {
+        console.log('Some discounts appear to be invalid after refresh attempts:', invalidProducts);
+        // Remove invalid products from active discounts
+        invalidProducts.forEach(product => {
+          console.log(`Product ${product.name} has invalid discount data`);
+        });
+      }
+    }
+  }, [refreshCount, discountedProducts]);
 
   // Use cached data if available, otherwise fetch from database
   const {
@@ -99,7 +165,7 @@ const MobileProducts = () => {
       });
     },
     enabled: !cachedData || cacheStatus === 'complete',
-    staleTime: 60000, // Cache for 1 minute
+    staleTime: 60000,
   });
 
   const {
@@ -123,7 +189,7 @@ const MobileProducts = () => {
       return data;
     },
     enabled: !cachedData || cacheStatus === 'complete',
-    staleTime: 300000, // Cache categories for 5 minutes
+    staleTime: 300000,
   });
 
   // Set up real-time updates for discounts
@@ -139,7 +205,7 @@ const MobileProducts = () => {
         },
         () => {
           console.log('Discount updated, refreshing...');
-          // Invalidate both product and discount queries
+          setRefreshCount(0); // Reset refresh count
           queryClient.invalidateQueries({ queryKey: ['mobile-discounted-products'] });
           queryClient.invalidateQueries({ queryKey: ['mobile-products'] });
         }
@@ -154,6 +220,7 @@ const MobileProducts = () => {
         },
         () => {
           console.log('Product discount updated, refreshing...');
+          setRefreshCount(0); // Reset refresh count
           queryClient.invalidateQueries({ queryKey: ['mobile-discounted-products'] });
           queryClient.invalidateQueries({ queryKey: ['mobile-products'] });
         }
@@ -176,7 +243,7 @@ const MobileProducts = () => {
     if (discountedProducts && discountedProducts.length > 1) {
       const interval = setInterval(() => {
         setCurrentDiscountIndex(prev => (prev + 1) % discountedProducts.length);
-      }, 3000); // Change every 3 seconds
+      }, 3000);
 
       return () => clearInterval(interval);
     }
@@ -188,6 +255,14 @@ const MobileProducts = () => {
   
   const handleDiscountProductClick = (productId: string) => {
     navigate(`/app/product/${productId}`);
+  };
+
+  // Safe price calculation function
+  const calculateDiscountedPrice = (price: number, discountPercentage: number) => {
+    if (!price || isNaN(price) || !discountPercentage || isNaN(discountPercentage)) {
+      return price || 0;
+    }
+    return Math.round(price * (1 - discountPercentage / 100));
   };
 
   // Show loading skeletons while data is loading
@@ -204,34 +279,77 @@ const MobileProducts = () => {
           <div className="relative h-32 bg-gradient-to-r from-red-500 to-pink-500 rounded-xl overflow-hidden shadow-lg">
             <div className="absolute inset-0 bg-black/20"></div>
             
-            {discountedProducts.map((product, index) => <div key={product.id} className={`absolute inset-0 transition-all duration-700 ease-in-out cursor-pointer ${index === currentDiscountIndex ? 'opacity-100 translate-x-0' : index < currentDiscountIndex ? 'opacity-0 -translate-x-full' : 'opacity-0 translate-x-full'}`} onClick={() => handleDiscountProductClick(product.id)}>
-                <div className="flex items-center h-full p-4 text-white">
-                  <div className="flex-shrink-0 w-20 h-20 mr-4">
-                    <img src={product.cover_image || '/placeholder.svg'} alt={product.name} className="w-full h-full object-cover rounded-lg border-2 border-white/30" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-bold text-lg truncate">{product.name}</h3>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-sm line-through opacity-75">
-                        {product.price} د.ع
-                      </span>
-                      <span className="text-lg font-bold text-yellow-300">
-                        {Math.round(product.price * (1 - (product.discount_percentage || 0) / 100))} د.ع
-                      </span>
+            {discountedProducts.map((product, index) => {
+              const originalPrice = Number(product.price) || 0;
+              const discountedPrice = calculateDiscountedPrice(originalPrice, product.discount_percentage || 0);
+              
+              return (
+                <div 
+                  key={product.id} 
+                  className={`absolute inset-0 transition-all duration-700 ease-in-out cursor-pointer ${
+                    index === currentDiscountIndex 
+                      ? 'opacity-100 translate-x-0' 
+                      : index < currentDiscountIndex 
+                        ? 'opacity-0 -translate-x-full' 
+                        : 'opacity-0 translate-x-full'
+                  }`} 
+                  onClick={() => handleDiscountProductClick(product.id)}
+                >
+                  <div className="flex items-center h-full p-4 text-white">
+                    <div className="flex-shrink-0 w-20 h-20 mr-4">
+                      <img 
+                        src={product.cover_image || '/placeholder.svg'} 
+                        alt={product.name} 
+                        className="w-full h-full object-cover rounded-lg border-2 border-white/30" 
+                      />
                     </div>
-                    <div className="bg-yellow-400 text-red-800 px-2 py-1 rounded-full text-xs font-bold inline-block mt-1">
-                      خصم {product.discount_percentage}%
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-bold text-lg truncate">{product.name}</h3>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-sm line-through opacity-75">
+                          {originalPrice} د.ع
+                        </span>
+                        <span className="text-lg font-bold text-yellow-300">
+                          {discountedPrice} د.ع
+                        </span>
+                      </div>
+                      <div className="bg-yellow-400 text-red-800 px-2 py-1 rounded-full text-xs font-bold inline-block mt-1">
+                        خصم {product.discount_percentage}%
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>)}
+              );
+            })}
             
             {/* Indicators */}
-            {discountedProducts.length > 1 && <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex gap-1">
-                {discountedProducts.map((_, index) => <button key={index} className={`w-2 h-2 rounded-full transition-all duration-300 ${index === currentDiscountIndex ? 'bg-white' : 'bg-white/50'}`} onClick={() => setCurrentDiscountIndex(index)} />)}
-              </div>}
+            {discountedProducts.length > 1 && (
+              <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex gap-1">
+                {discountedProducts.map((_, index) => (
+                  <button 
+                    key={index} 
+                    className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                      index === currentDiscountIndex ? 'bg-white' : 'bg-white/50'
+                    }`} 
+                    onClick={() => setCurrentDiscountIndex(index)} 
+                  />
+                ))}
+              </div>
+            )}
           </div>
         ) : null}
+
+        {/* Refresh indicator when auto-refreshing */}
+        {refreshCount > 0 && refreshCount < 2 && (
+          <div className="bg-orange-50 border border-orange-200 rounded-xl p-3">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse" />
+              <span className="text-sm text-orange-800">
+                جاري تحديث العروض... (محاولة {refreshCount}/2)
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* Category Filter with skeleton */}
         {showCategoriesLoading ? (
@@ -241,9 +359,11 @@ const MobileProducts = () => {
             <Button variant={selectedCategory === '' ? 'default' : 'outline'} size="sm" onClick={() => setSelectedCategory('')} className="whitespace-nowrap rounded-full">
               الكل
             </Button>
-            {categories.map((category: any) => <Button key={category.id} variant={selectedCategory === category.id ? 'default' : 'outline'} size="sm" onClick={() => setSelectedCategory(category.id)} className="whitespace-nowrap rounded-full">
+            {categories.map((category: any) => (
+              <Button key={category.id} variant={selectedCategory === category.id ? 'default' : 'outline'} size="sm" onClick={() => setSelectedCategory(category.id)} className="whitespace-nowrap rounded-full">
                 {category.icon} {category.name}
-              </Button>)}
+              </Button>
+            ))}
           </div>
         )}
 
@@ -300,9 +420,11 @@ const MobileProducts = () => {
             <p className="text-gray-500 mb-4">
               {selectedCategory ? 'لم يتم العثور على منتجات في هذه الفئة' : 'لا توجد منتجات متاحة حالياً'}
             </p>
-            {selectedCategory && <Button onClick={handleClearFilters} variant="outline" className="mx-auto">
+            {selectedCategory && (
+              <Button onClick={handleClearFilters} variant="outline" className="mx-auto">
                 مسح جميع المرشحات
-              </Button>}
+              </Button>
+            )}
           </div>
         )}
       </div>
