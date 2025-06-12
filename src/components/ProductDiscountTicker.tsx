@@ -17,8 +17,8 @@ interface ProductDiscountTickerProps {
 
 const ProductDiscountTicker = ({ products: propProducts }: ProductDiscountTickerProps) => {
   const navigate = useNavigate();
-  const [products, setProducts] = useState<Product[]>(propProducts || []);
-  const [isLoading, setIsLoading] = useState(!propProducts);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Safe price calculation function
   const calculateDiscountedPrice = (price: number, discountPercentage: number) => {
@@ -29,32 +29,26 @@ const ProductDiscountTicker = ({ products: propProducts }: ProductDiscountTicker
   };
 
   useEffect(() => {
-    if (propProducts) {
-      console.log('Using prop products:', propProducts);
-      // Filter and validate products when passed as props
-      const validProducts = propProducts.filter(product => {
-        const price = Number(product.price);
-        const discount = Number(product.discount_percentage);
-        
-        if (!price || isNaN(price) || !discount || isNaN(discount) || discount <= 0 || discount > 100) {
-          console.log('Invalid product filtered out:', product);
-          return false;
-        }
-        
-        const discountedPrice = calculateDiscountedPrice(price, discount);
-        return !isNaN(discountedPrice) && discountedPrice > 0;
-      });
-      
-      console.log('Valid products after filtering:', validProducts);
-      setProducts(validProducts);
-      setIsLoading(false);
-      return;
-    }
-
     const fetchDiscountedProducts = async () => {
       try {
-        console.log('Fetching discounted products directly from Supabase...');
+        console.log('Fetching discounted products for ticker...');
         
+        // If we have prop products, use them first
+        if (propProducts && propProducts.length > 0) {
+          console.log('Using prop products:', propProducts);
+          const validProducts = propProducts.filter(product => {
+            const price = Number(product.price);
+            const discount = Number(product.discount_percentage);
+            return price > 0 && !isNaN(price) && discount > 0 && discount <= 100;
+          });
+          
+          console.log('Valid prop products:', validProducts.length);
+          setProducts(validProducts);
+          setIsLoading(false);
+          return;
+        }
+
+        // Fetch from database
         const { data, error } = await supabase
           .from('products')
           .select('id, name, price, discount_percentage')
@@ -65,38 +59,42 @@ const ProductDiscountTicker = ({ products: propProducts }: ProductDiscountTicker
 
         if (error) {
           console.error('Error fetching discounted products:', error);
+          setIsLoading(false);
           return;
         }
 
-        console.log('Raw discounted products fetched:', data);
+        console.log('Raw discounted products fetched:', data?.length || 0);
         
-        // Filter out products with invalid prices and validate discounts
-        const validProducts = (data || []).filter(product => {
+        if (!data || data.length === 0) {
+          console.log('No discounted products found');
+          setProducts([]);
+          setIsLoading(false);
+          return;
+        }
+
+        // Filter and validate products
+        const validProducts = data.filter(product => {
           const price = Number(product.price);
           const discount = Number(product.discount_percentage);
           
-          if (!price || isNaN(price) || !discount || isNaN(discount) || discount <= 0 || discount > 100) {
+          const isValid = price > 0 && !isNaN(price) && discount > 0 && discount <= 100;
+          
+          if (!isValid) {
             console.log('Invalid product filtered out:', product);
-            return false;
           }
           
-          // Test discount calculation
-          const discountedPrice = calculateDiscountedPrice(price, discount);
-          const isValid = !isNaN(discountedPrice) && discountedPrice > 0;
-          if (!isValid) {
-            console.log('Product with invalid calculated price filtered out:', product);
-          }
           return isValid;
         }).map(product => ({
           ...product,
           price: Number(product.price)
         }));
 
-        console.log('Valid products after filtering and mapping:', validProducts);
+        console.log('Valid products after filtering:', validProducts.length);
         setProducts(validProducts);
+        setIsLoading(false);
       } catch (error) {
         console.error('Error in fetchDiscountedProducts:', error);
-      } finally {
+        setProducts([]);
         setIsLoading(false);
       }
     };
@@ -105,7 +103,7 @@ const ProductDiscountTicker = ({ products: propProducts }: ProductDiscountTicker
 
     // Set up real-time listener for product changes
     const channel = supabase
-      .channel('product-discount-changes')
+      .channel('product-discount-ticker-changes')
       .on(
         'postgres_changes',
         {
@@ -114,8 +112,8 @@ const ProductDiscountTicker = ({ products: propProducts }: ProductDiscountTicker
           table: 'products'
         },
         (payload) => {
-          console.log('Product change detected:', payload);
-          fetchDiscountedProducts(); // Refetch products on any change
+          console.log('Product change detected in ticker:', payload);
+          fetchDiscountedProducts();
         }
       )
       .on(
@@ -126,8 +124,8 @@ const ProductDiscountTicker = ({ products: propProducts }: ProductDiscountTicker
           table: 'active_discounts'
         },
         (payload) => {
-          console.log('Active discount change detected:', payload);
-          fetchDiscountedProducts(); // Refetch products on discount changes
+          console.log('Active discount change detected in ticker:', payload);
+          fetchDiscountedProducts();
         }
       )
       .subscribe();
@@ -137,8 +135,13 @@ const ProductDiscountTicker = ({ products: propProducts }: ProductDiscountTicker
     };
   }, [propProducts]);
 
-  console.log('ProductDiscountTicker render state:', { isLoading, productsCount: products.length, products });
+  console.log('ProductDiscountTicker render state:', { 
+    isLoading, 
+    productsCount: products.length, 
+    hasProducts: products.length > 0 
+  });
 
+  // Show loading state
   if (isLoading) {
     return (
       <div className="bg-gradient-to-r from-orange-500 to-red-500 text-white py-2 overflow-hidden relative border-b-2 border-orange-600 shadow-lg">
@@ -149,8 +152,9 @@ const ProductDiscountTicker = ({ products: propProducts }: ProductDiscountTicker
     );
   }
 
+  // Don't render if no products
   if (!products || products.length === 0) {
-    console.log('No products to display in ticker');
+    console.log('No products to display in ticker - not rendering');
     return null;
   }
 
