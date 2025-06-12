@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -15,11 +16,48 @@ import { useNavigate } from 'react-router-dom';
 const MobileProducts = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [currentDiscountIndex, setCurrentDiscountIndex] = useState(0);
+  const [isCheckingDiscounts, setIsCheckingDiscounts] = useState(true);
   const {
     cachedData,
     cacheStatus
   } = useCache();
   const navigate = useNavigate();
+
+  // Quick discount check query
+  const { data: discountCheckResult, isLoading: isDiscountLoading } = useQuery({
+    queryKey: ['quick-discount-check'],
+    queryFn: async () => {
+      console.log('Quick discount check...');
+      
+      // Check cached data first
+      if (cachedData?.discounts) {
+        return {
+          hasActiveDiscounts: cachedData.discounts.activeDiscounts?.length > 0,
+          hasDiscountedProducts: cachedData.discounts.discountedProducts?.length > 0
+        };
+      }
+
+      // Fallback to database check
+      const [activeDiscountsResult, discountedProductsResult] = await Promise.all([
+        supabase
+          .from('active_discounts')
+          .select('id')
+          .eq('is_active', true)
+          .limit(1),
+        supabase
+          .from('products')
+          .select('id')
+          .gt('discount_percentage', 0)
+          .eq('is_active', true)
+          .limit(1)
+      ]);
+
+      return {
+        hasActiveDiscounts: (activeDiscountsResult.data?.length || 0) > 0,
+        hasDiscountedProducts: (discountedProductsResult.data?.length || 0) > 0
+      };
+    }
+  });
 
   // Use cached data if available, otherwise fetch from database
   const {
@@ -94,6 +132,16 @@ const MobileProducts = () => {
     enabled: !cachedData || cacheStatus === 'complete'
   });
 
+  // Update discount checking state when discount check is complete
+  useEffect(() => {
+    if (!isDiscountLoading && discountCheckResult) {
+      // Small delay for smooth UX
+      setTimeout(() => {
+        setIsCheckingDiscounts(false);
+      }, 300);
+    }
+  }, [isDiscountLoading, discountCheckResult]);
+
   // Filter products based on category
   const filteredProducts = products?.filter(product => {
     const matchesCategory = !selectedCategory || product.categories && product.categories.includes(selectedCategory);
@@ -102,6 +150,9 @@ const MobileProducts = () => {
 
   // Get discounted products with full details including images
   const discountedProducts = React.useMemo(() => {
+    // Don't show discounted products while checking
+    if (isCheckingDiscounts) return [];
+
     // First try to get from cached discount data and match with full product data
     if (cachedData?.discounts?.discountedProducts && products) {
       return cachedData.discounts.discountedProducts.map((discountProduct: any) => {
@@ -112,7 +163,7 @@ const MobileProducts = () => {
 
     // Fallback to filtering current products
     return products?.filter(product => product.discount_percentage && product.discount_percentage > 0) || [];
-  }, [cachedData?.discounts?.discountedProducts, products]);
+  }, [cachedData?.discounts?.discountedProducts, products, isCheckingDiscounts]);
 
   // Auto-rotate discount carousel
   useEffect(() => {
@@ -134,15 +185,14 @@ const MobileProducts = () => {
   // Show loading skeletons while data is loading
   const showProductsLoading = isLoading || (cachedData && cacheStatus !== 'complete');
   const showCategoriesLoading = !categories;
-  const showDiscountsLoading = discountedProducts.length === 0 && showProductsLoading;
 
   return (
     <MobileAppLayout title="المنتجات" showBackButton={false}>
       <div className="space-y-4 p-4">
-        {/* Enhanced Discount Products Carousel with skeleton */}
-        {showDiscountsLoading ? (
+        {/* Enhanced Discount Products Carousel with skeleton while checking */}
+        {isCheckingDiscounts ? (
           <DiscountCarouselSkeleton />
-        ) : discountedProducts.length > 0 && (
+        ) : discountedProducts.length > 0 ? (
           <div className="relative h-32 bg-gradient-to-r from-red-500 to-pink-500 rounded-xl overflow-hidden shadow-lg">
             <div className="absolute inset-0 bg-black/20"></div>
             
@@ -178,7 +228,7 @@ const MobileProducts = () => {
                 {discountedProducts.map((_, index) => <button key={index} className={`w-2 h-2 rounded-full transition-all duration-300 ${index === currentDiscountIndex ? 'bg-white' : 'bg-white/50'}`} onClick={() => setCurrentDiscountIndex(index)} />)}
               </div>}
           </div>
-        )}
+        ) : null}
 
         {/* Category Filter with skeleton */}
         {showCategoriesLoading ? (
