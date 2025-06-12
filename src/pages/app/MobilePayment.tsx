@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import MobileAppLayout from '@/components/MobileAppLayout';
@@ -16,9 +17,25 @@ import { PaymentMethod } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 
 const GOVERNORATES = [
-  'بغداد', 'البصرة', 'نينوى', 'أربيل', 'النجف', 'كربلاء', 'الأنبار', 'دهوك', 
-  'السليمانية', 'كركوك', 'ديالى', 'صلاح الدين', 'القادسية', 'بابل', 'واسط', 
-  'ميسان', 'ذي قار', 'المثنى'
+  { name: 'بغداد', cost: 5000 },
+  { name: 'العامرية', cost: 2000 },
+  { name: 'البصرة', cost: 6000 },
+  { name: 'نينوى', cost: 6000 },
+  { name: 'أربيل', cost: 6000 },
+  { name: 'النجف', cost: 6000 },
+  { name: 'كربلاء', cost: 6000 },
+  { name: 'الأنبار', cost: 6000 },
+  { name: 'دهوك', cost: 6000 },
+  { name: 'السليمانية', cost: 6000 },
+  { name: 'كركوك', cost: 6000 },
+  { name: 'ديالى', cost: 6000 },
+  { name: 'صلاح الدين', cost: 6000 },
+  { name: 'القادسية', cost: 6000 },
+  { name: 'بابل', cost: 6000 },
+  { name: 'واسط', cost: 6000 },
+  { name: 'ميسان', cost: 6000 },
+  { name: 'ذي قار', cost: 6000 },
+  { name: 'المثنى', cost: 6000 }
 ];
 
 const MobilePayment = () => {
@@ -51,7 +68,10 @@ const MobilePayment = () => {
     }
   }, [user]);
 
-  const totalPrice = getTotalPrice();
+  const productsPrice = getTotalPrice();
+  const selectedGov = GOVERNORATES.find(gov => gov.name === shippingInfo.governorate);
+  const shippingCost = selectedGov ? selectedGov.cost : 0;
+  const totalPrice = productsPrice + shippingCost;
 
   const paymentMethods = [
     {
@@ -215,8 +235,18 @@ const MobilePayment = () => {
                   </div>
                 </div>
               ))}
-              <div className="border-t pt-3 mt-3">
-                <div className="flex justify-between items-center text-lg font-bold">
+              <div className="border-t pt-3 mt-3 space-y-2">
+                <div className="flex justify-between items-center">
+                  <span>المنتجات:</span>
+                  <span>{productsPrice.toLocaleString()} د.ع</span>
+                </div>
+                {shippingCost > 0 && (
+                  <div className="flex justify-between items-center">
+                    <span>رسوم الشحن:</span>
+                    <span>{shippingCost.toLocaleString()} د.ع</span>
+                  </div>
+                )}
+                <div className="flex justify-between items-center text-lg font-bold border-t pt-2">
                   <span>المجموع الكلي:</span>
                   <span>{totalPrice.toLocaleString()} د.ع</span>
                 </div>
@@ -275,8 +305,8 @@ const MobilePayment = () => {
                   </SelectTrigger>
                   <SelectContent>
                     {GOVERNORATES.map((gov) => (
-                      <SelectItem key={gov} value={gov}>
-                        {gov}
+                      <SelectItem key={gov.name} value={gov.name}>
+                        {gov.name} - {gov.cost.toLocaleString()} د.ع
                       </SelectItem>
                     ))}
                   </SelectContent>

@@ -27,6 +27,7 @@ const SimpleDiscountManagement = () => {
         .from('products')
         .select('discount_percentage')
         .gt('discount_percentage', 0)
+        .eq('is_active', true)
         .limit(1);
       
       if (error) throw error;
@@ -42,6 +43,7 @@ const SimpleDiscountManagement = () => {
         .from('products')
         .select('discount_percentage')
         .gt('discount_percentage', 0)
+        .eq('is_active', true)
         .limit(1);
       
       if (error) throw error;
@@ -50,13 +52,14 @@ const SimpleDiscountManagement = () => {
     enabled: !!hasActiveDiscount
   });
 
-  // Get total products count for confirmation
+  // Get total active products count for confirmation
   const { data: totalProducts } = useQuery({
-    queryKey: ['total-products'],
+    queryKey: ['total-active-products'],
     queryFn: async () => {
       const { count, error } = await supabase
         .from('products')
-        .select('*', { count: 'exact', head: true });
+        .select('*', { count: 'exact', head: true })
+        .eq('is_active', true);
       
       if (error) throw error;
       return count || 0;
@@ -65,36 +68,40 @@ const SimpleDiscountManagement = () => {
 
   const applyDiscountMutation = useMutation({
     mutationFn: async (discount: number) => {
-      console.log('Applying global discount to ALL products:', discount);
+      console.log('Applying store-wide discount to active products:', discount);
       
       if (!user) throw new Error('User not authenticated');
 
-      // Call the database function to update ALL products (unsafe update)
-      const { error } = await supabase.rpc('update_all_products_discount', {
-        new_discount: discount
-      });
+      // Update only active products
+      const { error } = await supabase
+        .from('products')
+        .update({ 
+          discount_percentage: discount,
+          updated_at: new Date().toISOString()
+        })
+        .eq('is_active', true);
 
       if (error) {
-        console.error('Error applying global discount:', error);
-        throw new Error(`فشل في تطبيق الخصم العام: ${error.message}`);
+        console.error('Error applying store discount:', error);
+        throw new Error(`فشل في تطبيق الخصم على المتجر: ${error.message}`);
       }
 
-      console.log(`Global discount ${discount}% applied successfully to ALL products`);
+      console.log(`Store discount ${discount}% applied successfully to active products`);
       return discount;
     },
     onSuccess: async (discount) => {
-      console.log('Global discount applied successfully:', discount);
+      console.log('Store discount applied successfully:', discount);
       
-      // Log the unsafe operation
+      // Log the operation
       try {
-        await logChange('unsafe_global_discount_applied', 'products', 'ALL_PRODUCTS', {
+        await logChange('store_discount_applied', 'products', 'ACTIVE_PRODUCTS', {
           discount_percentage: discount,
-          operation: 'update_all_products_without_where_clause',
+          operation: 'update_active_products_discount',
           affected_products: totalProducts,
           timestamp: new Date().toISOString()
         });
       } catch (logError) {
-        console.error('Error logging unsafe operation:', logError);
+        console.error('Error logging operation:', logError);
       }
 
       queryClient.invalidateQueries({ queryKey: ['products'] });
@@ -102,17 +109,17 @@ const SimpleDiscountManagement = () => {
       queryClient.invalidateQueries({ queryKey: ['current-discount'] });
       
       toast({
-        title: 'تم تطبيق الخصم العام',
-        description: `تم تطبيق خصم ${discount}% على جميع المنتجات (${totalProducts} منتج) بنجاح`,
+        title: 'تم تطبيق خصم المتجر',
+        description: `تم تطبيق خصم ${discount}% على جميع المنتجات النشطة (${totalProducts} منتج) بنجاح`,
       });
 
       setDiscountPercentage(0);
     },
     onError: (error: any) => {
-      console.error('Global discount application failed:', error);
+      console.error('Store discount application failed:', error);
       toast({
-        title: 'خطأ في تطبيق الخصم العام',
-        description: error.message || 'فشل في تطبيق الخصم على جميع المنتجات',
+        title: 'خطأ في تطبيق خصم المتجر',
+        description: error.message || 'فشل في تطبيق الخصم على المنتجات',
         variant: 'destructive',
       });
     }
@@ -120,33 +127,39 @@ const SimpleDiscountManagement = () => {
 
   const stopDiscountMutation = useMutation({
     mutationFn: async () => {
-      console.log('Stopping ALL discounts (unsafe operation)');
+      console.log('Stopping store discounts on active products');
       
       if (!user) throw new Error('User not authenticated');
 
-      // Call the database function to reset ALL products to 0 discount
-      const { error } = await supabase.rpc('reset_all_product_discounts');
+      // Reset only active products to 0 discount
+      const { error } = await supabase
+        .from('products')
+        .update({ 
+          discount_percentage: 0,
+          updated_at: new Date().toISOString()
+        })
+        .eq('is_active', true);
 
       if (error) {
-        console.error('Error stopping all discounts:', error);
-        throw new Error(`فشل في إيقاف جميع الخصومات: ${error.message}`);
+        console.error('Error stopping store discounts:', error);
+        throw new Error(`فشل في إيقاف خصومات المتجر: ${error.message}`);
       }
 
-      console.log('All discounts stopped successfully');
+      console.log('Store discounts stopped successfully');
       return true;
     },
     onSuccess: async () => {
-      console.log('All discounts stopped successfully');
+      console.log('Store discounts stopped successfully');
       
-      // Log the unsafe operation
+      // Log the operation
       try {
-        await logChange('unsafe_global_discount_stopped', 'products', 'ALL_PRODUCTS', {
-          operation: 'reset_all_discounts_without_where_clause',
+        await logChange('store_discount_stopped', 'products', 'ACTIVE_PRODUCTS', {
+          operation: 'reset_active_products_discounts',
           affected_products: totalProducts,
           timestamp: new Date().toISOString()
         });
       } catch (logError) {
-        console.error('Error logging unsafe operation:', logError);
+        console.error('Error logging operation:', logError);
       }
 
       queryClient.invalidateQueries({ queryKey: ['products'] });
@@ -154,15 +167,15 @@ const SimpleDiscountManagement = () => {
       queryClient.invalidateQueries({ queryKey: ['current-discount'] });
       
       toast({
-        title: 'تم إيقاف جميع الخصومات',
-        description: `تم إيقاف جميع الخصومات من ${totalProducts} منتج بنجاح`,
+        title: 'تم إيقاف خصومات المتجر',
+        description: `تم إيقاف جميع الخصومات من ${totalProducts} منتج نشط بنجاح`,
       });
     },
     onError: (error: any) => {
       console.error('Error stopping discounts:', error);
       toast({
         title: 'خطأ',
-        description: error.message || 'فشل في إيقاف جميع الخصومات',
+        description: error.message || 'فشل في إيقاف خصومات المتجر',
         variant: 'destructive',
       });
     }
@@ -178,12 +191,12 @@ const SimpleDiscountManagement = () => {
       return;
     }
 
-    console.log('Starting unsafe global discount application with:', discountPercentage);
+    console.log('Starting store-wide discount application with:', discountPercentage);
     applyDiscountMutation.mutate(discountPercentage);
   };
 
   const handleStopDiscount = () => {
-    console.log('Starting unsafe global discount removal');
+    console.log('Starting store discount removal');
     stopDiscountMutation.mutate();
   };
 
@@ -193,28 +206,27 @@ const SimpleDiscountManagement = () => {
 
   return (
     <div className="space-y-6">
-      {/* Global Discount Warning */}
-      <Card className="border-orange-200 bg-orange-50">
+      {/* Store Discount Info */}
+      <Card className="border-blue-200 bg-blue-50">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-orange-800">
-            <AlertTriangle className="w-5 h-5" />
-            تحذير: عملية خصم عامة على جميع المنتجات
+          <CardTitle className="flex items-center gap-2 text-blue-800">
+            <Percent className="w-5 h-5" />
+            خصم المتجر العام
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-orange-700 text-sm">
-            هذه العملية ستقوم بتحديث جميع المنتجات في قاعدة البيانات ({totalProducts} منتج) بدون استثناء. 
-            هذه عملية غير آمنة ولا يمكن التراجع عنها بسهولة.
+          <p className="text-blue-700 text-sm">
+            هذه العملية ستقوم بتطبيق خصم على جميع المنتجات النشطة في المتجر ({totalProducts} منتج).
           </p>
         </CardContent>
       </Card>
 
-      {/* Apply Global Discount */}
+      {/* Apply Store Discount */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Percent className="w-5 h-5" />
-            تطبيق خصم عام على جميع المنتجات
+            تطبيق خصم عام على المتجر
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -230,7 +242,7 @@ const SimpleDiscountManagement = () => {
                 placeholder="أدخل نسبة الخصم"
               />
               <p className="text-sm text-gray-600 mt-1">
-                سيتم تطبيق هذا الخصم على جميع المنتجات ({totalProducts} منتج)
+                سيتم تطبيق هذا الخصم على جميع المنتجات النشطة ({totalProducts} منتج)
               </p>
             </div>
           </div>
@@ -241,7 +253,7 @@ const SimpleDiscountManagement = () => {
               disabled={applyDiscountMutation.isPending}
               className="flex-1"
             >
-              {applyDiscountMutation.isPending ? 'جاري التطبيق...' : `تطبيق خصم ${discountPercentage}% على جميع المنتجات`}
+              {applyDiscountMutation.isPending ? 'جاري التطبيق...' : `تطبيق خصم ${discountPercentage}% على المتجر`}
             </Button>
             
             {hasActiveDiscount && (
@@ -252,7 +264,7 @@ const SimpleDiscountManagement = () => {
                 className="text-red-600 border-red-300 hover:bg-red-50"
               >
                 <Square className="w-4 h-4 mr-2" />
-                {stopDiscountMutation.isPending ? 'جاري الإيقاف...' : 'إيقاف جميع الخصومات'}
+                {stopDiscountMutation.isPending ? 'جاري الإيقاف...' : 'إيقاف خصم المتجر'}
               </Button>
             )}
           </div>
@@ -260,7 +272,7 @@ const SimpleDiscountManagement = () => {
           {hasActiveDiscount && currentDiscountPercentage && (
             <div className="bg-green-50 p-4 rounded-lg border border-green-200">
               <p className="text-green-800 font-medium">
-                يوجد حالياً خصم {currentDiscountPercentage}% مطبق على جميع المنتجات ({totalProducts} منتج)
+                يوجد حالياً خصم {currentDiscountPercentage}% مطبق على جميع المنتجات النشطة ({totalProducts} منتج)
               </p>
             </div>
           )}
@@ -268,7 +280,7 @@ const SimpleDiscountManagement = () => {
           {/* Operation Log Info */}
           <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
             <p className="text-blue-800 text-sm">
-              <strong>معلومات العملية:</strong> جميع العمليات يتم تسجيلها في سجل التغييرات مع تفاصيل المنتجات المتأثرة والتوقيت.
+              <strong>معلومات العملية:</strong> جميع العمليات يتم تسجيلها في سجل التغييرات وتطبق فقط على المنتجات النشطة.
             </p>
           </div>
         </CardContent>
