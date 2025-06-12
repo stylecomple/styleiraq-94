@@ -37,15 +37,15 @@ const MobileProducts = () => {
   return (
     <MobileAppLayout title="جميع المنتجات" showBackButton={false}>
       <div className="space-y-6 animate-fade-in">
-        {/* App Logo Section */}
+        {/* App Logo Section - bigger and circular */}
         <div className="flex justify-center py-4 animate-slide-down">
           <div className="relative group">
-            <div className="absolute -inset-2 bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 rounded-full blur-md opacity-30 group-hover:opacity-50 transition-opacity duration-300" />
-            <div className="relative bg-white rounded-full p-3 shadow-lg transform transition-all duration-300 hover:scale-105">
+            <div className="absolute -inset-3 bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 rounded-full blur-md opacity-30 group-hover:opacity-50 transition-opacity duration-300" />
+            <div className="relative bg-white rounded-full p-4 shadow-lg transform transition-all duration-300 hover:scale-105">
               <img 
                 src="/lovable-uploads/44d2a604-8d2c-498a-9c37-e89e541a86cb.png" 
                 alt="Style متجر الجمال والأناقة" 
-                className="w-16 h-16 object-contain rounded-full"
+                className="w-24 h-24 object-contain rounded-full"
               />
             </div>
           </div>

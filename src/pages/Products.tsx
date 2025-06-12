@@ -57,15 +57,15 @@ const Products = () => {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      {/* Logo Section */}
+      {/* Logo Section - bigger and circular */}
       <div className="flex justify-center mb-8">
         <div className="relative group">
-          <div className="absolute -inset-2 bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 rounded-full blur-md opacity-30 group-hover:opacity-50 transition-opacity duration-300" />
-          <div className="relative bg-white rounded-full p-4 shadow-lg transform transition-all duration-300 hover:scale-105">
+          <div className="absolute -inset-3 bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 rounded-full blur-md opacity-30 group-hover:opacity-50 transition-opacity duration-300" />
+          <div className="relative bg-white rounded-full p-5 shadow-lg transform transition-all duration-300 hover:scale-105">
             <img 
               src="/lovable-uploads/44d2a604-8d2c-498a-9c37-e89e541a86cb.png" 
               alt="Style متجر الجمال والأناقة" 
-              className="w-20 h-20 object-contain"
+              className="w-28 h-28 object-contain rounded-full"
             />
           </div>
         </div>

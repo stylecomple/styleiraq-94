@@ -1,8 +1,10 @@
 
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const MobileSplash = () => {
   const [showContent, setShowContent] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -10,6 +12,15 @@ const MobileSplash = () => {
     }, 300);
     return () => clearTimeout(timer);
   }, []);
+
+  useEffect(() => {
+    // Navigate to products page after 3 seconds
+    const navigationTimer = setTimeout(() => {
+      navigate('/app/products');
+    }, 3000);
+    
+    return () => clearTimeout(navigationTimer);
+  }, [navigate]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-pink-500 via-purple-600 to-indigo-600 flex flex-col items-center justify-center text-white relative overflow-hidden">
@@ -35,21 +46,21 @@ const MobileSplash = () => {
       }`}>
         {/* Logo container with advanced animations */}
         <div className="relative group">
-          <div className="absolute -inset-6 bg-gradient-to-r from-pink-400 via-purple-500 to-indigo-500 rounded-full blur-lg opacity-30 group-hover:opacity-50 transition-opacity duration-500 animate-pulse-slow" />
+          <div className="absolute -inset-8 bg-gradient-to-r from-pink-400 via-purple-500 to-indigo-500 rounded-full blur-lg opacity-30 group-hover:opacity-50 transition-opacity duration-500 animate-pulse-slow" />
           
           <div className="relative">
             {/* Rotating ring */}
-            <div className="absolute inset-0 w-32 h-32 mx-auto border-4 border-white/30 rounded-full animate-spin-slow" />
+            <div className="absolute inset-0 w-40 h-40 mx-auto border-4 border-white/30 rounded-full animate-spin-slow" />
             
             {/* Inner glow ring */}
-            <div className="absolute inset-2 w-28 h-28 mx-auto border-2 border-white/50 rounded-full animate-ping-slow" />
+            <div className="absolute inset-2 w-36 h-36 mx-auto border-2 border-white/50 rounded-full animate-ping-slow" />
             
-            {/* Logo container */}
-            <div className="relative w-32 h-32 mx-auto bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center transform transition-all duration-700 hover:scale-110 animate-bounce-gentle">
+            {/* Logo container - bigger and circular */}
+            <div className="relative w-40 h-40 mx-auto bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center transform transition-all duration-700 hover:scale-110 animate-bounce-gentle shadow-2xl">
               <img 
                 src="/lovable-uploads/44d2a604-8d2c-498a-9c37-e89e541a86cb.png" 
                 alt="Style متجر الجمال والأناقة" 
-                className="w-24 h-24 object-contain animate-fade-in-scale" 
+                className="w-32 h-32 object-contain rounded-full animate-fade-in-scale" 
               />
             </div>
             
