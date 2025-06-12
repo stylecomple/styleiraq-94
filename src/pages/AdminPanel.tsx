@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Package, Users, BarChart3, Settings, MessageSquare, Percent, Plus, FolderPlus } from 'lucide-react';
+import { Package, Users, BarChart3, Settings, MessageSquare, Percent, Plus, FolderPlus, FileSpreadsheet } from 'lucide-react';
 import { SidebarProvider, SidebarTrigger, SidebarInset } from '@/components/ui/sidebar';
 import AdminSidebar from '@/components/AdminSidebar';
 import ProductsManagement from '@/components/admin/ProductsManagement';
@@ -16,6 +16,7 @@ import FeedbackManagement from '@/components/admin/FeedbackManagement';
 import AdminSettings from '@/components/admin/AdminSettings';
 import AddProductForm from '@/components/admin/AddProductForm';
 import CategoryManager from '@/components/admin/CategoryManager';
+import ExcelProductImport from '@/components/admin/ExcelProductImport';
 
 const AdminPanel = () => {
   const { user, isAdmin, isOwner, isOrderManager, isProductsAdder, loading } = useAuth();
@@ -26,6 +27,7 @@ const AdminPanel = () => {
   });
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [showCategoryManager, setShowCategoryManager] = useState(false);
+  const [showExcelImport, setShowExcelImport] = useState(false);
 
   if (loading) {
     return (
@@ -137,7 +139,20 @@ const AdminPanel = () => {
               </TabsList>
 
               <TabsContent value="products" className="space-y-6">
-                {showAddProduct ? (
+                {showExcelImport ? (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h2 className="text-2xl font-bold">استيراد المنتجات من Excel</h2>
+                      <Button 
+                        variant="outline" 
+                        onClick={() => setShowExcelImport(false)}
+                      >
+                        العودة للمنتجات
+                      </Button>
+                    </div>
+                    <ExcelProductImport />
+                  </div>
+                ) : showAddProduct ? (
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <h2 className="text-2xl font-bold">إضافة منتج جديد</h2>
@@ -168,6 +183,14 @@ const AdminPanel = () => {
                     <div className="flex items-center justify-between">
                       <h2 className="text-2xl font-bold">إدارة المنتجات</h2>
                       <div className="flex gap-2">
+                        <Button 
+                          onClick={() => setShowExcelImport(true)}
+                          variant="secondary"
+                          className="flex items-center gap-2"
+                        >
+                          <FileSpreadsheet className="w-4 h-4" />
+                          استيراد من Excel
+                        </Button>
                         <Button 
                           onClick={() => setShowAddProduct(true)}
                           className="flex items-center gap-2"

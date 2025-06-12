@@ -10,10 +10,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import PaymentDialog from '@/components/PaymentDialog';
-import { CreditCard, Smartphone, Truck, MapPin, Phone, User } from 'lucide-react';
+import { Truck, MapPin, Phone, User } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { PaymentMethod } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 
 const GOVERNORATES = [
@@ -40,15 +38,10 @@ const GOVERNORATES = [
 
 const MobilePayment = () => {
   const navigate = useNavigate();
-  const location = useLocation();
   const { user } = useAuth();
   const { items, getTotalPrice, clearCart } = useCart();
   const { toast } = useToast();
 
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod | null>(null);
-  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
-  const [orderData, setOrderData] = useState<{ orderId: string; totalAmount: number; items: any[] } | null>(null);
-  
   const [shippingInfo, setShippingInfo] = useState({
     fullName: '',
     phone: '',
@@ -73,39 +66,7 @@ const MobilePayment = () => {
   const shippingCost = selectedGov ? selectedGov.cost : 0;
   const totalPrice = productsPrice + shippingCost;
 
-  const paymentMethods = [
-    {
-      id: 'cash_on_delivery' as PaymentMethod,
-      name: 'الدفع عند الاستلام',
-      description: 'ادفع عند وصول الطلب',
-      icon: <Truck className="w-6 h-6" />,
-      color: 'bg-green-50 border-green-200 text-green-700'
-    },
-    {
-      id: 'zain_cash' as PaymentMethod,
-      name: 'زين كاش',
-      description: 'الدفع عبر محفظة زين كاش',
-      icon: <Smartphone className="w-6 h-6" />,
-      color: 'bg-purple-50 border-purple-200 text-purple-700'
-    },
-    {
-      id: 'visa_card' as PaymentMethod,
-      name: 'بطاقة فيزا',
-      description: 'الدفع بالبطاقة الائتمانية',
-      icon: <CreditCard className="w-6 h-6" />,
-      color: 'bg-blue-50 border-blue-200 text-blue-700'
-    }
-  ];
-
   const handlePayment = async () => {
-    if (!selectedPaymentMethod) {
-      toast({
-        title: "يرجى اختيار طريقة الدفع",
-        variant: "destructive",
-      });
-      return;
-    }
-
     if (!shippingInfo.fullName || !shippingInfo.phone || !shippingInfo.governorate || !shippingInfo.address) {
       toast({
         title: "يرجى ملء جميع بيانات الشحن",
@@ -114,77 +75,56 @@ const MobilePayment = () => {
       return;
     }
 
-    if (selectedPaymentMethod === 'cash_on_delivery') {
-      try {
-        const orderId = crypto.randomUUID();
-        
-        // Process cash on delivery order directly
-        const { data: order, error: orderError } = await supabase
-          .from('orders')
-          .insert({
-            id: orderId,
-            user_id: user.id,
-            total_amount: totalPrice,
-            status: 'pending',
-            payment_method: selectedPaymentMethod,
-            phone: shippingInfo.phone,
-            governorate: shippingInfo.governorate,
-            shipping_address: shippingInfo.address
-          })
-          .select()
-          .single();
-
-        if (orderError) throw orderError;
-
-        // Create order items
-        const orderItems = items.map(item => ({
-          order_id: orderId,
-          product_id: item.id,
-          quantity: item.quantity,
-          price: item.price,
-          selected_color: item.selectedOption || item.selectedColor
-        }));
-
-        const { error: itemsError } = await supabase
-          .from('order_items')
-          .insert(orderItems);
-
-        if (itemsError) throw itemsError;
-
-        clearCart();
-        toast({
-          title: "تم إنشاء الطلب بنجاح",
-          description: "سيتم التواصل معك لتأكيد الطلب",
-        });
-        navigate('/app/orders');
-      } catch (error) {
-        console.error('Payment error:', error);
-        toast({
-          title: "خطأ في إنشاء الطلب",
-          description: "حدث خطأ أثناء إنشاء الطلب",
-          variant: "destructive",
-        });
-      }
-    } else {
-      // For other payment methods, show payment dialog
+    try {
       const orderId = crypto.randomUUID();
-      setOrderData({
-        orderId,
-        totalAmount: totalPrice,
-        items
-      });
-      setShowPaymentDialog(true);
-    }
-  };
+      
+      // Process cash on delivery order directly
+      const { data: order, error: orderError } = await supabase
+        .from('orders')
+        .insert({
+          id: orderId,
+          user_id: user.id,
+          total_amount: totalPrice,
+          status: 'pending',
+          payment_method: 'cash_on_delivery',
+          phone: shippingInfo.phone,
+          governorate: shippingInfo.governorate,
+          shipping_address: shippingInfo.address
+        })
+        .select()
+        .single();
 
-  const handlePaymentSuccess = () => {
-    clearCart();
-    setShowPaymentDialog(false);
-    toast({
-      title: "تم الدفع بنجاح",
-      description: "تم إنشاء طلبك بنجاح",
-    });
-    navigate('/app/orders');
+      if (orderError) throw orderError;
+
+      // Create order items
+      const orderItems = items.map(item => ({
+        order_id: orderId,
+        product_id: item.id,
+        quantity: item.quantity,
+        price: item.price,
+        selected_color: item.selectedOption || item.selectedColor
+      }));
+
+      const { error: itemsError } = await supabase
+        .from('order_items')
+        .insert(orderItems);
+
+      if (itemsError) throw itemsError;
+
+      clearCart();
+      toast({
+        title: "تم إنشاء الطلب بنجاح",
+        description: "سيتم التواصل معك لتأكيد الطلب",
+      });
+      navigate('/app/orders');
+    } catch (error) {
+      console.error('Payment error:', error);
+      toast({
+        title: "خطأ في إنشاء الطلب",
+        description: "حدث خطأ أثناء إنشاء الطلب",
+        variant: "destructive",
+      });
+    }
   };
 
   if (!user) {
@@ -328,38 +268,21 @@ const MobilePayment = () => {
           </CardContent>
         </Card>
 
-        {/* Payment Methods */}
+        {/* Payment Method - Cash on Delivery Only */}
         <Card>
           <CardHeader>
             <CardTitle>طريقة الدفع</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
-            {paymentMethods.map((method) => (
-              <div
-                key={method.id}
-                className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${
-                  selectedPaymentMethod === method.id
-                    ? method.color + ' border-current'
-                    : 'border-gray-200 hover:border-gray-300'
-                }`}
-                onClick={() => setSelectedPaymentMethod(method.id)}
-              >
-                <div className="flex items-center gap-3">
-                  <div className={selectedPaymentMethod === method.id ? '' : 'text-gray-600'}>
-                    {method.icon}
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold">{method.name}</h3>
-                    <p className="text-sm text-gray-600">{method.description}</p>
-                  </div>
-                  <div className={`w-4 h-4 rounded-full border-2 ${
-                    selectedPaymentMethod === method.id
-                      ? 'bg-current border-current'
-                      : 'border-gray-300'
-                  }`} />
+          <CardContent>
+            <div className="border-2 rounded-lg p-4 bg-green-50 border-green-200">
+              <div className="flex items-center gap-3">
+                <Truck className="w-6 h-6 text-green-600" />
+                <div className="flex-1">
+                  <h3 className="font-semibold text-green-800">الدفع عند الاستلام</h3>
+                  <p className="text-sm text-green-600">ادفع عند وصول الطلب</p>
                 </div>
               </div>
-            ))}
+            </div>
           </CardContent>
         </Card>
 
@@ -367,19 +290,9 @@ const MobilePayment = () => {
         <Button
           onClick={handlePayment}
           className="w-full h-12 text-lg font-semibold bg-pink-600 hover:bg-pink-700"
-          disabled={!selectedPaymentMethod}
         >
           إتمام الطلب - {totalPrice.toLocaleString()} د.ع
         </Button>
-
-        {/* Payment Dialog */}
-        <PaymentDialog
-          isOpen={showPaymentDialog}
-          onClose={() => setShowPaymentDialog(false)}
-          paymentMethod={selectedPaymentMethod}
-          orderData={orderData}
-          onPaymentSuccess={handlePaymentSuccess}
-        />
       </div>
     </MobileAppLayout>
   );

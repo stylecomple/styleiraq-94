@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -8,35 +9,17 @@ import { Minus, Plus, Trash2, ShoppingCart, Package, ArrowRight } from 'lucide-r
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { useQuery } from '@tanstack/react-query';
-import PaymentDialog from '@/components/PaymentDialog';
 import { useNavigate } from 'react-router-dom';
 import { useCartDiscounts } from '@/hooks/useCartDiscounts';
-
-interface PaymentConfig {
-  enabled: boolean;
-  [key: string]: any;
-}
-
-interface AdminSettingsData {
-  visa_card_config?: PaymentConfig;
-  zain_cash_config?: PaymentConfig;
-}
 
 const Cart = () => {
   const { 
     items, 
     removeFromCart, 
     updateQuantity, 
-    clearCart,
-    isPaymentDialogOpen,
-    selectedPaymentMethod,
-    pendingOrder,
-    openPaymentDialog,
-    closePaymentDialog
+    clearCart
   } = useCart();
   const { user } = useAuth();
   const { toast } = useToast();
@@ -44,24 +27,10 @@ const Cart = () => {
   const [shippingAddress, setShippingAddress] = useState('');
   const [phone, setPhone] = useState('');
   const [governorate, setGovernorate] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState<'cash_on_delivery' | 'visa_card' | 'zain_cash'>('cash_on_delivery');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Use the new discount hook
   const { discountedCartItems, hasDiscounts } = useCartDiscounts(items);
-
-  const { data: adminSettings } = useQuery({
-    queryKey: ['admin-settings'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('admin_settings')
-        .select('visa_card_config, zain_cash_config')
-        .single();
-      
-      if (error) throw error;
-      return data as AdminSettingsData;
-    }
-  });
 
   const governorates = [
     "بغداد", "البصرة", "نينوى", "ذي قار", "الأنبار", "ديالى", "صلاح الدين", "كركوك", "بابل", "القادسية",
@@ -115,29 +84,10 @@ const Cart = () => {
       return;
     }
 
-    // Check if payment method requires gateway and if it's enabled
-    if (paymentMethod === 'visa_card' && !adminSettings?.visa_card_config?.enabled) {
-      toast({
-        title: "خطأ",
-        description: "طريقة الدفع بالفيزا غير متاحة حالياً",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (paymentMethod === 'zain_cash' && !adminSettings?.zain_cash_config?.enabled) {
-      toast({
-        title: "خطأ",
-        description: "طريقة الدفع بزين كاش غير متاحة حالياً",
-        variant: "destructive",
-      });
-      return;
-    }
-
     setIsSubmitting(true);
 
     try {
-      // Create order in database with shipping cost included
+      // Create order in database with shipping cost included - Cash on delivery only
       const { data: order, error: orderError } = await supabase
         .from('orders')
         .insert({
@@ -146,7 +96,7 @@ const Cart = () => {
           shipping_address: shippingAddress,
           phone: phone,
           governorate: governorate,
-          payment_method: paymentMethod,
+          payment_method: 'cash_on_delivery',
           status: 'pending'
         })
         .select()
@@ -169,18 +119,8 @@ const Cart = () => {
 
       if (itemsError) throw itemsError;
 
-      // If payment method requires gateway processing, open payment dialog
-      if (paymentMethod === 'visa_card' || paymentMethod === 'zain_cash') {
-        const orderData = {
-          orderId: order.id,
-          totalAmount: getTotalWithShipping(),
-          items: discountedCartItems
-        };
-        openPaymentDialog(paymentMethod, orderData);
-      } else {
-        // For cash on delivery, complete the order immediately
-        await completeOrder(order.id);
-      }
+      // Complete the order immediately for cash on delivery
+      await completeOrder(order.id);
 
     } catch (error) {
       console.error('Error creating order:', error);
@@ -206,7 +146,6 @@ const Cart = () => {
       setShippingAddress('');
       setPhone('');
       setGovernorate('');
-      setPaymentMethod('cash_on_delivery');
     } catch (error) {
       console.error('Error completing order:', error);
       toast({
@@ -214,13 +153,6 @@ const Cart = () => {
         description: "تم إنشاء الطلب بنجاح",
       });
     }
-  };
-
-  const handlePaymentSuccess = () => {
-    if (pendingOrder) {
-      completeOrder(pendingOrder.orderId);
-    }
-    closePaymentDialog();
   };
 
   const handleViewOrders = () => {
@@ -454,26 +386,12 @@ const Cart = () => {
                     />
                   </div>
 
-                  <div>
-                    <Label>طريقة الدفع *</Label>
-                    <RadioGroup value={paymentMethod} onValueChange={(value: any) => setPaymentMethod(value)} className="mt-2">
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="cash_on_delivery" id="cash" />
-                        <Label htmlFor="cash">الدفع عند الاستلام</Label>
-                      </div>
-                      {adminSettings?.visa_card_config?.enabled && (
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="visa_card" id="visa" />
-                          <Label htmlFor="visa">فيزا كارد</Label>
-                        </div>
-                      )}
-                      {adminSettings?.zain_cash_config?.enabled && (
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="zain_cash" id="zain" />
-                          <Label htmlFor="zain">زين كاش</Label>
-                        </div>
-                      )}
-                    </RadioGroup>
+                  <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <Package className="w-5 h-5 text-green-600" />
+                      <span className="font-medium text-green-800">الدفع عند الاستلام</span>
+                    </div>
+                    <p className="text-sm text-green-600 mt-1">ادفع عند وصول الطلب إليك</p>
                   </div>
 
                   <Button 
@@ -489,14 +407,6 @@ const Cart = () => {
           </div>
         </div>
       </div>
-
-      <PaymentDialog
-        isOpen={isPaymentDialogOpen}
-        onClose={closePaymentDialog}
-        paymentMethod={selectedPaymentMethod}
-        orderData={pendingOrder}
-        onPaymentSuccess={handlePaymentSuccess}
-      />
     </div>
   );
 };
