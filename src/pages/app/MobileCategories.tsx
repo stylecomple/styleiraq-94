@@ -122,11 +122,13 @@ const MobileCategories = () => {
     return (
       <MobileAppLayout title={selectedCategoryData?.name || 'المنتجات'} showBackButton={false}>
         <div className="p-4 space-y-4" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-          <style jsx>{`
-            div::-webkit-scrollbar {
-              display: none;
-            }
-          `}</style>
+          <style>
+            {`
+              div::-webkit-scrollbar {
+                display: none;
+              }
+            `}
+          </style>
           
           {/* Back to categories button */}
           <Button
@@ -217,11 +219,13 @@ const MobileCategories = () => {
   return (
     <MobileAppLayout title="الفئات" showBackButton={false}>
       <div className="p-4 space-y-4" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-        <style jsx>{`
-          div::-webkit-scrollbar {
-            display: none;
-          }
-        `}</style>
+        <style>
+          {`
+            div::-webkit-scrollbar {
+              display: none;
+            }
+          `}
+        </style>
 
         {/* Header Stats */}
         <div className="bg-gradient-to-r from-pink-500 to-purple-600 rounded-2xl p-6 text-white mb-6">
