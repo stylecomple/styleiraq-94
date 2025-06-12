@@ -15,6 +15,7 @@ const ProductDiscountTicker = () => {
   const navigate = useNavigate();
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [retryCount, setRetryCount] = useState(0);
 
   // Safe price calculation function
   const calculateDiscountedPrice = (price: number, discountPercentage: number) => {
@@ -44,19 +45,35 @@ const ProductDiscountTicker = () => {
 
         console.log('Discounted products fetched:', data);
         
-        // Filter out products with invalid prices
-        const validProducts = (data || []).filter(product => 
-          product.price && 
-          !isNaN(Number(product.price)) && 
-          product.discount_percentage > 0 &&
-          product.discount_percentage <= 100
-        ).map(product => ({
+        // Filter out products with invalid prices and validate discounts
+        const validProducts = (data || []).filter(product => {
+          const price = Number(product.price);
+          const discount = Number(product.discount_percentage);
+          
+          if (!price || isNaN(price) || !discount || isNaN(discount) || discount <= 0 || discount > 100) {
+            return false;
+          }
+          
+          // Test discount calculation
+          const discountedPrice = calculateDiscountedPrice(price, discount);
+          return !isNaN(discountedPrice) && discountedPrice > 0;
+        }).map(product => ({
           ...product,
           price: Number(product.price)
         }));
 
         console.log('Valid products after filtering:', validProducts);
-        setProducts(validProducts);
+        
+        // If we get NaN or invalid data and haven't retried too much, try again
+        if (validProducts.length === 0 && retryCount < 2) {
+          console.log('No valid products found, retrying...');
+          setTimeout(() => {
+            setRetryCount(prev => prev + 1);
+          }, 1000);
+        } else {
+          setProducts(validProducts);
+          setRetryCount(0); // Reset retry count on success
+        }
       } catch (error) {
         console.error('Error in fetchDiscountedProducts:', error);
       } finally {
@@ -78,7 +95,21 @@ const ProductDiscountTicker = () => {
         },
         (payload) => {
           console.log('Product change detected:', payload);
+          setRetryCount(0); // Reset retry count
           fetchDiscountedProducts(); // Refetch products on any change
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'active_discounts'
+        },
+        (payload) => {
+          console.log('Active discount change detected:', payload);
+          setRetryCount(0); // Reset retry count
+          fetchDiscountedProducts(); // Refetch products on discount changes
         }
       )
       .subscribe();
@@ -86,7 +117,7 @@ const ProductDiscountTicker = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [retryCount]);
 
   if (isLoading || !products || products.length === 0) {
     return null;

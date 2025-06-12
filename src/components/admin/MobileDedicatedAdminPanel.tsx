@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, ArrowLeft, Sparkles, Grid3X3, Package, Settings } from 'lucide-react';
+import { Plus, ArrowLeft, Sparkles, Grid3X3, Package, Settings, FolderPlus, Layers } from 'lucide-react';
 import AddProductForm from './AddProductForm';
 import CategoryManager from './CategoryManager';
 
@@ -121,25 +121,20 @@ const MobileDedicatedAdminPanel = () => {
           </CardContent>
         </Card>
 
-        {/* Essential Actions */}
-        <div className="space-y-3">
+        {/* Essential Actions - Main Row */}
+        <div className="grid grid-cols-2 gap-3">
           {/* Add Product */}
           <Card 
             className="overflow-hidden border-0 shadow-lg bg-white cursor-pointer transform transition-all duration-200 active:scale-95"
             onClick={() => setActiveView('add-product')}
           >
             <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-600 rounded-xl flex items-center justify-center">
+              <div className="text-center">
+                <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-600 rounded-xl flex items-center justify-center mx-auto mb-2">
                   <Plus className="w-6 h-6 text-white" />
                 </div>
-                <div className="flex-1">
-                  <h3 className="font-bold text-gray-800">إضافة منتج جديد</h3>
-                  <p className="text-xs text-gray-600">أضف منتجات جديدة للمتجر</p>
-                </div>
-                <div className="text-purple-500">
-                  <ArrowLeft className="w-4 h-4 rotate-180" />
-                </div>
+                <h3 className="font-bold text-gray-800 text-sm">إضافة منتج</h3>
+                <p className="text-xs text-gray-600">منتج جديد</p>
               </div>
             </CardContent>
           </Card>
@@ -150,17 +145,31 @@ const MobileDedicatedAdminPanel = () => {
             onClick={() => setActiveView('categories')}
           >
             <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center">
+              <div className="text-center">
+                <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center mx-auto mb-2">
                   <Grid3X3 className="w-6 h-6 text-white" />
                 </div>
-                <div className="flex-1">
-                  <h3 className="font-bold text-gray-800">إدارة الفئات</h3>
-                  <p className="text-xs text-gray-600">أضف وعدل فئات المنتجات</p>
+                <h3 className="font-bold text-gray-800 text-sm">الفئات</h3>
+                <p className="text-xs text-gray-600">إدارة الفئات</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Secondary Actions Row */}
+        <div className="grid grid-cols-2 gap-3">
+          {/* Quick Access to Products Management (only for admins) */}
+          <Card 
+            className="overflow-hidden border-0 shadow-lg bg-white cursor-pointer transform transition-all duration-200 active:scale-95"
+            onClick={() => navigate('/admin?tab=products')}
+          >
+            <CardContent className="p-4">
+              <div className="text-center">
+                <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl flex items-center justify-center mx-auto mb-2">
+                  <Package className="w-6 h-6 text-white" />
                 </div>
-                <div className="text-blue-500">
-                  <ArrowLeft className="w-4 h-4 rotate-180" />
-                </div>
+                <h3 className="font-bold text-gray-800 text-sm">إدارة المنتجات</h3>
+                <p className="text-xs text-gray-600">عرض وتعديل</p>
               </div>
             </CardContent>
           </Card>
@@ -172,45 +181,70 @@ const MobileDedicatedAdminPanel = () => {
               onClick={() => navigate('/admin?tab=orders')}
             >
               <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl flex items-center justify-center">
-                    <Package className="w-6 h-6 text-white" />
+                <div className="text-center">
+                  <div className="w-12 h-12 bg-gradient-to-r from-orange-500 to-red-600 rounded-xl flex items-center justify-center mx-auto mb-2">
+                    <FolderPlus className="w-6 h-6 text-white" />
                   </div>
-                  <div className="flex-1">
-                    <h3 className="font-bold text-gray-800">الطلبات</h3>
-                    <p className="text-xs text-gray-600">عرض وإدارة الطلبات</p>
-                  </div>
-                  <div className="text-green-500">
-                    <ArrowLeft className="w-4 h-4 rotate-180" />
-                  </div>
+                  <h3 className="font-bold text-gray-800 text-sm">الطلبات</h3>
+                  <p className="text-xs text-gray-600">إدارة الطلبات</p>
                 </div>
               </CardContent>
             </Card>
           )}
 
-          {/* Settings */}
-          {isFullAdmin && (
+          {/* Settings (if space available and user is not full admin) */}
+          {!isFullAdmin && (
             <Card 
               className="overflow-hidden border-0 shadow-lg bg-white cursor-pointer transform transition-all duration-200 active:scale-95"
               onClick={() => navigate('/admin?tab=settings')}
             >
               <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-gradient-to-r from-orange-500 to-red-600 rounded-xl flex items-center justify-center">
+                <div className="text-center">
+                  <div className="w-12 h-12 bg-gradient-to-r from-gray-500 to-gray-600 rounded-xl flex items-center justify-center mx-auto mb-2">
                     <Settings className="w-6 h-6 text-white" />
                   </div>
-                  <div className="flex-1">
-                    <h3 className="font-bold text-gray-800">الإعدادات</h3>
-                    <p className="text-xs text-gray-600">إعدادات المتجر العامة</p>
-                  </div>
-                  <div className="text-orange-500">
-                    <ArrowLeft className="w-4 h-4 rotate-180" />
-                  </div>
+                  <h3 className="font-bold text-gray-800 text-sm">الإعدادات</h3>
+                  <p className="text-xs text-gray-600">إعدادات عامة</p>
                 </div>
               </CardContent>
             </Card>
           )}
         </div>
+
+        {/* Additional Admin Actions (only for full admins) */}
+        {isFullAdmin && (
+          <div className="grid grid-cols-2 gap-3">
+            <Card 
+              className="overflow-hidden border-0 shadow-lg bg-white cursor-pointer transform transition-all duration-200 active:scale-95"
+              onClick={() => navigate('/admin?tab=discounts')}
+            >
+              <CardContent className="p-4">
+                <div className="text-center">
+                  <div className="w-12 h-12 bg-gradient-to-r from-yellow-500 to-orange-600 rounded-xl flex items-center justify-center mx-auto mb-2">
+                    <Sparkles className="w-6 h-6 text-white" />
+                  </div>
+                  <h3 className="font-bold text-gray-800 text-sm">الخصومات</h3>
+                  <p className="text-xs text-gray-600">إدارة العروض</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card 
+              className="overflow-hidden border-0 shadow-lg bg-white cursor-pointer transform transition-all duration-200 active:scale-95"
+              onClick={() => navigate('/admin?tab=settings')}
+            >
+              <CardContent className="p-4">
+                <div className="text-center">
+                  <div className="w-12 h-12 bg-gradient-to-r from-gray-500 to-gray-600 rounded-xl flex items-center justify-center mx-auto mb-2">
+                    <Settings className="w-6 h-6 text-white" />
+                  </div>
+                  <h3 className="font-bold text-gray-800 text-sm">الإعدادات</h3>
+                  <p className="text-xs text-gray-600">إعدادات المتجر</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         {/* Quick Tips */}
         <Card className="border-0 shadow-lg bg-gradient-to-r from-amber-50 to-orange-50 border-l-4 border-amber-400">

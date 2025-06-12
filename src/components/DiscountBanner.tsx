@@ -6,7 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 interface Discount {
   id: string;
-  discount_type: 'all_products' | 'category' | 'subcategory';
+  discount_type: string;
   target_value: string | null;
   discount_percentage: number;
 }
