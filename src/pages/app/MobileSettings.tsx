@@ -54,6 +54,22 @@ const MobileSettings = () => {
     });
   };
 
+  const handleResetApp = () => {
+    // Clear cache
+    localStorage.removeItem('style_app_cache');
+    
+    // Show success message
+    toast({
+      title: "تم إعادة تعيين التطبيق",
+      description: "سيتم إعادة تحميل التطبيق...",
+    });
+    
+    // Navigate to the correct splash screen route
+    setTimeout(() => {
+      navigate('/app');
+    }, 1000);
+  };
+
   if (!user) {
     navigate('/app/auth');
     return null;
@@ -210,6 +226,35 @@ const MobileSettings = () => {
             >
               <Save className="w-4 h-4" />
               حفظ الإعدادات
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Reset App Section */}
+        <Card className={`${
+          theme === 'dark' 
+            ? 'bg-gray-800 border-gray-700' 
+            : 'bg-white border-gray-200'
+        }`}>
+          <CardHeader>
+            <CardTitle className={`flex items-center gap-2 ${
+              theme === 'dark' ? 'text-white' : 'text-gray-900'
+            }`}>
+              إعادة تعيين التطبيق
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className={`text-sm mb-4 ${
+              theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+            }`}>
+              سيتم مسح جميع البيانات المخزنة وإعادة تحميل التطبيق من البداية
+            </p>
+            <Button
+              onClick={handleResetApp}
+              variant="destructive"
+              className="w-full"
+            >
+              إعادة تعيين التطبيق
             </Button>
           </CardContent>
         </Card>
