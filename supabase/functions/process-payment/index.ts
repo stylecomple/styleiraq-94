@@ -30,7 +30,7 @@ serve(async (req) => {
       .single();
 
     if (settingsError) {
-      console.error('Error fetching admin settings:', settings</Error);
+      console.error('Error fetching admin settings:', settingsError);
       return new Response(
         JSON.stringify({ success: false, message: 'Configuration error' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
