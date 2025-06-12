@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -52,7 +53,7 @@ const AdminPanel = () => {
 
   const handleTabChange = (value: string) => {
     setActiveTab(value);
-    const newUrl = new URL(window.location);
+    const newUrl = new URL(window.location.href);
     newUrl.searchParams.set('tab', value);
     window.history.pushState({}, '', newUrl);
   };
@@ -147,7 +148,7 @@ const AdminPanel = () => {
                         العودة للمنتجات
                       </Button>
                     </div>
-                    <AddProductForm />
+                    <AddProductForm onClose={() => setShowAddProduct(false)} />
                   </div>
                 ) : showCategoryManager ? (
                   <div className="space-y-4">
