@@ -8,11 +8,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Moon, Sun, User, MapPin, Phone, Save } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Moon, Sun, User, Phone, MapPin, Save } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
 
 const GOVERNORATES = [
   'بغداد', 'البصرة', 'نينوى', 'أربيل', 'النجف', 'كربلاء', 'الأنبار', 'دهوك', 
@@ -25,55 +24,34 @@ const MobileSettings = () => {
   const { user } = useAuth();
   const { theme, toggleTheme } = useAppTheme();
   const { toast } = useToast();
-  
-  const [formData, setFormData] = useState({
+
+  const [userInfo, setUserInfo] = useState({
     fullName: '',
     phone: '',
     governorate: ''
   });
-  const [isLoading, setIsLoading] = useState(false);
 
+  // Load saved user data on component mount
   useEffect(() => {
     if (user) {
-      // Load user data
-      setFormData({
-        fullName: user.user_metadata?.full_name || '',
+      setUserInfo({
+        fullName: user.user_metadata?.full_name || localStorage.getItem('user-fullname') || '',
         phone: localStorage.getItem('user-phone') || '',
         governorate: localStorage.getItem('user-governorate') || ''
       });
     }
   }, [user]);
 
-  const handleSave = async () => {
-    if (!user) return;
+  const handleSaveSettings = () => {
+    // Save user info to localStorage
+    localStorage.setItem('user-fullname', userInfo.fullName);
+    localStorage.setItem('user-phone', userInfo.phone);
+    localStorage.setItem('user-governorate', userInfo.governorate);
 
-    setIsLoading(true);
-    try {
-      // Update user metadata in Supabase
-      const { error } = await supabase.auth.updateUser({
-        data: { full_name: formData.fullName }
-      });
-
-      if (error) throw error;
-
-      // Save phone and governorate to localStorage for order auto-fill
-      localStorage.setItem('user-phone', formData.phone);
-      localStorage.setItem('user-governorate', formData.governorate);
-
-      toast({
-        title: "تم الحفظ بنجاح",
-        description: "تم حفظ إعداداتك بنجاح",
-      });
-    } catch (error) {
-      console.error('Save error:', error);
-      toast({
-        title: "خطأ في الحفظ",
-        description: "حدث خطأ أثناء حفظ الإعدادات",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    toast({
+      title: "تم حفظ الإعدادات",
+      description: "تم حفظ معلوماتك بنجاح",
+    });
   };
 
   if (!user) {
@@ -85,76 +63,139 @@ const MobileSettings = () => {
     <MobileAppLayout title="الإعدادات" showBackButton={true}>
       <div className="p-4 space-y-6">
         {/* Theme Settings */}
-        <Card>
+        <Card className={`${
+          theme === 'dark' 
+            ? 'bg-gray-800 border-gray-700' 
+            : 'bg-white border-gray-200'
+        }`}>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className={`flex items-center gap-2 ${
+              theme === 'dark' ? 'text-white' : 'text-gray-900'
+            }`}>
               {theme === 'dark' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
-              إعدادات المظهر
+              مظهر التطبيق
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <Label>الوضع المظلم</Label>
-                <p className="text-sm text-muted-foreground">
-                  تفعيل الوضع المظلم للتطبيق
+              <div>
+                <p className={`font-medium ${
+                  theme === 'dark' ? 'text-white' : 'text-gray-900'
+                }`}>الوضع الليلي</p>
+                <p className={`text-sm ${
+                  theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                }`}>
+                  {theme === 'dark' ? 'تم تفعيل الوضع الليلي' : 'تم تفعيل الوضع النهاري'}
                 </p>
               </div>
               <Switch
                 checked={theme === 'dark'}
                 onCheckedChange={toggleTheme}
+                className="data-[state=checked]:bg-pink-600"
               />
             </div>
           </CardContent>
         </Card>
 
-        {/* Profile Settings */}
-        <Card>
+        {/* User Information */}
+        <Card className={`${
+          theme === 'dark' 
+            ? 'bg-gray-800 border-gray-700' 
+            : 'bg-white border-gray-200'
+        }`}>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className={`flex items-center gap-2 ${
+              theme === 'dark' ? 'text-white' : 'text-gray-900'
+            }`}>
               <User className="w-5 h-5" />
-              معلومات الملف الشخصي
+              المعلومات الشخصية
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <Label htmlFor="fullName">الاسم الكامل</Label>
-              <Input
-                id="fullName"
-                value={formData.fullName}
-                onChange={(e) => setFormData(prev => ({ ...prev, fullName: e.target.value }))}
-                placeholder="أدخل اسمك الكامل"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="phone">رقم الهاتف</Label>
+              <Label htmlFor="fullName" className={`${
+                theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+              }`}>
+                الاسم الكامل
+              </Label>
               <div className="relative">
-                <Phone className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" />
+                <User className={`absolute right-3 top-3 h-4 w-4 ${
+                  theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
+                }`} />
                 <Input
-                  id="phone"
-                  value={formData.phone}
-                  onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-                  placeholder="07XXXXXXXXX"
-                  className="pr-10"
+                  id="fullName"
+                  value={userInfo.fullName}
+                  onChange={(e) => setUserInfo(prev => ({ ...prev, fullName: e.target.value }))}
+                  placeholder="أدخل اسمك الكامل"
+                  className={`pr-10 ${
+                    theme === 'dark'
+                      ? 'bg-gray-700 border-gray-600 text-white placeholder:text-gray-400'
+                      : 'bg-white border-gray-300 text-gray-900'
+                  }`}
                 />
               </div>
             </div>
 
             <div>
-              <Label htmlFor="governorate">المحافظة</Label>
+              <Label htmlFor="phone" className={`${
+                theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+              }`}>
+                رقم الهاتف
+              </Label>
               <div className="relative">
-                <MapPin className="absolute right-3 top-3 h-4 w-4 text-muted-foreground z-10" />
+                <Phone className={`absolute right-3 top-3 h-4 w-4 ${
+                  theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
+                }`} />
+                <Input
+                  id="phone"
+                  value={userInfo.phone}
+                  onChange={(e) => setUserInfo(prev => ({ ...prev, phone: e.target.value }))}
+                  placeholder="07XXXXXXXXX"
+                  className={`pr-10 ${
+                    theme === 'dark'
+                      ? 'bg-gray-700 border-gray-600 text-white placeholder:text-gray-400'
+                      : 'bg-white border-gray-300 text-gray-900'
+                  }`}
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="governorate" className={`${
+                theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+              }`}>
+                المحافظة
+              </Label>
+              <div className="relative">
+                <MapPin className={`absolute right-3 top-3 h-4 w-4 z-10 ${
+                  theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
+                }`} />
                 <Select
-                  value={formData.governorate}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, governorate: value }))}
+                  value={userInfo.governorate}
+                  onValueChange={(value) => setUserInfo(prev => ({ ...prev, governorate: value }))}
                 >
-                  <SelectTrigger className="pr-10">
+                  <SelectTrigger className={`pr-10 ${
+                    theme === 'dark'
+                      ? 'bg-gray-700 border-gray-600 text-white'
+                      : 'bg-white border-gray-300 text-gray-900'
+                  }`}>
                     <SelectValue placeholder="اختر المحافظة" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className={`${
+                    theme === 'dark'
+                      ? 'bg-gray-800 border-gray-600'
+                      : 'bg-white border-gray-200'
+                  }`}>
                     {GOVERNORATES.map((gov) => (
-                      <SelectItem key={gov} value={gov}>
+                      <SelectItem 
+                        key={gov} 
+                        value={gov}
+                        className={`${
+                          theme === 'dark'
+                            ? 'text-white hover:bg-gray-700 focus:bg-gray-700'
+                            : 'text-gray-900 hover:bg-gray-100 focus:bg-gray-100'
+                        }`}
+                      >
                         {gov}
                       </SelectItem>
                     ))}
@@ -163,23 +204,13 @@ const MobileSettings = () => {
               </div>
             </div>
 
-            <Button 
-              onClick={handleSave} 
-              disabled={isLoading}
-              className="w-full flex items-center gap-2"
+            <Button
+              onClick={handleSaveSettings}
+              className="w-full bg-pink-600 hover:bg-pink-700 text-white gap-2"
             >
               <Save className="w-4 h-4" />
-              {isLoading ? 'جاري الحفظ...' : 'حفظ التغييرات'}
+              حفظ الإعدادات
             </Button>
-          </CardContent>
-        </Card>
-
-        {/* Info Card */}
-        <Card>
-          <CardContent className="p-4">
-            <p className="text-sm text-muted-foreground text-center">
-              سيتم حفظ رقم الهاتف والمحافظة محلياً لتسهيل عملية الطلب في المستقبل
-            </p>
           </CardContent>
         </Card>
       </div>

@@ -3,6 +3,8 @@ import React, { useEffect, useState } from 'react';
 import { ArrowRight } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { useAppTheme } from '@/contexts/AppThemeContext';
 import BottomNavigation from './BottomNavigation';
 
 interface MobileAppLayoutProps {
@@ -15,6 +17,7 @@ interface MobileAppLayoutProps {
 const MobileAppLayout = ({ children, title, showBackButton = true, backPath }: MobileAppLayoutProps) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { theme } = useAppTheme();
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
@@ -57,30 +60,44 @@ const MobileAppLayout = ({ children, title, showBackButton = true, backPath }: M
   ].includes(location.pathname);
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col relative">
+    <div className={`min-h-screen flex flex-col relative transition-colors duration-300 ${
+      theme === 'dark' 
+        ? 'bg-gray-900' 
+        : 'bg-gray-50'
+    }`}>
       {/* Header with slide down animation */}
-      <div className={`bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-3 sticky top-0 z-40 transition-all duration-500 transform ${
+      <div className={`border-b px-4 py-3 flex items-center gap-3 sticky top-0 z-40 transition-all duration-500 transform backdrop-blur-sm ${
         isVisible ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0'
+      } ${
+        theme === 'dark'
+          ? 'bg-gray-900/95 border-gray-700 text-white'
+          : 'bg-white/95 border-gray-200 text-gray-800'
       }`}>
         {showBackButton && !hideBackButton && (
           <Button
             variant="ghost"
             size="sm"
             onClick={handleBack}
-            className="p-2 transition-all duration-200 hover:bg-pink-50 hover:text-pink-600"
+            className={`p-2 transition-all duration-200 ${
+              theme === 'dark'
+                ? 'hover:bg-pink-900/30 hover:text-pink-400 text-gray-300'
+                : 'hover:bg-pink-50 hover:text-pink-600 text-gray-700'
+            }`}
           >
             <ArrowRight className="w-5 h-5" />
           </Button>
         )}
-        <h1 className="text-lg font-semibold text-gray-800 flex-1">{title}</h1>
+        <h1 className="text-lg font-semibold flex-1">{title}</h1>
       </div>
 
-      {/* Content with fade in and slide up animation - increased bottom padding */}
-      <div className={`flex-1 pb-32 overflow-y-auto transition-all duration-700 ease-out transform ${
-        isVisible ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
-      }`}>
-        {children}
-      </div>
+      {/* Content with custom scrollbar and fade in animation */}
+      <ScrollArea className="flex-1">
+        <div className={`pb-32 transition-all duration-700 ease-out transform ${
+          isVisible ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
+        }`}>
+          {children}
+        </div>
+      </ScrollArea>
 
       {/* Bottom Navigation - always visible */}
       <BottomNavigation />
