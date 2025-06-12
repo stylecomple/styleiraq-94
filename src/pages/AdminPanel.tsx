@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Navigate, useSearchParams } from 'react-router-dom';
@@ -6,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Plus, Package, Users, BarChart3, Settings, MessageSquare, Percent, FolderPlus, Menu } from 'lucide-react';
 import { SidebarProvider, SidebarTrigger, SidebarInset } from '@/components/ui/sidebar';
+import { useIsMobile } from '@/hooks/use-mobile';
 import AdminSidebar from '@/components/AdminSidebar';
 import ProductsManagement from '@/components/admin/ProductsManagement';
 import AddProductForm from '@/components/admin/AddProductForm';
@@ -17,12 +17,14 @@ import FeedbackManagement from '@/components/admin/FeedbackManagement';
 import SimpleDiscountManagement from '@/components/admin/SimpleDiscountManagement';
 import EnhancedOrdersManagement from '@/components/admin/EnhancedOrdersManagement';
 import ChangesLogPanel from '@/components/admin/ChangesLogPanel';
+import MobileAdminPanel from '@/components/admin/MobileAdminPanel';
 
 const AdminPanel = () => {
   const { user, isAdmin, isOwner, isOrderManager, loading } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [showCategoryManager, setShowCategoryManager] = useState(false);
+  const isMobile = useIsMobile();
   
   const activeTab = searchParams.get('tab') || (isOrderManager && !isAdmin && !isOwner ? 'orders' : 'products');
 
@@ -39,6 +41,11 @@ const AdminPanel = () => {
   }
 
   const isFullAdmin = isAdmin || isOwner;
+
+  // Show mobile admin panel for small screens and full admins
+  if (isMobile && isFullAdmin) {
+    return <MobileAdminPanel />;
+  }
 
   const setActiveTab = (tab: string) => {
     setSearchParams({ tab });
