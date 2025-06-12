@@ -1,5 +1,5 @@
-
 import React, { createContext, useContext, useReducer, useEffect, ReactNode, useState } from 'react';
+import { PaymentMethod } from '@/types';
 
 export interface CartItem {
   id: string;
@@ -25,9 +25,9 @@ interface CartContextType extends CartState {
   getTotalPrice: () => number;
   getTotalItems: () => number;
   isPaymentDialogOpen: boolean;
-  selectedPaymentMethod: 'visa_card' | 'zain_cash' | null;
+  selectedPaymentMethod: PaymentMethod | null;
   pendingOrder: { orderId: string; totalAmount: number; items: CartItem[] } | null;
-  openPaymentDialog: (method: 'visa_card' | 'zain_cash', orderData: { orderId: string; totalAmount: number; items: CartItem[] }) => void;
+  openPaymentDialog: (method: PaymentMethod, orderData: { orderId: string; totalAmount: number; items: CartItem[] }) => void;
   closePaymentDialog: () => void;
 }
 
@@ -99,7 +99,7 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [state, dispatch] = useReducer(cartReducer, { items: [] });
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'visa_card' | 'zain_cash' | null>(null);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod | null>(null);
   const [pendingOrder, setPendingOrder] = useState<{ orderId: string; totalAmount: number; items: CartItem[] } | null>(null);
 
   // Load cart from localStorage on mount
@@ -152,7 +152,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     return state.items.reduce((total, item) => total + item.quantity, 0);
   };
 
-  const openPaymentDialog = (method: 'visa_card' | 'zain_cash', orderData: { orderId: string; totalAmount: number; items: CartItem[] }) => {
+  const openPaymentDialog = (method: PaymentMethod, orderData: { orderId: string; totalAmount: number; items: CartItem[] }) => {
     setSelectedPaymentMethod(method);
     setPendingOrder(orderData);
     setIsPaymentDialogOpen(true);

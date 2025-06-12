@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import MobileAppLayout from '@/components/MobileAppLayout';
@@ -13,13 +12,14 @@ import { Label } from '@/components/ui/label';
 import { CreditCard, Smartphone, Truck } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { PaymentMethod } from '@/types';
 
 const MobilePayment = () => {
   const navigate = useNavigate();
   const { items, getTotalPrice, clearCart } = useCart();
   const { user } = useAuth();
   const { toast } = useToast();
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'visa_card' | 'zain_cash' | 'cash_on_delivery' | null>(null);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod | null>(null);
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [orderData, setOrderData] = useState<{ orderId: string; totalAmount: number; items: any[] } | null>(null);
   const [selectedGovernorate, setSelectedGovernorate] = useState<string>('');
@@ -52,7 +52,7 @@ const MobilePayment = () => {
   const shippingCost = selectedGov ? selectedGov.cost : 0;
   const totalAmount = subtotalAmount + shippingCost;
 
-  const handlePaymentMethodSelect = (method: 'visa_card' | 'zain_cash' | 'cash_on_delivery') => {
+  const handlePaymentMethodSelect = (method: PaymentMethod) => {
     if (!user) {
       navigate('/app/auth');
       return;
