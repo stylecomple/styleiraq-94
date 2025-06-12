@@ -6,7 +6,6 @@ import { supabase } from '@/integrations/supabase/client';
 import MobileAppLayout from '@/components/MobileAppLayout';
 import ProductCard from '@/components/ProductCard';
 import { Button } from '@/components/ui/button';
-import { Product } from '@/types';
 
 interface Category {
   id: string;
@@ -20,6 +19,18 @@ interface Subcategory {
   name: string;
   icon: string;
   category_id: string;
+}
+
+interface Product {
+  id: string;
+  name: string;
+  price: number;
+  cover_image?: string;
+  categories?: string[];
+  subcategories?: string[];
+  options?: any[];
+  discount_percentage?: number;
+  is_active: boolean;
 }
 
 const MobileCategoryDetail = () => {
@@ -38,22 +49,17 @@ const MobileCategoryDetail = () => {
         .from('products')
         .select('*')
         .eq('is_active', true)
-        .eq('category_id', categoryId);
+        .contains('categories', [categoryId]);
 
       if (selectedSubcategory) {
-        query = query.eq('subcategory_id', selectedSubcategory);
+        query = query.contains('subcategories', [selectedSubcategory]);
       }
 
       const { data, error } = await query.order('created_at', { ascending: false });
       
       if (error) throw error;
       
-      // Transform data to match Product interface
-      return (data || []).map(item => ({
-        ...item,
-        options: item.options || (item.colors ? item.colors.map((color: string) => ({ name: color, price: undefined })) : []),
-        subcategories: item.subcategories || []
-      })) as Product[];
+      return (data || []) as Product[];
     },
     enabled: !!categoryId
   });

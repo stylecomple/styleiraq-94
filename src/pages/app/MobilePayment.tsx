@@ -7,21 +7,52 @@ import { useAuth } from '@/contexts/AuthContext';
 import PaymentDialog from '@/components/PaymentDialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { CreditCard, Smartphone } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { CreditCard, Smartphone, Truck } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 const MobilePayment = () => {
   const navigate = useNavigate();
   const { items, getTotalPrice, clearCart } = useCart();
   const { user } = useAuth();
   const { toast } = useToast();
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'visa_card' | 'zain_cash' | null>(null);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'visa_card' | 'zain_cash' | 'cash_on_delivery' | null>(null);
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [orderData, setOrderData] = useState<{ orderId: string; totalAmount: number; items: any[] } | null>(null);
+  const [selectedGovernorate, setSelectedGovernorate] = useState<string>('');
+  const [shippingAddress, setShippingAddress] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
 
-  const totalAmount = getTotalPrice();
+  const governorates = [
+    { name: 'بغداد', cost: 5000 },
+    { name: 'العامرية', cost: 2000 },
+    { name: 'الأنبار', cost: 6000 },
+    { name: 'بابل', cost: 6000 },
+    { name: 'البصرة', cost: 6000 },
+    { name: 'ذي قار', cost: 6000 },
+    { name: 'القادسية', cost: 6000 },
+    { name: 'كربلاء', cost: 6000 },
+    { name: 'كركوك', cost: 6000 },
+    { name: 'ميسان', cost: 6000 },
+    { name: 'المثنى', cost: 6000 },
+    { name: 'النجف', cost: 6000 },
+    { name: 'نينوى', cost: 6000 },
+    { name: 'صلاح الدين', cost: 6000 },
+    { name: 'واسط', cost: 6000 },
+    { name: 'أربيل', cost: 6000 },
+    { name: 'دهوك', cost: 6000 },
+    { name: 'السليمانية', cost: 6000 }
+  ];
 
-  const handlePaymentMethodSelect = (method: 'visa_card' | 'zain_cash') => {
+  const subtotalAmount = getTotalPrice();
+  const selectedGov = governorates.find(gov => gov.name === selectedGovernorate);
+  const shippingCost = selectedGov ? selectedGov.cost : 0;
+  const totalAmount = subtotalAmount + shippingCost;
+
+  const handlePaymentMethodSelect = (method: 'visa_card' | 'zain_cash' | 'cash_on_delivery') => {
     if (!user) {
       navigate('/app/auth');
       return;
@@ -36,17 +67,101 @@ const MobilePayment = () => {
       return;
     }
 
-    // Create order data
-    const orderId = `order_${Date.now()}`;
-    const newOrderData = {
-      orderId,
-      totalAmount,
-      items
-    };
+    if (!selectedGovernorate) {
+      toast({
+        title: "اختر المحافظة",
+        description: "يرجى اختيار المحافظة لحساب تكلفة التوصيل",
+        variant: "destructive",
+      });
+      return;
+    }
 
-    setSelectedPaymentMethod(method);
-    setOrderData(newOrderData);
-    setIsPaymentDialogOpen(true);
+    if (!shippingAddress.trim()) {
+      toast({
+        title: "العنوان مطلوب",
+        description: "يرجى إدخال عنوان التوصيل",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!phoneNumber.trim()) {
+      toast({
+        title: "رقم الهاتف مطلوب",
+        description: "يرجى إدخال رقم الهاتف",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (method === 'cash_on_delivery') {
+      handleCashOnDeliveryOrder();
+    } else {
+      // Create order data for online payment
+      const orderId = `order_${Date.now()}`;
+      const newOrderData = {
+        orderId,
+        totalAmount,
+        items
+      };
+
+      setSelectedPaymentMethod(method);
+      setOrderData(newOrderData);
+      setIsPaymentDialogOpen(true);
+    }
+  };
+
+  const handleCashOnDeliveryOrder = async () => {
+    try {
+      const orderId = `cod_${Date.now()}`;
+      
+      // Create order in database
+      const { data: order, error: orderError } = await supabase
+        .from('orders')
+        .insert({
+          id: orderId,
+          user_id: user!.id,
+          total_amount: totalAmount,
+          status: 'pending',
+          payment_method: 'cash_on_delivery',
+          shipping_address: shippingAddress,
+          governorate: selectedGovernorate,
+          phone: phoneNumber
+        })
+        .select()
+        .single();
+
+      if (orderError) throw orderError;
+
+      // Create order items
+      const orderItems = items.map(item => ({
+        order_id: orderId,
+        product_id: item.id,
+        quantity: item.quantity,
+        price: item.price,
+        selected_color: item.selectedOption || item.selectedColor
+      }));
+
+      const { error: itemsError } = await supabase
+        .from('order_items')
+        .insert(orderItems);
+
+      if (itemsError) throw itemsError;
+
+      clearCart();
+      toast({
+        title: "تم إنشاء الطلب بنجاح",
+        description: "سيتم التواصل معك لتأكيد الطلب",
+      });
+      navigate('/app/orders');
+    } catch (error) {
+      console.error('Error creating cash on delivery order:', error);
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ أثناء إنشاء الطلب",
+        variant: "destructive",
+      });
+    }
   };
 
   const handlePaymentSuccess = () => {
@@ -117,6 +232,54 @@ const MobilePayment = () => {
   return (
     <MobileAppLayout title="الدفع" backPath="/app/cart">
       <div className="p-4 space-y-6">
+        {/* Shipping Information */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Truck className="w-5 h-5" />
+              معلومات التوصيل
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label htmlFor="governorate">المحافظة</Label>
+              <Select value={selectedGovernorate} onValueChange={setSelectedGovernorate}>
+                <SelectTrigger>
+                  <SelectValue placeholder="اختر المحافظة" />
+                </SelectTrigger>
+                <SelectContent>
+                  {governorates.map((gov) => (
+                    <SelectItem key={gov.name} value={gov.name}>
+                      {gov.name} - {gov.cost.toLocaleString()} د.ع
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div>
+              <Label htmlFor="address">العنوان التفصيلي</Label>
+              <Input
+                id="address"
+                value={shippingAddress}
+                onChange={(e) => setShippingAddress(e.target.value)}
+                placeholder="أدخل العنوان التفصيلي"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="phone">رقم الهاتف</Label>
+              <Input
+                id="phone"
+                value={phoneNumber}
+                onChange={(e) => setPhoneNumber(e.target.value)}
+                placeholder="07XXXXXXXXX"
+                type="tel"
+              />
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Order Summary */}
         <Card>
           <CardHeader>
@@ -137,7 +300,17 @@ const MobilePayment = () => {
                 </p>
               </div>
             ))}
-            <div className="border-t pt-3">
+            <div className="border-t pt-3 space-y-2">
+              <div className="flex justify-between items-center">
+                <span>المجموع الفرعي</span>
+                <span>{subtotalAmount.toLocaleString()} د.ع</span>
+              </div>
+              {selectedGov && (
+                <div className="flex justify-between items-center">
+                  <span>التوصيل ({selectedGov.name})</span>
+                  <span>{shippingCost.toLocaleString()} د.ع</span>
+                </div>
+              )}
               <div className="flex justify-between items-center text-lg font-bold">
                 <span>المجموع الكلي</span>
                 <span className="text-pink-600">{totalAmount.toLocaleString()} د.ع</span>
@@ -149,6 +322,18 @@ const MobilePayment = () => {
         {/* Payment Methods */}
         <div className="space-y-4">
           <h3 className="text-lg font-semibold">اختر طريقة الدفع</h3>
+          
+          <Card className="cursor-pointer hover:bg-gray-50" onClick={() => handlePaymentMethodSelect('cash_on_delivery')}>
+            <CardContent className="p-4">
+              <div className="flex items-center space-x-4">
+                <Truck className="w-8 h-8 text-green-600" />
+                <div className="flex-1">
+                  <h4 className="font-semibold">دفع عند الاستلام</h4>
+                  <p className="text-sm text-gray-600">ادفع نقداً عند وصول الطلب</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
           
           <Card className="cursor-pointer hover:bg-gray-50" onClick={() => handlePaymentMethodSelect('visa_card')}>
             <CardContent className="p-4">
