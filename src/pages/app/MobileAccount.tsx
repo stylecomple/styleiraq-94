@@ -4,14 +4,17 @@ import { useNavigate } from 'react-router-dom';
 import MobileAppLayout from '@/components/MobileAppLayout';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAppTheme } from '@/contexts/AppThemeContext';
+import { useCache } from '@/contexts/CacheContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { User, Package, LogOut, Shield, Settings } from 'lucide-react';
+import { User, Package, LogOut, Shield, Settings, RefreshCw } from 'lucide-react';
+import { toast } from 'sonner';
 
 const MobileAccount = () => {
   const navigate = useNavigate();
   const { user, signOut, isAdmin, isOwner, isOrderManager } = useAuth();
   const { theme } = useAppTheme();
+  const { clearCache } = useCache();
 
   const handleSignOut = async () => {
     try {
@@ -19,6 +22,22 @@ const MobileAccount = () => {
       navigate('/app/products');
     } catch (error) {
       console.error('Error signing out:', error);
+    }
+  };
+
+  const handleResetApp = async () => {
+    try {
+      // Clear cache
+      clearCache();
+      
+      // Show success message
+      toast.success('تم إعادة تعيين التطبيق بنجاح');
+      
+      // Navigate to splash screen to re-cache everything
+      navigate('/app/splash');
+    } catch (error) {
+      console.error('Error resetting app:', error);
+      toast.error('حدث خطأ أثناء إعادة التعيين');
     }
   };
 
@@ -139,6 +158,19 @@ const MobileAccount = () => {
           >
             <Settings className="w-5 h-5" />
             الإعدادات
+          </Button>
+
+          <Button
+            onClick={handleResetApp}
+            variant="outline"
+            className={`w-full justify-start gap-3 h-12 ${
+              theme === 'dark'
+                ? 'border-orange-500 text-orange-400 hover:bg-orange-900/30'
+                : 'border-orange-200 text-orange-600 hover:bg-orange-50'
+            }`}
+          >
+            <RefreshCw className="w-5 h-5" />
+            إعادة تعيين التطبيق
           </Button>
 
           {/* Admin Panel Button - Show for admin, owner, or order manager */}

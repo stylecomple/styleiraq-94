@@ -8,7 +8,10 @@ interface CacheData {
   lastUpdated: string;
   version: string;
   // New fields for selective caching
-  discounts: any[];
+  discounts: {
+    activeDiscounts: any[];
+    discountedProducts: any[];
+  };
   lastDiscountCheck: string;
   lastProductCheck: string;
   lastCategoryCheck: string;
@@ -47,7 +50,7 @@ export const useAppCache = () => {
   };
 
   // Check for discounts updates (always check)
-  const checkDiscountUpdates = async (): Promise<any[]> => {
+  const checkDiscountUpdates = async (): Promise<{ activeDiscounts: any[]; discountedProducts: any[] }> => {
     try {
       console.log('Checking for discount updates...');
       const { data: activeDiscounts } = await supabase

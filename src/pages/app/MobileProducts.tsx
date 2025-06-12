@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -93,11 +94,14 @@ const MobileProducts = () => {
     return matchesCategory;
   }) || [];
 
-  // Get discounted products from cache first, then from products
+  // Get discounted products with full details including images
   const discountedProducts = React.useMemo(() => {
-    // First try to get from cached discount data
-    if (cachedData?.discounts?.discountedProducts) {
-      return cachedData.discounts.discountedProducts;
+    // First try to get from cached discount data and match with full product data
+    if (cachedData?.discounts?.discountedProducts && products) {
+      return cachedData.discounts.discountedProducts.map((discountProduct: any) => {
+        const fullProduct = products.find(p => p.id === discountProduct.id);
+        return fullProduct || discountProduct;
+      }).filter(product => product.discount_percentage > 0);
     }
     
     // Fallback to filtering current products
@@ -130,7 +134,7 @@ const MobileProducts = () => {
   return (
     <MobileAppLayout title="المنتجات" showBackButton={false}>
       <div className="space-y-4 p-4">
-        {/* Enhanced Discount Products Carousel with real-time data */}
+        {/* Enhanced Discount Products Carousel with full product details */}
         {discountedProducts.length > 0 && (
           <div className="relative h-32 bg-gradient-to-r from-red-500 to-pink-500 rounded-xl overflow-hidden shadow-lg">
             <div className="absolute inset-0 bg-black/20"></div>
