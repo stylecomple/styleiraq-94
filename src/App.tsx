@@ -45,8 +45,11 @@ const App = () => (
             <ThemeProvider>
               <AppThemeProvider>
                 <Routes>
+                  {/* Main route is now the mobile app */}
+                  <Route path="/" element={<MobileSplash />} />
+                  
                   {/* Desktop Routes */}
-                  <Route path="/" element={<Index />} />
+                  <Route path="/desktop" element={<Index />} />
                   <Route path="/products" element={<Products />} />
                   <Route path="/product/:id" element={<ProductDetail />} />
                   <Route path="/cart" element={<Cart />} />

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,7 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { useAdminSettings } from '@/hooks/useAdminSettings';
 import { Separator } from '@/components/ui/separator';
-import { Upload, Image } from 'lucide-react';
+import { Upload, Image, Share } from 'lucide-react';
+import ShareLinkGenerator from './ShareLinkGenerator';
 
 interface PaymentConfig {
   enabled: boolean;
@@ -251,6 +251,19 @@ const AdminSettings = () => {
               onCheckedChange={setStoreOpen}
             />
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Share Link Generator */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Share className="w-6 h-6" />
+            مشاركة التطبيق
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ShareLinkGenerator />
         </CardContent>
       </Card>
 
