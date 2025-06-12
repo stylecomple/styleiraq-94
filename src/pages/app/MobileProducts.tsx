@@ -1,35 +1,44 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
 import MobileAppLayout from '@/components/MobileAppLayout';
 import ProductCard from '@/components/ProductCard';
-import ProductDiscountTicker from '@/components/ProductDiscountTicker';
-import OnboardingTour from '@/components/OnboardingTour';
+import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { User } from 'lucide-react';
+import { Search, Filter, SlidersHorizontal } from 'lucide-react';
 import { Product } from '@/types';
+import { useCache } from '@/contexts/CacheContext';
 
 const MobileProducts = () => {
-  const { user } = useAuth();
-  const navigate = useNavigate();
-  const [showOnboarding, setShowOnboarding] = useState(false);
-  const [showGuestPrompt, setShowGuestPrompt] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const { cachedData, cacheStatus } = useCache();
 
-  useEffect(() => {
-    const hasSeenOnboarding = localStorage.getItem('hasSeenOnboarding');
-    
-    if (!hasSeenOnboarding) {
-      setShowOnboarding(true);
-    } else if (!user) {
-      setShowGuestPrompt(true);
-    }
-  }, [user]);
-
+  // Use cached data if available, otherwise fetch from database
   const { data: products, isLoading } = useQuery({
     queryKey: ['mobile-products'],
-    queryFn: async () => {
+    queryFn: async (): Promise<Product[]> => {
+      // If we have cached data and it's complete, use it
+      if (cachedData && cacheStatus === 'complete') {
+        console.log('Using cached products data');
+        return cachedData.products.map((rawProduct: any) => {
+          const options = rawProduct.options || 
+            (rawProduct.colors ? rawProduct.colors.map((color: string) => ({ name: color, price: undefined })) : []);
+          
+          const subcategories = rawProduct.subcategories || [];
+
+          return {
+            ...rawProduct,
+            options,
+            subcategories,
+            discount_percentage: rawProduct.discount_percentage || 0
+          } as Product;
+        });
+      }
+
+      // Fallback to database query
+      console.log('Fetching products from database');
       const { data, error } = await supabase
         .from('products')
         .select('*')
@@ -51,154 +60,185 @@ const MobileProducts = () => {
           discount_percentage: rawProduct.discount_percentage || 0
         } as Product;
       });
-    }
+    },
+    enabled: !cachedData || cacheStatus === 'complete'
   });
 
-  const discountedProducts = products?.filter(product => 
-    product.discount_percentage && product.discount_percentage > 0
-  ).map(product => ({
-    id: product.id,
-    name: product.name,
-    discount_percentage: product.discount_percentage || 0
-  })) || [];
+  const { data: categories } = useQuery({
+    queryKey: ['mobile-categories-filter'],
+    queryFn: async () => {
+      // Use cached categories if available
+      if (cachedData && cacheStatus === 'complete') {
+        console.log('Using cached categories data');
+        return cachedData.categories;
+      }
 
-  const handleOnboardingComplete = () => {
-    localStorage.setItem('hasSeenOnboarding', 'true');
-    setShowOnboarding(false);
-    if (!user) {
-      setShowGuestPrompt(true);
-    }
+      // Fallback to database query
+      console.log('Fetching categories from database');
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*');
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !cachedData || cacheStatus === 'complete'
+  });
+
+  // Filter products based on search term and category
+  const filteredProducts = products?.filter(product => {
+    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         product.description?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesCategory = !selectedCategory || 
+                           (product.categories && product.categories.includes(selectedCategory));
+    
+    return matchesSearch && matchesCategory;
+  }) || [];
+
+  const handleClearFilters = () => {
+    setSearchTerm('');
+    setSelectedCategory('');
   };
 
-  const handleOnboardingSkip = () => {
-    localStorage.setItem('hasSeenOnboarding', 'true');
-    setShowOnboarding(false);
-    if (!user) {
-      setShowGuestPrompt(true);
-    }
-  };
-
-  const handleLoginClick = () => {
-    setShowGuestPrompt(false);
-    navigate('/app/auth');
-  };
-
-  const handleContinueAsGuest = () => {
-    setShowGuestPrompt(false);
-  };
+  const showLoading = isLoading || (cachedData && cacheStatus !== 'complete');
 
   return (
-    <>
-      <MobileAppLayout title="جميع المنتجات" showBackButton={false}>
-        <div className="space-y-6 animate-fade-in">
-          {/* New Mobile Logo Section */}
-          <div className="flex justify-center py-4 animate-slide-down">
-            <div className="relative">
-              {/* Mobile optimized modern design */}
-              <div className="bg-white rounded-2xl p-4 shadow-xl border-2 border-gradient-to-r from-pink-200 to-purple-200 hover:shadow-2xl transition-all duration-300 transform hover:scale-105">
-                <div className="text-center relative">
-                  <h1 className="text-2xl font-black bg-gradient-to-r from-pink-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent mb-1">
-                    Style
-                  </h1>
-                  <p className="text-xs font-medium text-gray-600 tracking-wide">
-                    متجر الجمال والأناقة
-                  </p>
-                  
-                  {/* Mobile decorative elements */}
-                  <div className="absolute -top-2 -right-2 w-4 h-4 bg-gradient-to-r from-pink-400 to-rose-500 rounded-full animate-pulse"></div>
-                  <div className="absolute -bottom-2 -left-2 w-3 h-3 bg-gradient-to-r from-purple-400 to-indigo-500 rounded-full animate-pulse" style={{ animationDelay: '1s' }}></div>
-                </div>
-              </div>
-              
-              {/* Background glow */}
-              <div className="absolute inset-0 bg-gradient-to-r from-pink-300 via-purple-300 to-indigo-300 rounded-2xl blur-lg opacity-15 -z-10 animate-pulse"></div>
-            </div>
+    <MobileAppLayout title="المنتجات" showBackButton={false}>
+      <div className="space-y-4 p-4">
+        {/* Search and Filter Section */}
+        <div className="space-y-3">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <Input
+              placeholder="ابحث عن منتج..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 pr-4 bg-white border-gray-200 rounded-xl"
+            />
           </div>
 
-          {/* Discount Ticker - only show if there are discounted products */}
-          {discountedProducts.length > 0 && (
-            <ProductDiscountTicker products={discountedProducts} />
-          )}
-
-          {/* Guest login prompt */}
-          {!user && showGuestPrompt && (
-            <div className="mx-4 mb-4">
-              <div className="bg-gradient-to-r from-pink-50 to-purple-50 border border-pink-200 rounded-lg p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-gradient-to-r from-pink-500 to-purple-600 rounded-full flex items-center justify-center">
-                      <User className="w-5 h-5 text-white" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-800">مرحباً بك!</h3>
-                      <p className="text-sm text-gray-600">سجل دخولك للحصول على تجربة أفضل</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="flex gap-2 mt-3">
-                  <Button 
-                    onClick={handleLoginClick}
-                    className="flex-1 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white"
-                    size="sm"
-                  >
-                    تسجيل الدخول
-                  </Button>
-                  <Button 
-                    onClick={handleContinueAsGuest}
-                    variant="outline"
-                    className="flex-1"
-                    size="sm"
-                  >
-                    متابعة كضيف
-                  </Button>
-                </div>
-              </div>
+          {/* Category Filter */}
+          {categories && categories.length > 0 && (
+            <div className="flex gap-2 overflow-x-auto pb-2">
+              <Button
+                variant={selectedCategory === '' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setSelectedCategory('')}
+                className="whitespace-nowrap rounded-full"
+              >
+                الكل
+              </Button>
+              {categories.map((category: any) => (
+                <Button
+                  key={category.id}
+                  variant={selectedCategory === category.id ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setSelectedCategory(category.id)}
+                  className="whitespace-nowrap rounded-full"
+                >
+                  {category.icon} {category.name}
+                </Button>
+              ))}
             </div>
           )}
 
-          <div className="p-4 space-y-4">
-            {/* Products Grid */}
-            {isLoading ? (
-              <div className="grid grid-cols-2 gap-4">
-                {[...Array(6)].map((_, index) => (
-                  <div 
-                    key={index} 
-                    className="bg-gray-200 animate-pulse rounded-lg h-80"
-                    style={{ animationDelay: `${index * 100}ms` }}
-                  />
-                ))}
+          {/* Active Filters */}
+          {(searchTerm || selectedCategory) && (
+            <div className="flex items-center justify-between bg-blue-50 p-3 rounded-xl">
+              <div className="flex items-center gap-2">
+                <Filter className="w-4 h-4 text-blue-600" />
+                <span className="text-sm text-blue-800">
+                  {searchTerm && `البحث: "${searchTerm}"`}
+                  {searchTerm && selectedCategory && ' • '}
+                  {selectedCategory && categories && 
+                    `الفئة: ${categories.find((c: any) => c.id === selectedCategory)?.name}`
+                  }
+                </span>
               </div>
-            ) : products && products.length > 0 ? (
-              <div className="grid grid-cols-2 gap-4">
-                {products.map((product, index) => (
-                  <div 
-                    key={product.id}
-                    className="animate-fade-in-up"
-                    style={{ animationDelay: `${index * 100}ms` }}
-                  >
-                    <ProductCard product={product} />
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-12 animate-fade-in">
-                <div className="text-6xl mb-4 animate-bounce">📦</div>
-                <h3 className="text-xl font-semibold text-gray-700 mb-2">لا توجد منتجات</h3>
-                <p className="text-gray-500">لا توجد منتجات متاحة حالياً.</p>
-              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleClearFilters}
+                className="text-blue-600 hover:text-blue-800"
+              >
+                مسح
+              </Button>
+            </div>
+          )}
+        </div>
+
+        {/* Cache Status Indicator */}
+        {cachedData && cacheStatus !== 'complete' && (
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
+              <span className="text-sm text-amber-800">
+                {cacheStatus === 'updating' ? 'جاري تحديث البيانات...' : 'جاري التحقق من التحديثات...'}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Products Grid */}
+        {showLoading ? (
+          <div className="grid grid-cols-2 gap-4">
+            {[...Array(6)].map((_, index) => (
+              <div 
+                key={index} 
+                className="bg-gray-200 animate-pulse rounded-xl h-80"
+                style={{ animationDelay: `${index * 100}ms` }}
+              />
+            ))}
+          </div>
+        ) : filteredProducts.length > 0 ? (
+          <>
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-gray-800">
+                {filteredProducts.length} منتج
+              </h2>
+              {cachedData && (
+                <div className="text-xs text-gray-500 flex items-center gap-1">
+                  <div className="w-2 h-2 bg-green-500 rounded-full" />
+                  محفوظ محلياً
+                </div>
+              )}
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              {filteredProducts.map((product, index) => (
+                <div 
+                  key={product.id}
+                  className="animate-fade-in-up"
+                  style={{ animationDelay: `${index * 50}ms` }}
+                >
+                  <ProductCard product={product} />
+                </div>
+              ))}
+            </div>
+          </>
+        ) : (
+          <div className="text-center py-16 animate-fade-in">
+            <div className="text-6xl mb-4">🔍</div>
+            <h3 className="text-xl font-semibold text-gray-700 mb-2">لا توجد منتجات</h3>
+            <p className="text-gray-500 mb-4">
+              {searchTerm || selectedCategory 
+                ? 'لم يتم العثور على منتجات تطابق معايير البحث'
+                : 'لا توجد منتجات متاحة حالياً'
+              }
+            </p>
+            {(searchTerm || selectedCategory) && (
+              <Button 
+                onClick={handleClearFilters}
+                variant="outline"
+                className="mx-auto"
+              >
+                مسح جميع المرشحات
+              </Button>
             )}
           </div>
-        </div>
-      </MobileAppLayout>
-
-      {/* Onboarding Tour */}
-      {showOnboarding && (
-        <OnboardingTour
-          onComplete={handleOnboardingComplete}
-          onSkip={handleOnboardingSkip}
-        />
-      )}
-    </>
+        )}
+      </div>
+    </MobileAppLayout>
   );
 };
 

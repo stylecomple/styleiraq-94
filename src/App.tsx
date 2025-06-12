@@ -8,6 +8,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { CartProvider } from "@/contexts/CartContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { AppThemeProvider } from "@/contexts/AppThemeContext";
+import { CacheProvider } from "@/contexts/CacheContext";
 import Index from "./pages/Index";
 import Products from "./pages/Products";
 import ProductDetail from "./pages/ProductDetail";
@@ -44,36 +45,38 @@ const App = () => (
           <CartProvider>
             <ThemeProvider>
               <AppThemeProvider>
-                <Routes>
-                  {/* Main route is now the mobile app */}
-                  <Route path="/" element={<MobileSplash />} />
-                  
-                  {/* Desktop Routes */}
-                  <Route path="/desktop" element={<Index />} />
-                  <Route path="/products" element={<Products />} />
-                  <Route path="/product/:id" element={<ProductDetail />} />
-                  <Route path="/cart" element={<Cart />} />
-                  <Route path="/auth" element={<Auth />} />
-                  <Route path="/orders" element={<Orders />} />
-                  <Route path="/admin" element={<AdminPanel />} />
-                  <Route path="/owner-panel" element={<OwnerPanelPage />} />
-                  
-                  {/* Mobile App Routes */}
-                  <Route path="/app" element={<MobileSplash />} />
-                  <Route path="/app/products" element={<MobileProducts />} />
-                  <Route path="/app/product/:id" element={<MobileProductDetail />} />
-                  <Route path="/app/categories" element={<MobileCategories />} />
-                  <Route path="/app/category/:categoryId" element={<MobileCategoryDetail />} />
-                  <Route path="/app/search" element={<MobileSearch />} />
-                  <Route path="/app/cart" element={<MobileCart />} />
-                  <Route path="/app/auth" element={<MobileAuth />} />
-                  <Route path="/app/account" element={<MobileAccount />} />
-                  <Route path="/app/settings" element={<MobileSettings />} />
-                  <Route path="/app/orders" element={<MobileOrders />} />
-                  <Route path="/app/payment" element={<MobilePayment />} />
-                  
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
+                <CacheProvider>
+                  <Routes>
+                    {/* Main route is now the mobile app */}
+                    <Route path="/" element={<MobileSplash />} />
+                    
+                    {/* Desktop Routes */}
+                    <Route path="/desktop" element={<Index />} />
+                    <Route path="/products" element={<Products />} />
+                    <Route path="/product/:id" element={<ProductDetail />} />
+                    <Route path="/cart" element={<Cart />} />
+                    <Route path="/auth" element={<Auth />} />
+                    <Route path="/orders" element={<Orders />} />
+                    <Route path="/admin" element={<AdminPanel />} />
+                    <Route path="/owner-panel" element={<OwnerPanelPage />} />
+                    
+                    {/* Mobile App Routes */}
+                    <Route path="/app" element={<MobileSplash />} />
+                    <Route path="/app/products" element={<MobileProducts />} />
+                    <Route path="/app/product/:id" element={<MobileProductDetail />} />
+                    <Route path="/app/categories" element={<MobileCategories />} />
+                    <Route path="/app/category/:categoryId" element={<MobileCategoryDetail />} />
+                    <Route path="/app/search" element={<MobileSearch />} />
+                    <Route path="/app/cart" element={<MobileCart />} />
+                    <Route path="/app/auth" element={<MobileAuth />} />
+                    <Route path="/app/account" element={<MobileAccount />} />
+                    <Route path="/app/settings" element={<MobileSettings />} />
+                    <Route path="/app/orders" element={<MobileOrders />} />
+                    <Route path="/app/payment" element={<MobilePayment />} />
+                    
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </CacheProvider>
               </AppThemeProvider>
             </ThemeProvider>
           </CartProvider>

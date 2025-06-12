@@ -1,10 +1,12 @@
 
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAppCache } from '@/hooks/useAppCache';
 
 const MobileSplash = () => {
   const [showContent, setShowContent] = useState(false);
   const navigate = useNavigate();
+  const { isLoading, cacheStatus, cachedData } = useAppCache();
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -14,13 +16,45 @@ const MobileSplash = () => {
   }, []);
 
   useEffect(() => {
-    // Navigate to products page after 3 seconds
-    const navigationTimer = setTimeout(() => {
-      navigate('/app/products');
-    }, 3000);
-    
-    return () => clearTimeout(navigationTimer);
-  }, [navigate]);
+    // Navigate to products page when caching is complete
+    if (!isLoading && cacheStatus === 'complete') {
+      const navigationTimer = setTimeout(() => {
+        navigate('/app/products');
+      }, 1500); // Give a bit more time to show the complete status
+      
+      return () => clearTimeout(navigationTimer);
+    }
+  }, [isLoading, cacheStatus, navigate]);
+
+  const getLoadingText = () => {
+    switch (cacheStatus) {
+      case 'loading':
+        return 'جاري التحميل...';
+      case 'cached':
+        return 'جاري التحقق من التحديثات...';
+      case 'updating':
+        return 'جاري تحديث البيانات...';
+      case 'complete':
+        return 'تم التحميل بنجاح!';
+      default:
+        return 'جاري التحميل...';
+    }
+  };
+
+  const getLoadingProgress = () => {
+    switch (cacheStatus) {
+      case 'loading':
+        return 25;
+      case 'cached':
+        return 50;
+      case 'updating':
+        return 75;
+      case 'complete':
+        return 100;
+      default:
+        return 25;
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-pink-500 via-purple-600 to-indigo-600 flex flex-col items-center justify-center text-white relative overflow-hidden">
@@ -83,21 +117,38 @@ const MobileSplash = () => {
           </p>
         </div>
         
-        {/* Animated loading dots */}
-        <div className={`flex space-x-2 justify-center transition-all duration-1000 delay-700 ${
+        {/* Progress Bar */}
+        <div className={`w-64 mx-auto transition-all duration-1000 delay-700 ${
           showContent ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
         }`}>
-          <div className="w-3 h-3 bg-white rounded-full animate-pulse-wave" />
-          <div className="w-3 h-3 bg-white rounded-full animate-pulse-wave delay-150" />
-          <div className="w-3 h-3 bg-white rounded-full animate-pulse-wave delay-300" />
+          <div className="w-full bg-white/20 rounded-full h-2 mb-4">
+            <div 
+              className="bg-gradient-to-r from-yellow-400 to-orange-500 h-2 rounded-full transition-all duration-500 ease-out"
+              style={{ width: `${getLoadingProgress()}%` }}
+            />
+          </div>
         </div>
+
+        {/* Cache Status Indicator */}
+        {cachedData && (
+          <div className={`transition-all duration-1000 delay-900 ${
+            showContent ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
+          }`}>
+            <div className="flex items-center justify-center gap-2 text-sm">
+              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+              <span>
+                {cachedData.products?.length || 0} منتج • {cachedData.categories?.length || 0} فئة
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* Loading text */}
         <div className={`transition-all duration-1000 delay-1000 ${
           showContent ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
         }`}>
           <p className="text-lg font-light opacity-80 animate-fade-in-up">
-            جاري التحميل...
+            {getLoadingText()}
           </p>
         </div>
       </div>

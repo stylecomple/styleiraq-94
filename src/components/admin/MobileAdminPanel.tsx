@@ -1,16 +1,22 @@
 
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, Package, FolderPlus, Menu, X } from 'lucide-react';
+import { Plus, Package, FolderPlus, Menu, X, ArrowLeft } from 'lucide-react';
 import AddProductForm from './AddProductForm';
 import CategoryManager from './CategoryManager';
 
 const MobileAdminPanel = () => {
+  const navigate = useNavigate();
   const [activeView, setActiveView] = useState<'main' | 'add-product' | 'categories'>('main');
 
   const handleBackToMain = () => {
     setActiveView('main');
+  };
+
+  const handleBackToApp = () => {
+    navigate('/app/products');
   };
 
   if (activeView === 'add-product') {
@@ -58,12 +64,25 @@ const MobileAdminPanel = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-pink-50 to-purple-50 p-4">
       <div className="max-w-lg mx-auto space-y-6">
-        {/* Header */}
+        {/* Header with Back Button */}
+        <div className="flex items-center justify-between mb-4">
+          <Button 
+            variant="outline" 
+            onClick={handleBackToApp}
+            className="flex items-center gap-2"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            العودة للتطبيق
+          </Button>
+          <h1 className="text-xl font-bold text-gray-800">لوحة الإدارة</h1>
+          <div className="w-24"></div> {/* Spacer for centering */}
+        </div>
+
+        {/* Admin Icon */}
         <div className="text-center space-y-2">
           <div className="w-16 h-16 bg-gradient-to-br from-pink-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
             <Package className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-800">لوحة الإدارة</h1>
           <p className="text-gray-600">إدارة المنتجات والفئات بسهولة</p>
         </div>
 
@@ -108,7 +127,6 @@ const MobileAdminPanel = () => {
           </Card>
         </div>
 
-        {/* Stats Cards */}
         <div className="grid grid-cols-2 gap-4">
           <Card className="border-0 shadow-md bg-white">
             <CardContent className="p-4 text-center">
@@ -131,7 +149,6 @@ const MobileAdminPanel = () => {
           </Card>
         </div>
 
-        {/* Quick Tips */}
         <Card className="border-0 shadow-md bg-gradient-to-r from-amber-50 to-orange-50 border-l-4 border-amber-400">
           <CardContent className="p-4">
             <h3 className="font-semibold text-amber-800 mb-2">💡 نصائح سريعة</h3>
