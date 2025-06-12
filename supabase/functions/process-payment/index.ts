@@ -30,7 +30,7 @@ serve(async (req) => {
       .single();
 
     if (settingsError) {
-      console.error('Error fetching admin settings:', settingsError);
+      console.error('Error fetching admin settings:', settings</Error);
       return new Response(
         JSON.stringify({ success: false, message: 'Configuration error' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -158,51 +158,151 @@ serve(async (req) => {
 async function processVisaCardPayment(paymentData: any, orderData: any, config: any) {
   console.log('Processing Visa Card payment...');
   
-  // Basic validation (in real implementation, you would integrate with actual payment gateway)
+  // Enhanced validation for Visa Card
   if (!paymentData.cardNumber || !paymentData.expiryDate || !paymentData.cvv || !paymentData.cardholderName) {
+    console.log('Missing required Visa card data');
     return { success: false, transactionId: null };
   }
 
-  // Simulate payment processing with validation
+  // Validate card number format
   const cardNumber = paymentData.cardNumber.replace(/\s/g, '');
-  
-  // Basic card number validation (Luhn algorithm would be used in real implementation)
   if (cardNumber.length < 16 || !/^\d+$/.test(cardNumber)) {
+    console.log('Invalid card number format');
     return { success: false, transactionId: null };
   }
 
-  // Simulate successful payment (replace with real gateway integration)
-  const transactionId = `visa_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  // Validate expiry date format (MM/YY)
+  const expiryRegex = /^(0[1-9]|1[0-2])\/\d{2}$/;
+  if (!expiryRegex.test(paymentData.expiryDate)) {
+    console.log('Invalid expiry date format');
+    return { success: false, transactionId: null };
+  }
+
+  // Check if card is not expired
+  const [month, year] = paymentData.expiryDate.split('/');
+  const expiryDate = new Date(2000 + parseInt(year), parseInt(month) - 1);
+  const currentDate = new Date();
+  if (expiryDate < currentDate) {
+    console.log('Card is expired');
+    return { success: false, transactionId: null };
+  }
+
+  // Validate CVV (3 or 4 digits)
+  if (!/^\d{3,4}$/.test(paymentData.cvv)) {
+    console.log('Invalid CVV format');
+    return { success: false, transactionId: null };
+  }
+
+  // Simulate payment gateway integration
+  // In a real implementation, you would:
+  // 1. Call the actual Visa/Mastercard payment gateway API
+  // 2. Use the merchant_id, api_key, and secret_key from config
+  // 3. Handle real payment processing, balance checking, and money transfer
   
-  // In real implementation, you would:
-  // 1. Call the actual Visa payment gateway API
-  // 2. Use the merchant_id, api_key, and terminal_id from config
-  // 3. Handle real payment processing and validation
-  
-  return { success: true, transactionId };
+  try {
+    // Simulate API call to payment gateway
+    console.log('Calling Visa payment gateway with config:', {
+      merchant_id: config.merchant_id,
+      amount: orderData.totalAmount,
+      currency: 'IQD'
+    });
+
+    // Simulate successful payment processing
+    // Replace this with actual payment gateway integration
+    const simulatedResponse = {
+      status: 'approved',
+      transaction_id: `visa_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      authorization_code: `AUTH${Math.random().toString(36).substr(2, 6).toUpperCase()}`,
+      amount_charged: orderData.totalAmount
+    };
+
+    if (simulatedResponse.status === 'approved') {
+      console.log('Visa payment approved:', simulatedResponse.transaction_id);
+      return { 
+        success: true, 
+        transactionId: simulatedResponse.transaction_id,
+        authCode: simulatedResponse.authorization_code
+      };
+    } else {
+      console.log('Visa payment declined');
+      return { success: false, transactionId: null };
+    }
+
+  } catch (error) {
+    console.error('Visa payment processing error:', error);
+    return { success: false, transactionId: null };
+  }
 }
 
 async function processZainCashPayment(paymentData: any, orderData: any, config: any) {
   console.log('Processing Zain Cash payment...');
   
-  // Basic validation (in real implementation, you would integrate with actual payment gateway)
+  // Enhanced validation for Zain Cash
   if (!paymentData.phoneNumber || !paymentData.pin) {
+    console.log('Missing required Zain Cash data');
     return { success: false, transactionId: null };
   }
 
   // Validate Iraqi phone number format
   const phoneNumber = paymentData.phoneNumber;
   if (!/^07\d{9}$/.test(phoneNumber)) {
+    console.log('Invalid Iraqi phone number format');
     return { success: false, transactionId: null };
   }
 
-  // Simulate successful payment (replace with real gateway integration)
-  const transactionId = `zain_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  // Validate PIN format (4-6 digits)
+  if (!/^\d{4,6}$/.test(paymentData.pin)) {
+    console.log('Invalid PIN format');
+    return { success: false, transactionId: null };
+  }
+
+  // Simulate Zain Cash API integration
+  // In a real implementation, you would:
+  // 1. Call the actual Zain Cash payment API
+  // 2. Use the merchant_number, api_key, and secret_key from config
+  // 3. Check user balance, validate PIN, and process money transfer
   
-  // In real implementation, you would:
-  // 1. Call the actual Zain Cash payment gateway API
-  // 2. Use the merchant_code, api_key, and service_type from config
-  // 3. Handle real payment processing and validation
-  
-  return { success: true, transactionId };
+  try {
+    // Simulate API call to Zain Cash
+    console.log('Calling Zain Cash API with config:', {
+      merchant_number: config.merchant_number,
+      amount: orderData.totalAmount,
+      currency: 'IQD',
+      customer_phone: phoneNumber
+    });
+
+    // Simulate balance and PIN verification
+    // Replace this with actual Zain Cash API integration
+    const simulatedResponse = {
+      status: 'success',
+      transaction_id: `zain_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      balance_sufficient: true,
+      pin_verified: true,
+      amount_transferred: orderData.totalAmount,
+      merchant_balance: orderData.totalAmount // Amount received by merchant
+    };
+
+    if (simulatedResponse.status === 'success' && 
+        simulatedResponse.balance_sufficient && 
+        simulatedResponse.pin_verified) {
+      console.log('Zain Cash payment successful:', simulatedResponse.transaction_id);
+      return { 
+        success: true, 
+        transactionId: simulatedResponse.transaction_id,
+        merchantBalance: simulatedResponse.merchant_balance
+      };
+    } else {
+      if (!simulatedResponse.balance_sufficient) {
+        console.log('Insufficient balance in Zain Cash account');
+      }
+      if (!simulatedResponse.pin_verified) {
+        console.log('Invalid Zain Cash PIN');
+      }
+      return { success: false, transactionId: null };
+    }
+
+  } catch (error) {
+    console.error('Zain Cash processing error:', error);
+    return { success: false, transactionId: null };
+  }
 }

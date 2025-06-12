@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -25,17 +26,43 @@ const PaymentDialog = ({ isOpen, onClose, paymentMethod, orderData, onPaymentSuc
     cardNumber: '',
     expiryDate: '',
     cvv: '',
-    phoneNumber: ''
+    cardholderName: '',
+    phoneNumber: '',
+    pin: ''
   });
 
   const handlePayment = async () => {
     if (!orderData || !user || !paymentMethod) return;
 
+    // Validate payment data based on method
+    if (paymentMethod === 'visa_card') {
+      if (!paymentData.cardNumber || !paymentData.expiryDate || !paymentData.cvv || !paymentData.cardholderName) {
+        toast({
+          title: "خطأ في البيانات",
+          description: "يرجى ملء جميع بيانات البطاقة",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
+    if (paymentMethod === 'zain_cash') {
+      if (!paymentData.phoneNumber || !paymentData.pin) {
+        toast({
+          title: "خطأ في البيانات",
+          description: "يرجى ملء رقم الهاتف ورقم PIN",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
     setIsProcessing(true);
     try {
-      console.log('Creating order with UUID:', orderData.orderId);
-      
-      // Create order in database - orderId is already a proper UUID
+      console.log('Processing payment with method:', paymentMethod);
+      console.log('Order data:', orderData);
+
+      // Create order in database first
       const { data: order, error: orderError } = await supabase
         .from('orders')
         .insert({
@@ -53,8 +80,6 @@ const PaymentDialog = ({ isOpen, onClose, paymentMethod, orderData, onPaymentSuc
         throw orderError;
       }
 
-      console.log('Order created successfully:', order);
-
       // Create order items
       const orderItems = orderData.items.map(item => ({
         order_id: orderData.orderId,
@@ -63,8 +88,6 @@ const PaymentDialog = ({ isOpen, onClose, paymentMethod, orderData, onPaymentSuc
         price: item.price,
         selected_color: item.selectedOption || item.selectedColor
       }));
-
-      console.log('Creating order items:', orderItems);
 
       const { error: itemsError } = await supabase
         .from('order_items')
@@ -75,14 +98,38 @@ const PaymentDialog = ({ isOpen, onClose, paymentMethod, orderData, onPaymentSuc
         throw itemsError;
       }
 
-      console.log('Order items created successfully');
+      // Process payment through edge function
+      const { data: paymentResult, error: paymentError } = await supabase.functions.invoke('process-payment', {
+        body: {
+          paymentMethod,
+          paymentData: {
+            ...paymentData,
+            timestamp: new Date().toISOString()
+          },
+          orderData
+        }
+      });
 
-      onPaymentSuccess();
+      if (paymentError) {
+        console.error('Payment processing error:', paymentError);
+        throw new Error('فشل في معالجة الدفع');
+      }
+
+      if (paymentResult?.success) {
+        toast({
+          title: "تم الدفع بنجاح",
+          description: `تم تأكيد الدفع. رقم المعاملة: ${paymentResult.transactionId}`,
+        });
+        onPaymentSuccess();
+      } else {
+        throw new Error(paymentResult?.message || 'فشل في معالجة الدفع');
+      }
+
     } catch (error) {
       console.error('Payment error:', error);
       toast({
         title: "خطأ في الدفع",
-        description: "حدث خطأ أثناء معالجة الدفع",
+        description: error.message || "حدث خطأ أثناء معالجة الدفع",
         variant: "destructive",
       });
     } finally {
@@ -96,8 +143,6 @@ const PaymentDialog = ({ isOpen, onClose, paymentMethod, orderData, onPaymentSuc
         return 'دفع بالفيزا كارد';
       case 'zain_cash':
         return 'دفع بزين كاش';
-      case 'cash_on_delivery':
-        return 'دفع عند الاستلام';
       default:
         return 'الدفع';
     }
@@ -140,6 +185,16 @@ const PaymentDialog = ({ isOpen, onClose, paymentMethod, orderData, onPaymentSuc
           {paymentMethod === 'visa_card' && (
             <>
               <div>
+                <Label htmlFor="cardholderName">اسم حامل البطاقة</Label>
+                <Input
+                  id="cardholderName"
+                  placeholder="الاسم كما يظهر على البطاقة"
+                  value={paymentData.cardholderName}
+                  onChange={(e) => setPaymentData(prev => ({ ...prev, cardholderName: e.target.value }))}
+                />
+              </div>
+              
+              <div>
                 <Label htmlFor="cardNumber">رقم البطاقة</Label>
                 <Input
                   id="cardNumber"
@@ -173,15 +228,28 @@ const PaymentDialog = ({ isOpen, onClose, paymentMethod, orderData, onPaymentSuc
           )}
 
           {paymentMethod === 'zain_cash' && (
-            <div>
-              <Label htmlFor="phoneNumber">رقم الهاتف</Label>
-              <Input
-                id="phoneNumber"
-                placeholder="07XXXXXXXXX"
-                value={paymentData.phoneNumber}
-                onChange={(e) => setPaymentData(prev => ({ ...prev, phoneNumber: e.target.value }))}
-              />
-            </div>
+            <>
+              <div>
+                <Label htmlFor="phoneNumber">رقم الهاتف</Label>
+                <Input
+                  id="phoneNumber"
+                  placeholder="07XXXXXXXXX"
+                  value={paymentData.phoneNumber}
+                  onChange={(e) => setPaymentData(prev => ({ ...prev, phoneNumber: e.target.value }))}
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="pin">رقم PIN</Label>
+                <Input
+                  id="pin"
+                  type="password"
+                  placeholder="أدخل رقم PIN الخاص بك"
+                  value={paymentData.pin}
+                  onChange={(e) => setPaymentData(prev => ({ ...prev, pin: e.target.value }))}
+                />
+              </div>
+            </>
           )}
 
           <div className="flex gap-2 pt-4">

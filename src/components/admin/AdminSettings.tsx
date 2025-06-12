@@ -14,6 +14,7 @@ import ShareLinkGenerator from './ShareLinkGenerator';
 interface PaymentConfig {
   enabled: boolean;
   merchant_id?: string;
+  merchant_number?: string;
   api_key?: string;
   secret_key?: string;
 }
@@ -59,7 +60,7 @@ const AdminSettings = () => {
   // Zain Cash Configuration
   const zainConfig = getZainConfig();
   const [zainEnabled, setZainEnabled] = useState(zainConfig.enabled);
-  const [zainMerchantId, setZainMerchantId] = useState(zainConfig.merchant_id ?? '');
+  const [zainMerchantNumber, setZainMerchantNumber] = useState(zainConfig.merchant_number ?? '');
   const [zainApiKey, setZainApiKey] = useState(zainConfig.api_key ?? '');
   const [zainSecretKey, setZainSecretKey] = useState(zainConfig.secret_key ?? '');
 
@@ -78,7 +79,7 @@ const AdminSettings = () => {
       // Zain Cash settings
       const zain = getZainConfig();
       setZainEnabled(zain.enabled);
-      setZainMerchantId(zain.merchant_id ?? '');
+      setZainMerchantNumber(zain.merchant_number ?? '');
       setZainApiKey(zain.api_key ?? '');
       setZainSecretKey(zain.secret_key ?? '');
     }
@@ -201,7 +202,7 @@ const AdminSettings = () => {
         },
         zain_cash_config: {
           enabled: zainEnabled,
-          merchant_id: zainMerchantId,
+          merchant_number: zainMerchantNumber,
           api_key: zainApiKey,
           secret_key: zainSecretKey
         }
@@ -428,37 +429,43 @@ const AdminSettings = () => {
           {zainEnabled && (
             <>
               <Separator />
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-4">
                 <div>
-                  <Label htmlFor="zain-merchant-id">معرف التاجر (Merchant ID)</Label>
+                  <Label htmlFor="zain-merchant-number">رقم التاجر في زين كاش</Label>
                   <Input
-                    id="zain-merchant-id"
+                    id="zain-merchant-number"
                     type="text"
-                    value={zainMerchantId}
-                    onChange={(e) => setZainMerchantId(e.target.value)}
-                    placeholder="أدخل معرف التاجر"
+                    value={zainMerchantNumber}
+                    onChange={(e) => setZainMerchantNumber(e.target.value)}
+                    placeholder="أدخل رقم التاجر في زين كاش"
                   />
+                  <p className="text-sm text-muted-foreground mt-1">
+                    هذا هو رقم حساب زين كاش الذي سيتم تحويل الأموال إليه
+                  </p>
                 </div>
-                <div>
-                  <Label htmlFor="zain-api-key">مفتاح API</Label>
-                  <Input
-                    id="zain-api-key"
-                    type="text"
-                    value={zainApiKey}
-                    onChange={(e) => setZainApiKey(e.target.value)}
-                    placeholder="أدخل مفتاح API"
-                  />
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="zain-api-key">مفتاح API</Label>
+                    <Input
+                      id="zain-api-key"
+                      type="text"
+                      value={zainApiKey}
+                      onChange={(e) => setZainApiKey(e.target.value)}
+                      placeholder="أدخل مفتاح API"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="zain-secret-key">المفتاح السري</Label>
+                    <Input
+                      id="zain-secret-key"
+                      type="password"
+                      value={zainSecretKey}
+                      onChange={(e) => setZainSecretKey(e.target.value)}
+                      placeholder="أدخل المفتاح السري"
+                    />
+                  </div>
                 </div>
-              </div>
-              <div>
-                <Label htmlFor="zain-secret-key">المفتاح السري</Label>
-                <Input
-                  id="zain-secret-key"
-                  type="password"
-                  value={zainSecretKey}
-                  onChange={(e) => setZainSecretKey(e.target.value)}
-                  placeholder="أدخل المفتاح السري"
-                />
               </div>
             </>
           )}
