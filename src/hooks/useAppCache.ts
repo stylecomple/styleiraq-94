@@ -7,10 +7,15 @@ interface CacheData {
   categories: any[];
   lastUpdated: string;
   version: string;
+  // New fields for selective caching
+  discounts: any[];
+  lastDiscountCheck: string;
+  lastProductCheck: string;
+  lastCategoryCheck: string;
 }
 
 const CACHE_KEY = 'style_app_cache';
-const CACHE_VERSION = '1.0.0';
+const CACHE_VERSION = '1.1.0'; // Updated version for new selective caching
 
 export const useAppCache = () => {
   const [isLoading, setIsLoading] = useState(true);
@@ -41,34 +46,73 @@ export const useAppCache = () => {
     }
   };
 
-  const checkForUpdates = async (lastUpdated: string) => {
+  // Check for discounts updates (always check)
+  const checkDiscountUpdates = async (): Promise<any[]> => {
     try {
-      // Check if products have been updated
-      const { data: productUpdates } = await supabase
+      console.log('Checking for discount updates...');
+      const { data: activeDiscounts } = await supabase
+        .from('active_discounts')
+        .select('*')
+        .eq('is_active', true);
+
+      const { data: discountedProducts } = await supabase
         .from('products')
-        .select('updated_at')
-        .order('updated_at', { ascending: false })
-        .limit(1);
+        .select('id, name, discount_percentage')
+        .gt('discount_percentage', 0)
+        .eq('is_active', true);
 
-      // Check if categories have been updated
-      const { data: categoryUpdates } = await supabase
-        .from('categories')
-        .select('updated_at')
-        .order('updated_at', { ascending: false })
-        .limit(1);
-
-      const latestProductUpdate = productUpdates?.[0]?.updated_at;
-      const latestCategoryUpdate = categoryUpdates?.[0]?.updated_at;
-
-      // Compare with cached timestamp
-      const lastUpdate = new Date(lastUpdated).getTime();
-      const productUpdate = latestProductUpdate ? new Date(latestProductUpdate).getTime() : 0;
-      const categoryUpdate = latestCategoryUpdate ? new Date(latestCategoryUpdate).getTime() : 0;
-
-      return Math.max(productUpdate, categoryUpdate) > lastUpdate;
+      return {
+        activeDiscounts: activeDiscounts || [],
+        discountedProducts: discountedProducts || []
+      };
     } catch (error) {
-      console.error('Error checking updates:', error);
-      return true; // If we can't check, assume update needed
+      console.error('Error checking discount updates:', error);
+      return { activeDiscounts: [], discountedProducts: [] };
+    }
+  };
+
+  // Check for new products (always check for new ones)
+  const checkNewProducts = async (lastCheck: string) => {
+    try {
+      console.log('Checking for new products...');
+      const { data: newProducts } = await supabase
+        .from('products')
+        .select('*')
+        .eq('is_active', true)
+        .gt('created_at', lastCheck)
+        .order('created_at', { ascending: false });
+
+      return newProducts || [];
+    } catch (error) {
+      console.error('Error checking new products:', error);
+      return [];
+    }
+  };
+
+  // Check for category/subcategory updates (always check)
+  const checkCategoryUpdates = async (lastCheck: string) => {
+    try {
+      console.log('Checking for category updates...');
+      const { data: updatedCategories } = await supabase
+        .from('categories')
+        .select(`
+          *,
+          subcategories (*)
+        `)
+        .gt('updated_at', lastCheck);
+
+      const { data: updatedSubcategories } = await supabase
+        .from('subcategories')
+        .select('*')
+        .gt('updated_at', lastCheck);
+
+      return {
+        categories: updatedCategories || [],
+        subcategories: updatedSubcategories || []
+      };
+    } catch (error) {
+      console.error('Error checking category updates:', error);
+      return { categories: [], subcategories: [] };
     }
   };
 
@@ -94,14 +138,74 @@ export const useAppCache = () => {
 
     if (categoriesError) throw categoriesError;
 
+    // Fetch discounts
+    const discounts = await checkDiscountUpdates();
+
+    const now = new Date().toISOString();
+
     const cacheData: CacheData = {
       products: products || [],
       categories: categories || [],
-      lastUpdated: new Date().toISOString(),
+      discounts,
+      lastUpdated: now,
+      lastDiscountCheck: now,
+      lastProductCheck: now,
+      lastCategoryCheck: now,
       version: CACHE_VERSION
     };
 
     return cacheData;
+  };
+
+  // Selective update function - only updates specific parts
+  const performSelectiveUpdates = async (cached: CacheData) => {
+    console.log('Performing selective updates...');
+    const now = new Date().toISOString();
+    let updated = false;
+    const updatedCache = { ...cached };
+
+    // Always check discounts (real-time)
+    const latestDiscounts = await checkDiscountUpdates();
+    if (JSON.stringify(latestDiscounts) !== JSON.stringify(cached.discounts)) {
+      console.log('Discount updates found');
+      updatedCache.discounts = latestDiscounts;
+      updatedCache.lastDiscountCheck = now;
+      updated = true;
+    }
+
+    // Check for new products (last 5 minutes)
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+    if (cached.lastProductCheck < fiveMinutesAgo) {
+      const newProducts = await checkNewProducts(cached.lastProductCheck);
+      if (newProducts.length > 0) {
+        console.log(`Found ${newProducts.length} new products`);
+        // Add new products to existing ones (at the beginning)
+        updatedCache.products = [...newProducts, ...cached.products];
+        updated = true;
+      }
+      updatedCache.lastProductCheck = now;
+    }
+
+    // Check for category updates (last 10 minutes)
+    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+    if (cached.lastCategoryCheck < tenMinutesAgo) {
+      const categoryUpdates = await checkCategoryUpdates(cached.lastCategoryCheck);
+      if (categoryUpdates.categories.length > 0 || categoryUpdates.subcategories.length > 0) {
+        console.log('Category updates found, refreshing categories');
+        // Refresh all categories to ensure consistency
+        const { data: allCategories } = await supabase
+          .from('categories')
+          .select(`
+            *,
+            subcategories (*)
+          `);
+        updatedCache.categories = allCategories || cached.categories;
+        updated = true;
+      }
+      updatedCache.lastCategoryCheck = now;
+    }
+
+    return { updatedCache, updated };
   };
 
   const initializeCache = async () => {
@@ -112,25 +216,20 @@ export const useAppCache = () => {
       const cached = getCachedData();
       
       if (cached) {
-        console.log('Found cached data, checking for updates...');
+        console.log('Found cached data, performing selective updates...');
         setCachedData(cached);
         setCacheStatus('cached');
         
-        // Check if updates are needed in the background
-        const needsUpdate = await checkForUpdates(cached.lastUpdated);
+        // Perform selective updates
+        const { updatedCache, updated } = await performSelectiveUpdates(cached);
         
-        if (needsUpdate) {
-          console.log('Updates found, refreshing cache...');
-          setCacheStatus('updating');
-          
-          const freshData = await fetchFreshData();
-          setCacheData(freshData);
-          setCachedData(freshData);
-          setCacheStatus('complete');
-        } else {
-          console.log('Cache is up to date');
-          setCacheStatus('complete');
+        if (updated) {
+          console.log('Updates applied to cache');
+          setCacheData(updatedCache);
+          setCachedData(updatedCache);
         }
+        
+        setCacheStatus('complete');
       } else {
         console.log('No cache found, fetching initial data...');
         setCacheStatus('updating');
@@ -155,6 +254,27 @@ export const useAppCache = () => {
 
   useEffect(() => {
     initializeCache();
+    
+    // Set up periodic checks for critical updates
+    const discountInterval = setInterval(async () => {
+      if (cachedData) {
+        const latestDiscounts = await checkDiscountUpdates();
+        if (JSON.stringify(latestDiscounts) !== JSON.stringify(cachedData.discounts)) {
+          console.log('Background discount update');
+          const updatedCache = {
+            ...cachedData,
+            discounts: latestDiscounts,
+            lastDiscountCheck: new Date().toISOString()
+          };
+          setCacheData(updatedCache);
+          setCachedData(updatedCache);
+        }
+      }
+    }, 30000); // Check every 30 seconds for discounts
+
+    return () => {
+      clearInterval(discountInterval);
+    };
   }, []);
 
   return {

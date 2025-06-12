@@ -20,7 +20,7 @@ const MobileSplash = () => {
     if (!isLoading && cacheStatus === 'complete') {
       const navigationTimer = setTimeout(() => {
         navigate('/app/products');
-      }, 1500); // Give a bit more time to show the complete status
+      }, 1200); // Reduced time since updates are now faster
       
       return () => clearTimeout(navigationTimer);
     }
@@ -31,9 +31,9 @@ const MobileSplash = () => {
       case 'loading':
         return 'جاري التحميل...';
       case 'cached':
-        return 'جاري التحقق من التحديثات...';
+        return 'جاري التحقق من العروض والمنتجات الجديدة...';
       case 'updating':
-        return 'جاري تحديث البيانات...';
+        return 'جاري تحديث العروض والفئات...';
       case 'complete':
         return 'تم التحميل بنجاح!';
       default:
@@ -46,9 +46,9 @@ const MobileSplash = () => {
       case 'loading':
         return 25;
       case 'cached':
-        return 50;
+        return 65; // Higher progress for cached data
       case 'updating':
-        return 75;
+        return 85; // Almost complete when doing selective updates
       case 'complete':
         return 100;
       default:
@@ -129,17 +129,27 @@ const MobileSplash = () => {
           </div>
         </div>
 
-        {/* Cache Status Indicator */}
+        {/* Enhanced Cache Status Indicator */}
         {cachedData && (
           <div className={`transition-all duration-1000 delay-900 ${
             showContent ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
           }`}>
-            <div className="flex items-center justify-center gap-2 text-sm">
+            <div className="flex items-center justify-center gap-2 text-sm mb-2">
               <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
               <span>
                 {cachedData.products?.length || 0} منتج • {cachedData.categories?.length || 0} فئة
               </span>
             </div>
+            
+            {/* Discount status */}
+            {cachedData.discounts && (
+              <div className="flex items-center justify-center gap-2 text-xs opacity-80">
+                <div className="w-1.5 h-1.5 bg-orange-400 rounded-full animate-pulse" />
+                <span>
+                  {(cachedData.discounts.activeDiscounts?.length || 0) + (cachedData.discounts.discountedProducts?.length || 0)} عرض نشط
+                </span>
+              </div>
+            )}
           </div>
         )}
 

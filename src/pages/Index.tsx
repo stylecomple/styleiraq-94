@@ -8,6 +8,7 @@ import DiscountBanner from '@/components/DiscountBanner';
 import GlobalDiscountAlert from '@/components/GlobalDiscountAlert';
 import ProductDiscountTicker from '@/components/ProductDiscountTicker';
 import { useNavigate } from 'react-router-dom';
+import { useCache } from '@/contexts/CacheContext';
 
 interface Discount {
   id: string;
@@ -18,11 +19,25 @@ interface Discount {
 
 const Index = () => {
   const navigate = useNavigate();
+  const { cachedData } = useCache();
 
-  // Fetch active discounts for banner
+  // Fetch active discounts - use cache first, then database
   const { data: activeDiscounts } = useQuery({
     queryKey: ['active-discounts-banner'],
     queryFn: async () => {
+      // Use cached discount data if available
+      if (cachedData?.discounts?.activeDiscounts) {
+        console.log('Using cached discount data');
+        return cachedData.discounts.activeDiscounts.map((discount: any) => ({
+          id: discount.id,
+          discount_type: discount.discount_type as 'all_products' | 'category' | 'subcategory',
+          target_value: discount.target_value,
+          discount_percentage: discount.discount_percentage
+        }));
+      }
+
+      // Fallback to database query
+      console.log('Fetching discounts from database');
       const { data, error } = await supabase
         .from('active_discounts')
         .select('*')
@@ -39,10 +54,18 @@ const Index = () => {
     }
   });
 
-  // Fetch products with individual discounts for the ticker
+  // Fetch products with individual discounts - use cache first
   const { data: discountedProducts } = useQuery({
     queryKey: ['discounted-products'],
     queryFn: async () => {
+      // Use cached discount products if available
+      if (cachedData?.discounts?.discountedProducts) {
+        console.log('Using cached discounted products data');
+        return cachedData.discounts.discountedProducts;
+      }
+
+      // Fallback to database query
+      console.log('Fetching discounted products from database');
       const { data, error } = await supabase
         .from('products')
         .select('id, name, discount_percentage')
@@ -55,10 +78,18 @@ const Index = () => {
     }
   });
 
-  // Get total product count for Hero component
+  // Get total product count - use cache first
   const { data: productCount } = useQuery({
     queryKey: ['product-count'],
     queryFn: async () => {
+      // Use cached products count if available
+      if (cachedData?.products) {
+        console.log('Using cached products count');
+        return cachedData.products.length;
+      }
+
+      // Fallback to database query
+      console.log('Fetching product count from database');
       const { count, error } = await supabase
         .from('products')
         .select('*', { count: 'exact', head: true })

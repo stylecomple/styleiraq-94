@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -94,10 +93,18 @@ const MobileProducts = () => {
     return matchesCategory;
   }) || [];
 
-  // Get products with discounts for the carousel
-  const discountedProducts = products?.filter(product => 
-    product.discount_percentage && product.discount_percentage > 0
-  ) || [];
+  // Get discounted products from cache first, then from products
+  const discountedProducts = React.useMemo(() => {
+    // First try to get from cached discount data
+    if (cachedData?.discounts?.discountedProducts) {
+      return cachedData.discounts.discountedProducts;
+    }
+    
+    // Fallback to filtering current products
+    return products?.filter(product => 
+      product.discount_percentage && product.discount_percentage > 0
+    ) || [];
+  }, [cachedData?.discounts?.discountedProducts, products]);
 
   // Auto-rotate discount carousel
   useEffect(() => {
@@ -123,10 +130,19 @@ const MobileProducts = () => {
   return (
     <MobileAppLayout title="المنتجات" showBackButton={false}>
       <div className="space-y-4 p-4">
-        {/* Discount Products Carousel */}
+        {/* Enhanced Discount Products Carousel with real-time data */}
         {discountedProducts.length > 0 && (
           <div className="relative h-32 bg-gradient-to-r from-red-500 to-pink-500 rounded-xl overflow-hidden shadow-lg">
             <div className="absolute inset-0 bg-black/20"></div>
+            
+            {/* Real-time discount indicator */}
+            <div className="absolute top-2 right-2 z-10">
+              <div className="flex items-center gap-1 bg-white/20 backdrop-blur-sm rounded-full px-2 py-1">
+                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                <span className="text-xs text-white font-medium">مباشر</span>
+              </div>
+            </div>
+            
             {discountedProducts.map((product, index) => (
               <div
                 key={product.id}
@@ -227,13 +243,13 @@ const MobileProducts = () => {
           </div>
         )}
 
-        {/* Cache Status Indicator */}
+        {/* Enhanced Cache Status Indicator */}
         {cachedData && cacheStatus !== 'complete' && (
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-3">
             <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
-              <span className="text-sm text-amber-800">
-                {cacheStatus === 'updating' ? 'جاري تحديث البيانات...' : 'جاري التحقق من التحديثات...'}
+              <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
+              <span className="text-sm text-blue-800">
+                {cacheStatus === 'updating' ? 'جاري تحديث العروض والمنتجات...' : 'جاري التحقق من التحديثات...'}
               </span>
             </div>
           </div>
