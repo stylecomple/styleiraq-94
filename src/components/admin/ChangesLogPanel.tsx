@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Clock, User, Package, ShoppingCart, Store, Mail } from 'lucide-react';
+import { Clock, User, Package, ShoppingCart, Store } from 'lucide-react';
 import { format } from 'date-fns';
 
 const ChangesLogPanel = () => {
@@ -13,13 +13,7 @@ const ChangesLogPanel = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('changes_log')
-        .select(`
-          *,
-          profiles!admin_id (
-            email,
-            full_name
-          )
-        `)
+        .select('*')
         .order('created_at', { ascending: false })
         .limit(100);
       
@@ -87,15 +81,7 @@ const ChangesLogPanel = () => {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   {getEntityIcon(change.entity_type)}
-                  <div className="flex flex-col">
-                    <span className="font-medium">{change.admin_name}</span>
-                    {change.profiles?.email && (
-                      <div className="flex items-center gap-1 text-xs text-gray-500">
-                        <Mail className="w-3 h-3" />
-                        {change.profiles.email}
-                      </div>
-                    )}
-                  </div>
+                  <span className="font-medium">{change.admin_name}</span>
                 </div>
                 <Badge className={getActionColor(change.action_type)}>
                   {change.action_type}

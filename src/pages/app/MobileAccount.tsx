@@ -14,11 +14,12 @@ import {
   MessageSquare,
   LogOut,
   ExternalLink,
-  Star
+  Star,
+  Wrench
 } from 'lucide-react';
 
 const MobileAccount = () => {
-  const { user, isAdmin, isOwner, isOrderManager, isProductsAdder, signOut } = useAuth();
+  const { user, isAdmin, isOwner, isOrderManager, isProductsAdder, signOut, loading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -45,12 +46,93 @@ const MobileAccount = () => {
 
   const hasAdminAccess = isAdmin || isOwner || isOrderManager || isProductsAdder;
 
-  // If user is not logged in, redirect to auth
-  if (!user) {
-    navigate('/app/auth');
-    return null;
+  // Show loading state briefly
+  if (loading) {
+    return (
+      <MobileAppLayout title="حسابي" showBackButton={false}>
+        <div className="p-4 flex items-center justify-center min-h-32">
+          <div className="text-gray-500">جاري التحميل...</div>
+        </div>
+      </MobileAppLayout>
+    );
   }
 
+  // If user is not logged in, show limited options
+  if (!user) {
+    return (
+      <MobileAppLayout title="حسابي" showBackButton={false}>
+        <div className="p-4 space-y-6">
+          {/* Guest User Section */}
+          <div className="bg-gradient-to-r from-gray-500 to-gray-600 rounded-xl p-6 text-white text-center">
+            <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4">
+              <User className="w-8 h-8" />
+            </div>
+            <h2 className="text-xl font-bold mb-2">مرحباً بك</h2>
+            <p className="text-gray-100 text-sm mb-4">
+              سجل دخولك للوصول إلى جميع الميزات
+            </p>
+            <Button 
+              onClick={() => navigate('/app/auth')}
+              className="bg-white text-gray-700 hover:bg-gray-100"
+            >
+              تسجيل الدخول
+            </Button>
+          </div>
+
+          {/* Quick Actions for Guests */}
+          <div className="space-y-3">
+            <h3 className="font-semibold text-gray-800">الإعدادات والمساعدة</h3>
+            
+            <Button 
+              variant="outline" 
+              className="w-full justify-start h-12"
+              onClick={() => navigate('/app/settings')}
+            >
+              <Settings className="w-5 h-5 mr-3 text-gray-600" />
+              <span>الإعدادات</span>
+              <ChevronLeft className="w-4 h-4 mr-auto" />
+            </Button>
+
+            <Button 
+              variant="outline" 
+              className="w-full justify-start h-12 border-orange-200 hover:bg-orange-50"
+              onClick={() => {
+                // Refresh the page to fix any app issues
+                window.location.reload();
+              }}
+            >
+              <Wrench className="w-5 h-5 mr-3 text-orange-600" />
+              <span>إصلاح التطبيق</span>
+              <ChevronLeft className="w-4 h-4 mr-auto" />
+            </Button>
+          </div>
+
+          {/* Feedback Section for Guests */}
+          <div className="space-y-3">
+            <h3 className="font-semibold text-gray-800">رأيك يهمنا</h3>
+            
+            <div className="bg-gradient-to-r from-pink-50 to-purple-50 rounded-xl p-4 border border-pink-200">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 bg-gradient-to-r from-pink-500 to-purple-600 rounded-full flex items-center justify-center">
+                  <Star className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h4 className="font-semibold text-gray-800">شاركنا رأيك</h4>
+                  <p className="text-sm text-gray-600">ساعدنا في تحسين التطبيق</p>
+                </div>
+              </div>
+              <p className="text-sm text-gray-600 mb-4">
+                نحن نقدر آراءكم واقتراحاتكم لتطوير التطبيق وتحسين تجربة الاستخدام
+              </p>
+              <FeedbackForm />
+            </div>
+          </div>
+        </div>
+      </MobileAppLayout>
+    );
+  }
+
+  // Logged in user view
   return (
     <MobileAppLayout title="حسابي" showBackButton={false}>
       <div className="p-4 space-y-6">
@@ -143,6 +225,19 @@ const MobileAccount = () => {
           >
             <Settings className="w-5 h-5 mr-3 text-gray-600" />
             <span>الإعدادات</span>
+            <ChevronLeft className="w-4 h-4 mr-auto" />
+          </Button>
+
+          <Button 
+            variant="outline" 
+            className="w-full justify-start h-12 border-orange-200 hover:bg-orange-50"
+            onClick={() => {
+              // Refresh the page to fix any app issues
+              window.location.reload();
+            }}
+          >
+            <Wrench className="w-5 h-5 mr-3 text-orange-600" />
+            <span>إصلاح التطبيق</span>
             <ChevronLeft className="w-4 h-4 mr-auto" />
           </Button>
         </div>
