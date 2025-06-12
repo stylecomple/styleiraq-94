@@ -34,12 +34,14 @@ const ProductCard = ({ product }: ProductCardProps) => {
   };
 
   const getEffectivePrice = () => {
+    // Only apply discount if it's greater than 0
     if (product.discount_percentage && product.discount_percentage > 0) {
       return product.price * (1 - product.discount_percentage / 100);
     }
     return product.price;
   };
 
+  // Check if product actually has a valid discount
   const hasValidDiscount = product.discount_percentage && product.discount_percentage > 0;
 
   // Get category and subcategory names for display
@@ -81,7 +83,7 @@ const ProductCard = ({ product }: ProductCardProps) => {
           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
         />
         
-        {/* Discount badge - positioned to not interfere with content */}
+        {/* Only show discount badge if there's actually a discount */}
         {hasValidDiscount && (
           <Badge className="absolute top-1 right-1 bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white text-xs font-bold shadow-lg animate-pulse px-1.5 py-0.5">
             -{product.discount_percentage}%
@@ -97,7 +99,7 @@ const ProductCard = ({ product }: ProductCardProps) => {
         {/* Category and Subcategory with compact styling */}
         {(categoryName || subcategoryName) && (
           <div className="flex flex-wrap gap-1 mb-1.5">
-            {categoryName && (
+            {categoryName && categoryName !== 'discounts' && (
               <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${getCategoryColor(categoryName)}`}>
                 {categoryName}
               </span>
@@ -110,7 +112,7 @@ const ProductCard = ({ product }: ProductCardProps) => {
           </div>
         )}
 
-        {/* Price - compact spacing */}
+        {/* Price - only show discount styling if there's actually a discount */}
         <div className="flex flex-col mb-2">
           {hasValidDiscount ? (
             <>

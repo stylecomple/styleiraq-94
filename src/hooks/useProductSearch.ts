@@ -13,6 +13,8 @@ export const useProductSearch = ({ searchQuery, selectedCategory, selectedSubcat
   return useQuery({
     queryKey: ['product-search', searchQuery, selectedCategory, selectedSubcategory],
     queryFn: async () => {
+      console.log('Fetching products with filters:', { searchQuery, selectedCategory, selectedSubcategory });
+      
       let query = supabase
         .from('products')
         .select('*')
@@ -21,7 +23,7 @@ export const useProductSearch = ({ searchQuery, selectedCategory, selectedSubcat
       // Apply category filter
       if (selectedCategory && selectedCategory !== 'all') {
         if (selectedCategory === 'discounts') {
-          // Filter for products with discounts
+          // Filter for products with actual discounts greater than 0
           query = query.gt('discount_percentage', 0);
         } else {
           query = query.contains('categories', [selectedCategory]);
@@ -35,7 +37,12 @@ export const useProductSearch = ({ searchQuery, selectedCategory, selectedSubcat
       
       const { data, error } = await query;
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching products:', error);
+        throw error;
+      }
+      
+      console.log('Raw products fetched:', data?.length || 0);
       
       // Transform raw database data to match Product interface
       let products = (data || []).map(rawProduct => {
@@ -44,10 +51,14 @@ export const useProductSearch = ({ searchQuery, selectedCategory, selectedSubcat
         
         const subcategories = (rawProduct as any).subcategories || [];
 
+        // Ensure discount_percentage is properly handled
+        const discount_percentage = (rawProduct as any).discount_percentage || 0;
+
         return {
           ...rawProduct,
           options,
-          subcategories
+          subcategories,
+          discount_percentage
         } as Product;
       });
 
@@ -68,18 +79,22 @@ export const useProductSearch = ({ searchQuery, selectedCategory, selectedSubcat
         });
       }
 
-      // Sort discounted products first if in discounts category, otherwise randomize
+      // If filtering by discounts, only show products with actual discounts
       if (selectedCategory === 'discounts') {
+        products = products.filter(product => product.discount_percentage && product.discount_percentage > 0);
         products = products.sort((a, b) => (b.discount_percentage || 0) - (a.discount_percentage || 0));
       } else {
         products = products.sort(() => Math.random() - 0.5);
       }
 
+      console.log('Final filtered products:', products.length);
+      
       return {
         products,
         totalCount: products.length,
       };
     },
     enabled: true,
+    refetchInterval: 30000, // Refresh every 30 seconds to get updated discount data
   });
 };
