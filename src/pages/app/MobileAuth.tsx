@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -24,7 +23,12 @@ const MobileAuth = () => {
 
   useEffect(() => {
     if (user) {
-      navigate('/app/products');
+      // Check if email is verified
+      if (user.email_confirmed_at) {
+        navigate('/app/products');
+      } else {
+        navigate('/verify-email');
+      }
     }
   }, [user, navigate]);
 
@@ -232,6 +236,18 @@ const MobileAuth = () => {
                 )}
               </Button>
             </form>
+            
+            {isLogin && (
+              <div className="mt-4 text-center">
+                <Button
+                  variant="link"
+                  onClick={() => navigate('/forgot-password')}
+                  className="text-pink-600 text-sm font-medium hover:text-purple-600 transition-colors"
+                >
+                  نسيت كلمة المرور؟
+                </Button>
+              </div>
+            )}
             
             <div className="mt-6 text-center">
               <Button

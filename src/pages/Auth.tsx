@@ -22,7 +22,12 @@ const Auth = () => {
 
   useEffect(() => {
     if (user) {
-      navigate('/');
+      // Check if email is verified
+      if (user.email_confirmed_at) {
+        navigate('/');
+      } else {
+        navigate('/verify-email');
+      }
     }
   }, [user, navigate]);
 
@@ -151,6 +156,18 @@ const Auth = () => {
               {loading ? 'جاري التحميل...' : (isLogin ? 'تسجيل الدخول' : 'إنشاء الحساب')}
             </Button>
           </form>
+          
+          {isLogin && (
+            <div className="mt-4 text-center">
+              <Button
+                variant="link"
+                onClick={() => navigate('/forgot-password')}
+                className="text-pink-600 text-sm"
+              >
+                نسيت كلمة المرور؟
+              </Button>
+            </div>
+          )}
           
           <div className="mt-4 text-center">
             <Button
