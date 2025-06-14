@@ -1,11 +1,10 @@
-
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Clock, User, Package, ShoppingCart, Store, Search, Filter } from 'lucide-react';
+import { Clock, User, Package, ShoppingCart, Store } from 'lucide-react';
 import { format } from 'date-fns';
 import {
   Select,
@@ -16,7 +15,6 @@ import {
 } from '@/components/ui/select';
 
 const ChangesLogPanel = () => {
-  const [searchTerm, setSearchTerm] = useState('');
   const [filterAction, setFilterAction] = useState('all');
   const [filterEntity, setFilterEntity] = useState('all');
 
@@ -70,16 +68,10 @@ const ChangesLogPanel = () => {
   };
 
   const filteredChanges = changes?.filter(change => {
-    const matchesSearch = !searchTerm || 
-      change.admin_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      change.action_type?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      change.entity_type?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      change.entity_id?.toLowerCase().includes(searchTerm.toLowerCase());
-    
     const matchesAction = filterAction === 'all' || change.action_type.includes(filterAction);
     const matchesEntity = filterEntity === 'all' || change.entity_type === filterEntity;
     
-    return matchesSearch && matchesAction && matchesEntity;
+    return matchesAction && matchesEntity;
   });
 
   if (isLoading) {
@@ -109,16 +101,6 @@ const ChangesLogPanel = () => {
       <CardContent>
         {/* Filters */}
         <div className="flex flex-col md:flex-row gap-4 mb-6">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-            <Input
-              placeholder="البحث في سجل التغييرات..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-          
           <Select value={filterAction} onValueChange={setFilterAction}>
             <SelectTrigger className="w-full md:w-40">
               <SelectValue placeholder="نوع العملية" />
@@ -183,8 +165,8 @@ const ChangesLogPanel = () => {
           
           {!filteredChanges?.length && (
             <div className="text-center py-8 text-gray-500">
-              {searchTerm || filterAction !== 'all' || filterEntity !== 'all' 
-                ? 'لم يتم العثور على تغييرات تطابق البحث'
+              {filterAction !== 'all' || filterEntity !== 'all' 
+                ? 'لم يتم العثور على تغييرات تطابق الفلاتر'
                 : 'لا توجد تغييرات مسجلة'
               }
             </div>

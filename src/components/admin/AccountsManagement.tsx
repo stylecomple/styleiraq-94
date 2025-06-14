@@ -1,13 +1,11 @@
-
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useChangeLogger } from '@/hooks/useChangeLogger';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Trash2, AlertTriangle, Search, User, Mail, Calendar } from 'lucide-react';
+import { Trash2, AlertTriangle, User, Mail, Calendar } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -239,18 +237,6 @@ const AccountsManagement = () => {
         </p>
       </div>
 
-      <div className="flex items-center gap-4 mb-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-          <Input
-            placeholder="البحث بالاسم، البريد الإلكتروني، أو المعرف..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-      </div>
-
       <div className="border rounded-lg">
         <Table>
           <TableHeader>
@@ -263,7 +249,7 @@ const AccountsManagement = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredAccounts?.map((account) => (
+            {accounts?.map((account) => (
               <TableRow key={account.id}>
                 <TableCell>
                   <div className="flex items-center gap-2">
@@ -339,9 +325,9 @@ const AccountsManagement = () => {
           </TableBody>
         </Table>
         
-        {!filteredAccounts?.length && (
+        {!accounts?.length && (
           <div className="text-center py-8 text-muted-foreground">
-            {searchTerm ? 'لم يتم العثور على حسابات' : 'لا توجد حسابات حالياً'}
+            لا توجد حسابات حالياً
           </div>
         )}
       </div>
