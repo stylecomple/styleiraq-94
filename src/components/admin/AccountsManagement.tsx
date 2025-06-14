@@ -34,28 +34,53 @@ const AccountsManagement = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: accounts, isLoading } = useQuery({
-    queryKey: ['all-accounts'],
+  const { data: profiles, isLoading: profilesLoading } = useQuery({
+    queryKey: ['all-profiles'],
     queryFn: async () => {
-      console.log('Fetching all accounts...');
+      console.log('Fetching all profiles...');
       const { data, error } = await supabase
         .from('profiles')
-        .select(`
-          *,
-          user_roles (
-            role
-          )
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
       
       if (error) {
-        console.error('Error fetching accounts:', error);
+        console.error('Error fetching profiles:', error);
         throw error;
       }
-      console.log('Fetched accounts:', data?.length);
+      console.log('Fetched profiles:', data?.length);
       return data;
     }
   });
+
+  const { data: userRoles, isLoading: rolesLoading } = useQuery({
+    queryKey: ['all-user-roles'],
+    queryFn: async () => {
+      console.log('Fetching all user roles...');
+      const { data, error } = await supabase
+        .from('user_roles')
+        .select('*');
+      
+      if (error) {
+        console.error('Error fetching user roles:', error);
+        throw error;
+      }
+      console.log('Fetched user roles:', data?.length);
+      return data;
+    }
+  });
+
+  // Combine profiles with their roles
+  const accounts = React.useMemo(() => {
+    if (!profiles || !userRoles) return [];
+    
+    return profiles.map(profile => {
+      const profileRoles = userRoles.filter(role => role.user_id === profile.id);
+      return {
+        ...profile,
+        user_roles: profileRoles
+      };
+    });
+  }, [profiles, userRoles]);
 
   const deleteAccountMutation = useMutation({
     mutationFn: async (account: any) => {
@@ -141,17 +166,10 @@ const AccountsManagement = () => {
     onSuccess: (deletedAccount) => {
       console.log('Account deletion mutation successful, updating cache');
       
-      // Update cache immediately to remove the deleted account
-      queryClient.setQueryData(['all-accounts'], (oldData: any) => {
-        if (!oldData) return oldData;
-        const filteredData = oldData.filter((account: any) => account.id !== deletedAccount.id);
-        console.log('Updated cache, accounts count:', filteredData.length);
-        return filteredData;
-      });
-      
       // Force invalidate to ensure fresh data on next fetch
-      queryClient.invalidateQueries({ queryKey: ['all-accounts'], exact: true });
-      queryClient.invalidateQueries({ queryKey: ['user-roles'], exact: true });
+      queryClient.invalidateQueries({ queryKey: ['all-profiles'] });
+      queryClient.invalidateQueries({ queryKey: ['all-user-roles'] });
+      queryClient.invalidateQueries({ queryKey: ['user-roles'] });
       
       toast({
         title: 'تم حذف الحساب',
@@ -205,6 +223,8 @@ const AccountsManagement = () => {
       account.id.toLowerCase().includes(search)
     );
   });
+
+  const isLoading = profilesLoading || rolesLoading;
 
   if (isLoading) {
     return <div className="text-center py-8">جاري التحميل...</div>;
