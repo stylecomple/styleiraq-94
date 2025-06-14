@@ -1,13 +1,25 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Clock, User, Package, ShoppingCart, Store } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Clock, User, Package, ShoppingCart, Store, Search, Filter } from 'lucide-react';
 import { format } from 'date-fns';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 const ChangesLogPanel = () => {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterAction, setFilterAction] = useState('all');
+  const [filterEntity, setFilterEntity] = useState('all');
+
   const { data: changes, isLoading } = useQuery({
     queryKey: ['changes-log'],
     queryFn: async () => {
@@ -15,7 +27,7 @@ const ChangesLogPanel = () => {
         .from('changes_log')
         .select('*')
         .order('created_at', { ascending: false })
-        .limit(100);
+        .limit(500);
       
       if (error) throw error;
       return data;
@@ -38,6 +50,12 @@ const ChangesLogPanel = () => {
     if (actionType.includes('store_opened')) {
       return 'bg-emerald-100 text-emerald-800';
     }
+    if (actionType.includes('account_deleted')) {
+      return 'bg-red-200 text-red-900';
+    }
+    if (actionType.includes('order_deleted')) {
+      return 'bg-red-150 text-red-850';
+    }
     return 'bg-gray-100 text-gray-800';
   };
 
@@ -46,9 +64,23 @@ const ChangesLogPanel = () => {
       case 'product': return <Package className="w-4 h-4" />;
       case 'order': return <ShoppingCart className="w-4 h-4" />;
       case 'store': return <Store className="w-4 h-4" />;
+      case 'user': return <User className="w-4 h-4" />;
       default: return <User className="w-4 h-4" />;
     }
   };
+
+  const filteredChanges = changes?.filter(change => {
+    const matchesSearch = !searchTerm || 
+      change.admin_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      change.action_type?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      change.entity_type?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      change.entity_id?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesAction = filterAction === 'all' || change.action_type.includes(filterAction);
+    const matchesEntity = filterEntity === 'all' || change.entity_type === filterEntity;
+    
+    return matchesSearch && matchesAction && matchesEntity;
+  });
 
   if (isLoading) {
     return (
@@ -75,8 +107,46 @@ const ChangesLogPanel = () => {
         </CardTitle>
       </CardHeader>
       <CardContent>
+        {/* Filters */}
+        <div className="flex flex-col md:flex-row gap-4 mb-6">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Input
+              placeholder="البحث في سجل التغييرات..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          
+          <Select value={filterAction} onValueChange={setFilterAction}>
+            <SelectTrigger className="w-full md:w-40">
+              <SelectValue placeholder="نوع العملية" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">جميع العمليات</SelectItem>
+              <SelectItem value="added">إضافة</SelectItem>
+              <SelectItem value="updated">تحديث</SelectItem>
+              <SelectItem value="deleted">حذف</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select value={filterEntity} onValueChange={setFilterEntity}>
+            <SelectTrigger className="w-full md:w-40">
+              <SelectValue placeholder="نوع الكائن" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">جميع الكائنات</SelectItem>
+              <SelectItem value="product">منتج</SelectItem>
+              <SelectItem value="order">طلب</SelectItem>
+              <SelectItem value="user">مستخدم</SelectItem>
+              <SelectItem value="store">متجر</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
         <div className="space-y-4 max-h-96 overflow-y-auto">
-          {changes?.map((change) => (
+          {filteredChanges?.map((change) => (
             <div key={change.id} className="border rounded-lg p-4 space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -111,9 +181,12 @@ const ChangesLogPanel = () => {
             </div>
           ))}
           
-          {!changes?.length && (
+          {!filteredChanges?.length && (
             <div className="text-center py-8 text-gray-500">
-              لا توجد تغييرات مسجلة
+              {searchTerm || filterAction !== 'all' || filterEntity !== 'all' 
+                ? 'لم يتم العثور على تغييرات تطابق البحث'
+                : 'لا توجد تغييرات مسجلة'
+              }
             </div>
           )}
         </div>

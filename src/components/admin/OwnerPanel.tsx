@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Crown, ArrowLeft, Clock, UserCog, Trash2, Ban, Percent } from 'lucide-react';
+import { Crown, ArrowLeft, Clock, UserCog, Trash2, Ban, Percent, Users } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { SidebarProvider, SidebarTrigger, SidebarInset } from '@/components/ui/sidebar';
 import AdminSidebar from '@/components/AdminSidebar';
@@ -13,6 +13,7 @@ import UserManagement from './UserManagement';
 import OwnerOrdersManagement from './OwnerOrdersManagement';
 import UserBanManagement from './UserBanManagement';
 import SimpleDiscountManagement from './SimpleDiscountManagement';
+import AccountsManagement from './AccountsManagement';
 
 const OwnerPanel = () => {
   const { user, isOwner, loading } = useAuth();
@@ -75,19 +76,23 @@ const OwnerPanel = () => {
               </Button>
             </div>
 
-            <Tabs defaultValue="discounts" className="space-y-6">
-              <TabsList className="grid w-full grid-cols-2 lg:grid-cols-5 h-auto">
-                <TabsTrigger value="discounts" className="flex items-center gap-2 text-xs lg:text-sm">
-                  <Percent className="w-4 h-4" />
-                  <span className="hidden sm:inline">الخصومات</span>
-                </TabsTrigger>
+            <Tabs defaultValue="changes-log" className="space-y-6">
+              <TabsList className="grid w-full grid-cols-3 lg:grid-cols-6 h-auto">
                 <TabsTrigger value="changes-log" className="flex items-center gap-2 text-xs lg:text-sm">
                   <Clock className="w-4 h-4" />
                   <span className="hidden sm:inline">سجل التغييرات</span>
                 </TabsTrigger>
+                <TabsTrigger value="accounts" className="flex items-center gap-2 text-xs lg:text-sm">
+                  <Users className="w-4 h-4" />
+                  <span className="hidden sm:inline">الحسابات</span>
+                </TabsTrigger>
+                <TabsTrigger value="discounts" className="flex items-center gap-2 text-xs lg:text-sm">
+                  <Percent className="w-4 h-4" />
+                  <span className="hidden sm:inline">الخصومات</span>
+                </TabsTrigger>
                 <TabsTrigger value="user-management" className="flex items-center gap-2 text-xs lg:text-sm">
                   <UserCog className="w-4 h-4" />
-                  <span className="hidden sm:inline">المستخدمين</span>
+                  <span className="hidden sm:inline">الأدوار</span>
                 </TabsTrigger>
                 <TabsTrigger value="orders-management" className="flex items-center gap-2 text-xs lg:text-sm">
                   <Trash2 className="w-4 h-4" />
@@ -95,9 +100,27 @@ const OwnerPanel = () => {
                 </TabsTrigger>
                 <TabsTrigger value="user-ban" className="flex items-center gap-2 text-xs lg:text-sm">
                   <Ban className="w-4 h-4" />
-                  <span className="hidden sm:inline">حظر المستخدمين</span>
+                  <span className="hidden sm:inline">الحظر</span>
                 </TabsTrigger>
               </TabsList>
+
+              <TabsContent value="changes-log" className="space-y-6">
+                <ChangesLogPanel />
+              </TabsContent>
+
+              <TabsContent value="accounts" className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Users className="w-6 h-6" />
+                      إدارة الحسابات
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <AccountsManagement />
+                  </CardContent>
+                </Card>
+              </TabsContent>
 
               <TabsContent value="discounts" className="space-y-6">
                 <Card>
@@ -109,20 +132,6 @@ const OwnerPanel = () => {
                   </CardHeader>
                   <CardContent>
                     <SimpleDiscountManagement />
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="changes-log" className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Clock className="w-6 h-6" />
-                      سجل التغييرات
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <ChangesLogPanel />
                   </CardContent>
                 </Card>
               </TabsContent>
