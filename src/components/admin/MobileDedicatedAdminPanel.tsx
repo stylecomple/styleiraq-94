@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, ArrowLeft, Sparkles, Grid3X3, Package, Settings, FolderPlus, Layers } from 'lucide-react';
+import { Plus, ArrowLeft, Sparkles, Grid3X3, Package, FolderPlus } from 'lucide-react';
 import AddProductForm from './AddProductForm';
 import CategoryManager from './CategoryManager';
 
@@ -175,40 +175,20 @@ const MobileDedicatedAdminPanel = () => {
           </Card>
 
           {/* Quick Access to Orders (only for admins) */}
-          {(isFullAdmin) && (
-            <Card 
-              className="overflow-hidden border-0 shadow-lg bg-white cursor-pointer transform transition-all duration-200 active:scale-95"
-              onClick={() => navigate('/admin?tab=orders')}
-            >
-              <CardContent className="p-4">
-                <div className="text-center">
-                  <div className="w-12 h-12 bg-gradient-to-r from-orange-500 to-red-600 rounded-xl flex items-center justify-center mx-auto mb-2">
-                    <FolderPlus className="w-6 h-6 text-white" />
-                  </div>
-                  <h3 className="font-bold text-gray-800 text-sm">الطلبات</h3>
-                  <p className="text-xs text-gray-600">إدارة الطلبات</p>
+          <Card 
+            className="overflow-hidden border-0 shadow-lg bg-white cursor-pointer transform transition-all duration-200 active:scale-95"
+            onClick={() => navigate('/admin?tab=orders')}
+          >
+            <CardContent className="p-4">
+              <div className="text-center">
+                <div className="w-12 h-12 bg-gradient-to-r from-orange-500 to-red-600 rounded-xl flex items-center justify-center mx-auto mb-2">
+                  <FolderPlus className="w-6 h-6 text-white" />
                 </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Settings (if space available and user is not full admin) */}
-          {!isFullAdmin && (
-            <Card 
-              className="overflow-hidden border-0 shadow-lg bg-white cursor-pointer transform transition-all duration-200 active:scale-95"
-              onClick={() => navigate('/admin?tab=settings')}
-            >
-              <CardContent className="p-4">
-                <div className="text-center">
-                  <div className="w-12 h-12 bg-gradient-to-r from-gray-500 to-gray-600 rounded-xl flex items-center justify-center mx-auto mb-2">
-                    <Settings className="w-6 h-6 text-white" />
-                  </div>
-                  <h3 className="font-bold text-gray-800 text-sm">الإعدادات</h3>
-                  <p className="text-xs text-gray-600">إعدادات عامة</p>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+                <h3 className="font-bold text-gray-800 text-sm">الطلبات</h3>
+                <p className="text-xs text-gray-600">إدارة الطلبات</p>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Additional Admin Actions (only for full admins) */}
@@ -231,15 +211,15 @@ const MobileDedicatedAdminPanel = () => {
 
             <Card 
               className="overflow-hidden border-0 shadow-lg bg-white cursor-pointer transform transition-all duration-200 active:scale-95"
-              onClick={() => navigate('/admin?tab=settings')}
+              onClick={() => navigate('/admin?tab=users')}
             >
               <CardContent className="p-4">
                 <div className="text-center">
-                  <div className="w-12 h-12 bg-gradient-to-r from-gray-500 to-gray-600 rounded-xl flex items-center justify-center mx-auto mb-2">
-                    <Settings className="w-6 h-6 text-white" />
+                  <div className="w-12 h-12 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center mx-auto mb-2">
+                    <Package className="w-6 h-6 text-white" />
                   </div>
-                  <h3 className="font-bold text-gray-800 text-sm">الإعدادات</h3>
-                  <p className="text-xs text-gray-600">إعدادات المتجر</p>
+                  <h3 className="font-bold text-gray-800 text-sm">المستخدمين</h3>
+                  <p className="text-xs text-gray-600">إدارة المستخدمين</p>
                 </div>
               </CardContent>
             </Card>

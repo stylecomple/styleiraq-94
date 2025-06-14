@@ -7,10 +7,8 @@ import {
   Package, 
   Users, 
   BarChart3, 
-  Settings, 
   MessageSquare, 
   Percent, 
-  FolderPlus,
   Crown,
   LogOut,
   Home,
@@ -49,7 +47,6 @@ const AdminSidebar = () => {
       { title: 'الإحصائيات', url: '/admin', icon: BarChart3, id: 'statistics' },
       { title: 'الخصومات', url: '/admin', icon: Percent, id: 'discounts' },
       { title: 'التقييمات', url: '/admin', icon: MessageSquare, id: 'feedback' },
-      { title: 'الإعدادات', url: '/admin', icon: Settings, id: 'settings' },
     ] : []),
   ];
 
@@ -69,7 +66,7 @@ const AdminSidebar = () => {
         <div className="flex items-center gap-3">
           <div className="relative">
             <div className="w-10 h-10 bg-gradient-to-br from-pink-500 to-purple-600 rounded-full flex items-center justify-center">
-              <Settings className="w-5 h-5 text-white" />
+              <Package className="w-5 h-5 text-white" />
             </div>
           </div>
           <div>

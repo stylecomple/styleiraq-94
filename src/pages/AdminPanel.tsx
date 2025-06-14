@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Package, Users, BarChart3, Settings, MessageSquare, Percent, Plus, FolderPlus, FileSpreadsheet } from 'lucide-react';
+import { Package, Users, BarChart3, MessageSquare, Percent, Plus, FolderPlus, FileSpreadsheet } from 'lucide-react';
 import { SidebarProvider, SidebarTrigger, SidebarInset } from '@/components/ui/sidebar';
 import AdminSidebar from '@/components/AdminSidebar';
 import ProductsManagement from '@/components/admin/ProductsManagement';
@@ -13,7 +13,6 @@ import UserManagement from '@/components/admin/UserManagement';
 import StatisticsPanel from '@/components/admin/StatisticsPanel';
 import DiscountManagement from '@/components/admin/DiscountManagement';
 import FeedbackManagement from '@/components/admin/FeedbackManagement';
-import AdminSettings from '@/components/admin/AdminSettings';
 import AddProductForm from '@/components/admin/AddProductForm';
 import CategoryManager from '@/components/admin/CategoryManager';
 import ExcelProductImport from '@/components/admin/ExcelProductImport';
@@ -95,7 +94,7 @@ const AdminPanel = () => {
             </div>
 
             <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-              <TabsList className="grid w-full grid-cols-2 lg:grid-cols-7 h-auto">
+              <TabsList className="grid w-full grid-cols-2 lg:grid-cols-6 h-auto">
                 {isFullAdmin && (
                   <TabsTrigger value="products" className="flex items-center gap-2 text-xs lg:text-sm">
                     <Package className="w-4 h-4" />
@@ -129,10 +128,6 @@ const AdminPanel = () => {
                     <TabsTrigger value="feedback" className="flex items-center gap-2 text-xs lg:text-sm">
                       <MessageSquare className="w-4 h-4" />
                       <span className="hidden sm:inline">التقييمات</span>
-                    </TabsTrigger>
-                    <TabsTrigger value="settings" className="flex items-center gap-2 text-xs lg:text-sm">
-                      <Settings className="w-4 h-4" />
-                      <span className="hidden sm:inline">الإعدادات</span>
                     </TabsTrigger>
                   </>
                 )}
@@ -238,11 +233,6 @@ const AdminPanel = () => {
                   <TabsContent value="feedback" className="space-y-6">
                     <h2 className="text-2xl font-bold">إدارة التقييمات</h2>
                     <FeedbackManagement />
-                  </TabsContent>
-
-                  <TabsContent value="settings" className="space-y-6">
-                    <h2 className="text-2xl font-bold">إعدادات النظام</h2>
-                    <AdminSettings />
                   </TabsContent>
                 </>
               )}
